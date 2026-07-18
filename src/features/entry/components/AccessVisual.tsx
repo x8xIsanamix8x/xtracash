@@ -41,7 +41,7 @@ export function AccessVisual() {
         <Typography sx={{ fontWeight: 800, letterSpacing: "-0.03em" }}>
           xtracash
         </Typography>
-        <LoginRounded sx={{ fontSize: "34%" }} />
+        <LoginRounded sx={{ width: "34%", height: "34%" }} />
       </Stack>
       <Box
         sx={{
@@ -59,7 +59,7 @@ export function AccessVisual() {
           borderColor: "secondary.main",
         }}
       >
-        <VerifiedUserRounded sx={{ fontSize: "58%" }} />
+        <VerifiedUserRounded sx={{ width: "58%", height: "58%" }} />
       </Box>
     </Box>
   );

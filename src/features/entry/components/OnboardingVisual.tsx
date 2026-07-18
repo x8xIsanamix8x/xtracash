@@ -43,7 +43,7 @@ export function OnboardingVisual({ visualKey, imageAlt }: OnboardingVisualProps)
         color: "secondary.main",
       }}
     >
-      <PrimaryIcon aria-hidden="true" sx={{ fontSize: "48%" }} />
+      <PrimaryIcon aria-hidden="true" sx={{ width: "48%", height: "48%" }} />
       <Box
         sx={{
           position: "absolute",
@@ -60,7 +60,7 @@ export function OnboardingVisual({ visualKey, imageAlt }: OnboardingVisualProps)
           borderColor: "background.default",
         }}
       >
-        <SecondaryIcon aria-hidden="true" sx={{ fontSize: "60%" }} />
+        <SecondaryIcon aria-hidden="true" sx={{ width: "60%", height: "60%" }} />
       </Box>
     </Box>
   );

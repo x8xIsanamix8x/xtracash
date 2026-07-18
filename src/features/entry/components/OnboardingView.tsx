@@ -124,7 +124,7 @@ export function OnboardingView({
                   height: isActive ? 12 : 8,
                   borderRadius: "50%",
                   bgcolor: isActive ? "primary.main" : "text.secondary",
-                  opacity: isActive ? 1 : 0.4,
+                  opacity: isActive ? 1 : 0.8,
                   transition: "width 180ms ease, height 180ms ease, background-color 180ms ease",
                   "@media (prefers-reduced-motion: reduce)": {
                     transition: "none",
