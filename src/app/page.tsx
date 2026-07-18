@@ -1,5 +1,5 @@
-import { HomeView } from "@/features/home";
+import { EntryFlow } from "@/features/entry";
 
 export default function Home() {
-  return <HomeView />;
+  return <EntryFlow />;
 }
