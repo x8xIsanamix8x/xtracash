@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 import { AppProviders } from "./providers";
@@ -6,6 +6,13 @@ import { AppProviders } from "./providers";
 export const metadata: Metadata = {
   title: "XtraCash",
   description: "XtraCash",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#FFF9F6",
 };
 
 export default function RootLayout({
