@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Alert,
   Box,
@@ -31,6 +32,7 @@ const prototypeMessages = {
 } as const;
 
 export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
+  const router = useRouter();
   const [notice, setNotice] = useState<PrototypeNotice>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
@@ -48,6 +50,10 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
   const closeSignIn = () => {
     setNotice(null);
     setIsSignInOpen(false);
+  };
+
+  const completeSignIn = () => {
+    router.replace("/home");
   };
 
   return (
@@ -184,7 +190,7 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
           </Button>
         </DialogActions>
       </Dialog>
-      <SignInSheet onClose={closeSignIn} open={isSignInOpen} />
+      <SignInSheet onClose={closeSignIn} onSuccess={completeSignIn} open={isSignInOpen} />
     </Box>
   );
 }

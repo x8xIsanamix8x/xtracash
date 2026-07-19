@@ -30,6 +30,7 @@ import { SignInVisual } from "./SignInVisual";
 type SignInSheetProps = Readonly<{
   open: boolean;
   onClose: () => void;
+  onSuccess: () => void;
 }>;
 
 type FieldErrors = Readonly<{
@@ -37,14 +38,13 @@ type FieldErrors = Readonly<{
   password?: string;
 }>;
 
-const SUCCESS_MESSAGE = "Formulario completado correctamente.";
 const RECOVERY_MESSAGE = "La recuperación de acceso estará disponible en la siguiente etapa.";
 
 function BottomSheetTransition(props: SlideProps) {
   return <Slide {...props} direction="up" />;
 }
 
-export function SignInSheet({ open, onClose }: SignInSheetProps) {
+export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -119,7 +119,7 @@ export function SignInSheet({ open, onClose }: SignInSheetProps) {
 
       timerRef.current = null;
       setIsLoading(false);
-      setStatusMessage(SUCCESS_MESSAGE);
+      onSuccess();
     }, 600);
   };
 
