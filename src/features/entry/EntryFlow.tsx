@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 
+import { themeTokens } from "@/theme/tokens";
+
 import { BubbleField } from "./components/BubbleField";
 import { OnboardingView } from "./components/OnboardingView";
 import { AccessView } from "./components/AccessView";
@@ -69,9 +71,8 @@ export function EntryFlow() {
         <BubbleField />
         <Stack spacing={1} sx={{ position: "relative", zIndex: 1, textAlign: "center" }}>
           <Typography
-            color="secondary.main"
             variant="h5"
-            sx={{ fontWeight: 800, letterSpacing: "-0.03em" }}
+            sx={{ color: themeTokens.color.brandLogo, fontWeight: 800, letterSpacing: "-0.03em" }}
           >
             xtracash
           </Typography>

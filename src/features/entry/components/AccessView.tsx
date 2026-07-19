@@ -14,27 +14,40 @@ import {
   Typography,
 } from "@mui/material";
 
+import { SignInSheet } from "@/features/auth";
+import { themeTokens } from "@/theme/tokens";
+
 import { AccessVisual } from "./AccessVisual";
 import { BubbleField } from "./BubbleField";
 
-type PrototypeNotice = "sign-in" | "register" | null;
+type PrototypeNotice = "register" | null;
 
 type AccessViewProps = Readonly<{
   onRepeatOnboarding: () => void;
 }>;
 
 const prototypeMessages = {
-  "sign-in": "El acceso de usuarios estará disponible en la siguiente etapa.",
   register: "El registro estará disponible en la siguiente etapa.",
 } as const;
 
 export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
   const [notice, setNotice] = useState<PrototypeNotice>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
 
   const repeatOnboarding = () => {
     setIsHelpOpen(false);
     onRepeatOnboarding();
+  };
+
+  const openSignIn = () => {
+    setNotice(null);
+    setIsSignInOpen(true);
+  };
+
+  const closeSignIn = () => {
+    setNotice(null);
+    setIsSignInOpen(false);
   };
 
   return (
@@ -71,7 +84,10 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
           justifyContent: "space-between",
         }}
       >
-        <Typography sx={{ fontWeight: 800, letterSpacing: "-0.03em" }} variant="h5">
+        <Typography
+          variant="h5"
+          sx={{ color: themeTokens.color.brandLogo, fontWeight: 800, letterSpacing: "-0.03em" }}
+        >
           xtracash
         </Typography>
         <Button
@@ -124,7 +140,7 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
         )}
         <Button
           fullWidth
-          onClick={() => setNotice("sign-in")}
+          onClick={openSignIn}
           variant="contained"
           sx={{ "&:focus-visible": { outlineColor: "common.white" } }}
         >
@@ -168,6 +184,7 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
           </Button>
         </DialogActions>
       </Dialog>
+      <SignInSheet onClose={closeSignIn} open={isSignInOpen} />
     </Box>
   );
 }

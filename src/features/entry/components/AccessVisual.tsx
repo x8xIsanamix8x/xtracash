@@ -1,6 +1,8 @@
 import { LoginRounded, VerifiedUserRounded } from "@mui/icons-material";
 import { Box, Stack, Typography } from "@mui/material";
 
+import { themeTokens } from "@/theme/tokens";
+
 export function AccessVisual() {
   return (
     <Box
@@ -38,7 +40,9 @@ export function AccessVisual() {
           borderColor: "secondary.contrastText",
         }}
       >
-        <Typography sx={{ fontWeight: 800, letterSpacing: "-0.03em" }}>
+        <Typography
+          sx={{ color: themeTokens.color.brandLogo, fontWeight: 800, letterSpacing: "-0.03em" }}
+        >
           xtracash
         </Typography>
         <LoginRounded sx={{ width: "34%", height: "34%" }} />

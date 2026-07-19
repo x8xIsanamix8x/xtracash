@@ -4,6 +4,7 @@ export const themeTokens = {
     primaryHover: "#A93200",
     primaryActive: "#8F2A00",
     accent: "#FF5A1F",
+    brandLogo: "#FF5A1F",
     brandNavy: "#12385B",
     neutral: "#455a64",
     background: "#FFF9F6",
