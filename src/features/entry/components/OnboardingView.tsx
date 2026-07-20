@@ -90,7 +90,7 @@ export function OnboardingView({
             sx={{
               "&:focus-visible": {
                 outline: "3px solid",
-                outlineColor: "secondary.main",
+                outlineColor: "primary.main",
                 outlineOffset: 6,
               },
             }}

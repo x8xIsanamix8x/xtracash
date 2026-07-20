@@ -40,7 +40,7 @@ export function CreditCard({ status, available }: CreditCardProps) {
           width: 180,
           height: 180,
           borderRadius: "50%",
-          bgcolor: "secondary.light",
+          bgcolor: "primary.main",
           right: -70,
           top: -80,
           opacity: 0.7,

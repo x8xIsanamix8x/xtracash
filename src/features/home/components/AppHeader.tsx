@@ -20,16 +20,16 @@ export function AppHeader({ firstName, onNotifications, onProfile }: AppHeaderPr
           XtraCash
         </Typography>
         <Stack direction="row" spacing={0.5}>
-          <IconButton aria-label="Ver notificaciones" onClick={onNotifications}>
+          <IconButton aria-label="Ver notificaciones" color="primary" onClick={onNotifications}>
             <NotificationsNoneRounded />
           </IconButton>
-          <IconButton aria-label="Ver perfil" onClick={onProfile}>
+          <IconButton aria-label="Ver perfil" color="primary" onClick={onProfile}>
             <PersonOutlineRounded />
           </IconButton>
         </Stack>
       </Stack>
       <Stack spacing={0.5}>
-        <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
+        <Typography component="h1" variant="h4" sx={{ color: "secondary.main", fontWeight: 700 }}>
           Hola, {firstName}
         </Typography>
         <Typography color="text.secondary">Este es el estado de tu crédito</Typography>

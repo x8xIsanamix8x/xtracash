@@ -1,4 +1,4 @@
-import { createTheme } from "@mui/material/styles";
+import { alpha, createTheme, darken } from "@mui/material/styles";
 
 import { themeTokens } from "./tokens";
 
@@ -7,10 +7,10 @@ export const theme = createTheme({
     mode: "light",
     primary: {
       main: themeTokens.color.primary,
+      contrastText: themeTokens.color.onDark,
     },
     secondary: {
-      main: themeTokens.color.brandNavy,
-      light: themeTokens.color.darkSurface,
+      main: themeTokens.color.brandDeep,
       contrastText: themeTokens.color.onDark,
     },
     background: {
@@ -40,16 +40,28 @@ export const theme = createTheme({
           minHeight: 48,
           textTransform: "none",
           "&:focus-visible": {
-            outline: `3px solid ${themeTokens.color.focus}`,
+            outline: `3px solid ${themeTokens.color.primary}`,
             outlineOffset: 2,
+          },
+          "&.Mui-disabled": {
+            color: alpha(themeTokens.color.text, 0.38),
           },
           ...(ownerState.variant === "contained" &&
             ownerState.color === "primary" && {
               "&:hover": {
-                backgroundColor: themeTokens.color.primaryHover,
+                backgroundColor: darken(themeTokens.color.primary, 0.12),
               },
               "&:active": {
-                backgroundColor: themeTokens.color.primaryActive,
+                backgroundColor: darken(themeTokens.color.primary, 0.2),
+              },
+              "&.Mui-disabled": {
+                backgroundColor: alpha(themeTokens.color.text, 0.12),
+              },
+            }),
+          ...(ownerState.variant === "outlined" &&
+            ownerState.color === "primary" && {
+              "&.Mui-disabled": {
+                borderColor: alpha(themeTokens.color.text, 0.12),
               },
             }),
         }),
@@ -60,9 +72,41 @@ export const theme = createTheme({
         root: {
           minHeight: 44,
           minWidth: 44,
+          "&:hover": {
+            backgroundColor: alpha(themeTokens.color.primary, 0.08),
+          },
+          "&:active": {
+            backgroundColor: alpha(themeTokens.color.primary, 0.16),
+          },
           "&:focus-visible": {
-            outline: `3px solid ${themeTokens.color.focus}`,
+            outline: `3px solid ${themeTokens.color.primary}`,
             outlineOffset: 2,
+          },
+          "&.Mui-disabled": {
+            color: alpha(themeTokens.color.text, 0.38),
+          },
+        },
+      },
+    },
+    MuiBottomNavigationAction: {
+      styleOverrides: {
+        root: {
+          color: themeTokens.color.textSecondary,
+          "&:hover": {
+            backgroundColor: alpha(themeTokens.color.primary, 0.08),
+          },
+          "&:active": {
+            backgroundColor: alpha(themeTokens.color.primary, 0.16),
+          },
+          "&:focus-visible": {
+            outline: `3px solid ${themeTokens.color.primary}`,
+            outlineOffset: -3,
+          },
+          "&.Mui-selected": {
+            color: themeTokens.color.primary,
+          },
+          "&.Mui-disabled": {
+            color: alpha(themeTokens.color.text, 0.38),
           },
         },
       },

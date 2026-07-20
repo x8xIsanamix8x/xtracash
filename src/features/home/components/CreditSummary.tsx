@@ -72,7 +72,7 @@ export function CreditSummary({
     <Card component="section" variant="outlined" sx={{ height: "100%" }}>
       <CardContent>
         <Stack spacing={2.5}>
-          <Typography component="h2" variant="h6" sx={{ fontWeight: 700 }}>
+          <Typography component="h2" variant="h6" sx={{ color: "secondary.main", fontWeight: 700 }}>
             Resumen del crédito
           </Typography>
 
@@ -107,7 +107,7 @@ export function CreditSummary({
               direction="row"
               sx={{ alignItems: "center", flexWrap: "wrap", gap: 1, justifyContent: "space-between" }}
             >
-              <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 700 }}>
+              <Typography component="h3" variant="subtitle1" sx={{ color: "secondary.main", fontWeight: 700 }}>
                 Próximo pago
               </Typography>
               <Box sx={{ display: "flex", minHeight: 24, minWidth: 112 }}>
