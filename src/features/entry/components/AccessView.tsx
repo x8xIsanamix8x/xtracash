@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Alert,
   Box,
   Button,
   Dialog,
@@ -21,19 +21,12 @@ import { themeTokens } from "@/theme/tokens";
 import { AccessVisual } from "./AccessVisual";
 import { BubbleField } from "./BubbleField";
 
-type PrototypeNotice = "register" | null;
-
 type AccessViewProps = Readonly<{
   onRepeatOnboarding: () => void;
 }>;
 
-const prototypeMessages = {
-  register: "El registro estará disponible en la siguiente etapa.",
-} as const;
-
 export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
   const router = useRouter();
-  const [notice, setNotice] = useState<PrototypeNotice>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
 
@@ -43,12 +36,10 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
   };
 
   const openSignIn = () => {
-    setNotice(null);
     setIsSignInOpen(true);
   };
 
   const closeSignIn = () => {
-    setNotice(null);
     setIsSignInOpen(false);
   };
 
@@ -184,18 +175,14 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
             "@media (max-height: 650px)": { gap: 1, pt: 2 },
           }}
         >
-          {notice && (
-            <Alert aria-live="polite" role="status" severity="info">
-              {prototypeMessages[notice]}
-            </Alert>
-          )}
           <Button fullWidth onClick={openSignIn} variant="contained">
             Ingresar
           </Button>
           <Button
             fullWidth
             color="secondary"
-            onClick={() => setNotice("register")}
+            component={Link}
+            href="/register"
             variant="outlined"
             sx={{
               bgcolor: "background.paper",
