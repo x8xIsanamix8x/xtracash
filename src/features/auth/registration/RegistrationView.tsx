@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowBackRounded, CheckCircleRounded } from "@mui/icons-material";
+import { ArrowBackRounded } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -19,6 +19,10 @@ import { themeTokens } from "@/theme/tokens";
 import { ConfirmationStep } from "./components/ConfirmationStep";
 import { ContactSecurityStep } from "./components/ContactSecurityStep";
 import { IdentificationStep } from "./components/IdentificationStep";
+import {
+  RegistrationStepVisual,
+  type RegistrationVisualKey,
+} from "./components/RegistrationStepVisual";
 import { registrationMock } from "./mocks/registration";
 import type {
   RegistrationData,
@@ -39,7 +43,33 @@ const initialData: RegistrationData = {
   passwordConfirmation: "",
 };
 
-const stepTitles = ["Identificación", "Contacto y seguridad", "Confirmación"] as const;
+const stepContent: readonly Readonly<{
+  title: string;
+  description: string;
+  visualKey: RegistrationVisualKey;
+}>[] = [
+  {
+    title: "Cuéntanos quién eres",
+    description: "Necesitamos estos datos para identificarte y preparar el acceso a tu línea de crédito.",
+    visualKey: "identity",
+  },
+  {
+    title: "Protege tu cuenta",
+    description: "Indica cómo podemos contactarte y crea una contraseña segura para proteger tu información.",
+    visualKey: "security",
+  },
+  {
+    title: "Revisa y confirma",
+    description: "Verifica que tus datos estén correctos antes de solicitar el código de seguridad.",
+    visualKey: "confirmation",
+  },
+];
+
+const otpContent = {
+  title: "Confirma tu registro",
+  description: "Ingresa el código de 6 dígitos que enviamos a tu medio de contacto.",
+  visualKey: "otp",
+} as const;
 
 export function RegistrationView() {
   const [step, setStep] = useState(0);
@@ -150,8 +180,8 @@ export function RegistrationView() {
     event.preventDefault();
     const nextError = !otp
       ? "Ingresa el código de verificación."
-      : otp.length !== 6
-        ? "Ingresa los 6 dígitos del código."
+      : !/^\d{6}$/.test(otp)
+        ? "Ingresa únicamente 6 dígitos."
         : otp !== registrationMock.validOtp
           ? "El código ingresado es incorrecto. Inténtalo nuevamente."
           : "";
@@ -164,17 +194,35 @@ export function RegistrationView() {
     setIsComplete(true);
   };
 
+  const currentContent = step === 2 && isOtpVisible ? otpContent : stepContent[step];
+
   if (isComplete) {
     return (
-      <Box component="main" sx={{ minHeight: "100dvh", display: "grid", placeItems: "center", p: 3 }}>
-        <Stack spacing={2} sx={{ width: "100%", maxWidth: 520, alignItems: "center", textAlign: "center" }}>
-          <CheckCircleRounded color="success" sx={{ width: 72, height: 72 }} />
-          <Typography component="h1" ref={titleRef} tabIndex={-1} variant="h4" sx={{ fontWeight: 700 }}>
-            Registro completado
-          </Typography>
-          <Typography color="text.secondary">Tu registro demostrativo se completó correctamente.</Typography>
-          <Button component={Link} fullWidth href="/" variant="contained">Volver al acceso</Button>
-        </Stack>
+      <Box component="main" sx={{ minHeight: "100dvh", display: "grid", placeItems: "center", bgcolor: "background.default" }}>
+        <Container maxWidth={false} sx={{ width: "100%", maxWidth: 1120, py: 3 }}>
+          <Paper
+            variant="outlined"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 38fr) minmax(0, 62fr)" },
+              overflow: "hidden",
+              boxShadow: "none",
+            }}
+          >
+            <Box sx={{ minWidth: 0, overflow: "hidden", bgcolor: "background.default" }}>
+              <RegistrationStepVisual visualKey="success" />
+            </Box>
+            <Stack spacing={2} sx={{ justifyContent: "center", p: { xs: 3, lg: 5 }, textAlign: { xs: "center", lg: "left" } }}>
+              <Typography component="h1" ref={titleRef} tabIndex={-1} variant="h4" sx={{ color: "secondary.main", fontWeight: 700 }}>
+                Tu cuenta está lista
+              </Typography>
+              <Typography color="text.secondary">
+                Completaste el registro correctamente. Ahora puedes ingresar y continuar con tu experiencia XtraCash.
+              </Typography>
+              <Button component={Link} fullWidth href="/" variant="contained">Ir a iniciar sesión</Button>
+            </Stack>
+          </Paper>
+        </Container>
       </Box>
     );
   }
@@ -182,8 +230,10 @@ export function RegistrationView() {
   return (
     <Box component="main" sx={{ minHeight: "100dvh", bgcolor: "background.default" }}>
       <Container
-        maxWidth="sm"
+        maxWidth={false}
         sx={{
+          width: "100%",
+          maxWidth: 1120,
           minHeight: "100dvh",
           display: "flex",
           flexDirection: "column",
@@ -198,53 +248,107 @@ export function RegistrationView() {
           <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>xtracash</Typography>
         </Stack>
 
-        <Paper
-          variant="outlined"
-          sx={{ flex: 1, display: "flex", flexDirection: "column", mt: 2, p: { xs: 2, sm: 3 }, boxShadow: "none" }}
+        <Box
+          sx={{
+            flex: 1,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            py: { xs: 2, sm: 4 },
+          }}
         >
-          <Stack spacing={1}>
-            <Typography color="text.secondary" variant="body2">Paso {step + 1} de 3</Typography>
-            <LinearProgress aria-label={`Paso ${step + 1} de 3`} value={((step + 1) / 3) * 100} variant="determinate" />
-            <Typography component="h1" ref={titleRef} tabIndex={-1} variant="h4" sx={{ pt: 1, fontWeight: 700 }}>
-              {stepTitles[step]}
-            </Typography>
-          </Stack>
+          <Paper
+            variant="outlined"
+            sx={{
+              flex: "0 0 auto",
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 38fr) minmax(0, 62fr)" },
+              my: { xs: 0, sm: "auto" },
+              overflow: "hidden",
+              boxShadow: "none",
+            }}
+          >
+          <Box
+            sx={{
+              minWidth: 0,
+              overflow: "hidden",
+              bgcolor: "background.default",
+              borderBottom: { xs: "1px solid", lg: 0 },
+              borderRight: { xs: 0, lg: "1px solid" },
+              borderColor: "divider",
+            }}
+          >
+            <RegistrationStepVisual visualKey={currentContent.visualKey} />
+          </Box>
 
           <Box
-            component="form"
-            noValidate
-            onSubmit={step < 2 ? submitStep : isOtpVisible ? confirmOtp : (event) => { event.preventDefault(); sendOtp(); }}
-            sx={{ flex: 1, display: "flex", flexDirection: "column", pt: 3 }}
+            sx={{
+              display: "flex",
+              width: "100%",
+              maxWidth: { xs: 680, lg: "none" },
+              minWidth: 0,
+              mx: "auto",
+              flexDirection: "column",
+              p: { xs: 2, sm: 3, lg: 4 },
+            }}
           >
-            {step === 0 && <IdentificationStep data={data} errors={errors} inputRefs={inputRefs} onChange={updateField} />}
-            {step === 1 && <ContactSecurityStep data={data} errors={errors} inputRefs={inputRefs} onChange={updateField} />}
-            {step === 2 && (
-              <ConfirmationStep
-                data={data}
-                isOtpVisible={isOtpVisible}
-                onOtpChange={(value) => { setOtp(value); setOtpError(""); }}
-                onTermsChange={setTermsAccepted}
-                otp={otp}
-                otpError={otpError}
-                otpRef={otpRef}
-                termsAccepted={termsAccepted}
+            <Stack spacing={1}>
+              <Typography color="text.secondary" id="registration-progress-label" variant="body2">
+                Paso {step + 1} de 3
+              </Typography>
+              <LinearProgress
+                aria-labelledby="registration-progress-label"
+                value={((step + 1) / 3) * 100}
+                variant="determinate"
               />
-            )}
-
-            <Stack direction={{ xs: "column-reverse", sm: "row" }} spacing={1.5} sx={{ mt: "auto", pt: 3 }}>
-              {step > 0 && <Button fullWidth onClick={goBack} type="button" variant="outlined">Atrás</Button>}
-              <Button
-                disabled={step === 2 && !isOtpVisible && !termsAccepted}
-                fullWidth
-                loading={isSendingOtp}
-                type="submit"
-                variant="contained"
-              >
-                {step < 2 ? "Continuar" : isOtpVisible ? "Confirmar registro" : "Enviar código"}
-              </Button>
+              <Typography component="h1" ref={titleRef} tabIndex={-1} variant="h4" sx={{ pt: 1, color: "secondary.main", fontWeight: 700 }}>
+                {currentContent.title}
+              </Typography>
+              <Typography color="text.secondary">{currentContent.description}</Typography>
             </Stack>
+
+            <Box
+              component="form"
+              noValidate
+              onSubmit={step < 2 ? submitStep : isOtpVisible ? confirmOtp : (event) => { event.preventDefault(); sendOtp(); }}
+              sx={{ flex: 1, display: "flex", flexDirection: "column", pt: 3 }}
+            >
+              {step === 0 && <IdentificationStep data={data} errors={errors} inputRefs={inputRefs} onChange={updateField} />}
+              {step === 1 && <ContactSecurityStep data={data} errors={errors} inputRefs={inputRefs} onChange={updateField} />}
+              {step === 2 && (
+                <ConfirmationStep
+                  data={data}
+                  isOtpVisible={isOtpVisible}
+                  onOtpChange={(value) => { setOtp(value); setOtpError(""); }}
+                  onResend={() => setOtpError("")}
+                  onTermsChange={setTermsAccepted}
+                  otp={otp}
+                  otpError={otpError}
+                  otpRef={otpRef}
+                  termsAccepted={termsAccepted}
+                />
+              )}
+
+              <Stack
+                direction={{ xs: "column-reverse", sm: "row" }}
+                spacing={1.5}
+                sx={{ mt: 3, pt: 3, borderTop: "1px solid", borderColor: "divider" }}
+              >
+                {step > 0 && <Button fullWidth onClick={goBack} type="button" variant="outlined">Atrás</Button>}
+                <Button
+                  disabled={step === 2 && !isOtpVisible && !termsAccepted}
+                  fullWidth
+                  loading={isSendingOtp}
+                  type="submit"
+                  variant="contained"
+                >
+                  {step < 2 ? "Continuar" : isOtpVisible ? "Confirmar registro" : "Enviar código"}
+                </Button>
+              </Stack>
+            </Box>
           </Box>
-        </Paper>
+          </Paper>
+        </Box>
       </Container>
     </Box>
   );

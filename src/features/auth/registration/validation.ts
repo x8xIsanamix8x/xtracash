@@ -2,6 +2,7 @@ import { registrationMock } from "./mocks/registration";
 import type { RegistrationData, RegistrationErrors } from "./types";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const namePattern = /^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u;
 
 export const passwordRules = [
   { label: "8 caracteres como mínimo", test: (value: string) => value.length >= 8 },
@@ -13,14 +14,18 @@ export const passwordRules = [
 export function validateIdentification(data: RegistrationData): RegistrationErrors {
   const errors: RegistrationErrors = {};
 
-  if (!/^\d{6,8}$/.test(data.documentNumber.trim())) {
+  if (!/^\d{6,8}$/.test(data.documentNumber)) {
     errors.documentNumber = "Ingresa una cédula de 6 a 8 dígitos.";
-  } else if (data.documentNumber.trim() === registrationMock.duplicateDocument) {
+  } else if (data.documentNumber === registrationMock.duplicateDocument) {
     errors.documentNumber = "Esta cédula ya se encuentra registrada.";
   }
 
-  if (!data.firstName.trim()) errors.firstName = "Ingresa tu nombre.";
-  if (!data.lastName.trim()) errors.lastName = "Ingresa tu apellido.";
+  if (!namePattern.test(data.firstName)) {
+    errors.firstName = "Ingresa únicamente letras y espacios.";
+  }
+  if (!namePattern.test(data.lastName)) {
+    errors.lastName = "Ingresa únicamente letras y espacios.";
+  }
 
   return errors;
 }
@@ -29,7 +34,7 @@ export function validateContact(data: RegistrationData): RegistrationErrors {
   const errors: RegistrationErrors = {};
   const normalizedEmail = data.email.trim().toLowerCase();
 
-  if (!/^\d{11}$/.test(data.phone.trim())) {
+  if (!/^\d{11}$/.test(data.phone)) {
     errors.phone = "Ingresa un teléfono de 11 dígitos.";
   }
 

@@ -1,4 +1,5 @@
-import { MenuItem, Stack, TextField } from "@mui/material";
+import { InfoOutlined } from "@mui/icons-material";
+import { Alert, MenuItem, Stack, TextField } from "@mui/material";
 
 import type {
   Nationality,
@@ -65,6 +66,9 @@ export function IdentificationStep({ data, errors, inputRefs, onChange }: Identi
         required
         value={data.lastName}
       />
+      <Alert icon={<InfoOutlined />} severity="info">
+        Tus datos se utilizarán únicamente para validar tu registro.
+      </Alert>
     </Stack>
   );
 }
