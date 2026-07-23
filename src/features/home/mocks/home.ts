@@ -1,4 +1,5 @@
 export const homeMock = {
+  initialOverviewStatus: "ready",
   user: {
     firstName: "Andrés",
   },
