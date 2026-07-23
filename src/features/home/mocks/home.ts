@@ -1,4 +1,5 @@
 export const homeMock = {
+  initialOverviewStatus: "ready",
   user: {
     firstName: "Andrés",
   },
@@ -7,11 +8,12 @@ export const homeMock = {
     available: "Bs. 12.500,00",
   },
   credit: {
+    creditLimit: "Bs. 15.740,00",
     currentDebt: "Bs. 3.240,00",
     minimumPayment: "Bs. 648,00",
     dueDate: "2026-07-25",
     dueDateLabel: "25 de julio",
-    usedPercentage: 26,
+    usedPercentage: 21,
     annualRate: "Por validar",
   },
   activity: [

@@ -1,21 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AddRounded } from "@mui/icons-material";
 import { Box, Button, Container, Snackbar, Stack } from "@mui/material";
 
 import { AppBottomNavigation } from "./components/AppBottomNavigation";
 import { AppHeader } from "./components/AppHeader";
 import { CreditCard } from "./components/CreditCard";
+import {
+  CreditOverviewState,
+  type CreditOverviewStatus,
+} from "./components/CreditOverviewState";
 import { CreditSummary } from "./components/CreditSummary";
 import { RecentActivity } from "./components/RecentActivity";
 import { homeMock } from "./mocks/home";
 
 export function HomeView() {
   const [notice, setNotice] = useState("");
+  const [overviewStatus, setOverviewStatus] = useState<CreditOverviewStatus>(
+    homeMock.initialOverviewStatus,
+  );
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (retryTimerRef.current !== null) {
+      clearTimeout(retryTimerRef.current);
+    }
+  }, []);
 
   const showPaymentNotice = () => {
     setNotice("Los pagos estarán disponibles en la siguiente etapa.");
+  };
+
+  const showCreditRequestNotice = () => {
+    setNotice("La solicitud de crédito estará disponible en la siguiente etapa.");
+  };
+
+  const retryCreditOverview = () => {
+    if (retryTimerRef.current !== null) {
+      clearTimeout(retryTimerRef.current);
+    }
+
+    setOverviewStatus("loading");
+    retryTimerRef.current = setTimeout(() => {
+      retryTimerRef.current = null;
+      setOverviewStatus("ready");
+    }, 600);
   };
 
   return (
@@ -35,32 +65,42 @@ export function HomeView() {
             onProfile={() => setNotice("El perfil estará disponible en la siguiente etapa.")}
           />
 
-          <Box
-            sx={{
-              display: "grid",
-              gap: 3,
-              alignItems: "start",
-              gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) minmax(0, 1fr)" },
-            }}
-          >
-            <Stack spacing={2} sx={{ minWidth: 0 }}>
-              <CreditCard {...homeMock.card} />
-              <Button
-                fullWidth
-                onClick={() => setNotice("La solicitud de crédito estará disponible en la siguiente etapa.")}
-                startIcon={<AddRounded />}
-                variant="contained"
+          {overviewStatus === "ready" ? (
+            <>
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 3,
+                  alignItems: "start",
+                  gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) minmax(0, 1fr)" },
+                }}
               >
-                Solicitar crédito
-              </Button>
-            </Stack>
-            <CreditSummary
-              {...homeMock.credit}
-              onPay={showPaymentNotice}
-            />
-          </Box>
+                <Stack spacing={2} sx={{ minWidth: 0 }}>
+                  <CreditCard {...homeMock.card} />
+                  <Button
+                    fullWidth
+                    onClick={showCreditRequestNotice}
+                    startIcon={<AddRounded />}
+                    variant="contained"
+                  >
+                    Solicitar crédito
+                  </Button>
+                </Stack>
+                <CreditSummary
+                  {...homeMock.credit}
+                  onPay={showPaymentNotice}
+                />
+              </Box>
 
-          <RecentActivity items={homeMock.activity} />
+              <RecentActivity items={homeMock.activity} />
+            </>
+          ) : (
+            <CreditOverviewState
+              onRequestCredit={showCreditRequestNotice}
+              onRetry={retryCreditOverview}
+              status={overviewStatus}
+            />
+          )}
         </Stack>
       </Container>
 
