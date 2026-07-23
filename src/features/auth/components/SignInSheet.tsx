@@ -30,29 +30,32 @@ import { SignInVisual } from "./SignInVisual";
 type SignInSheetProps = Readonly<{
   open: boolean;
   onClose: () => void;
+  onSuccess: () => void;
 }>;
 
 type FieldErrors = Readonly<{
-  email?: string;
+  identifier?: string;
   password?: string;
 }>;
 
-const SUCCESS_MESSAGE = "Formulario completado correctamente.";
 const RECOVERY_MESSAGE = "La recuperación de acceso estará disponible en la siguiente etapa.";
+const INVALID_CREDENTIALS_MESSAGE =
+  "El usuario o la contraseña son incorrectos. Verifica los datos e inténtalo nuevamente.";
 
 function BottomSheetTransition(props: SlideProps) {
   return <Slide {...props} direction="up" />;
 }
 
-export function SignInSheet({ open, onClose }: SignInSheetProps) {
+export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const emailRef = useRef<HTMLInputElement>(null);
+  const identifierRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number | null>(null);
   const submissionRef = useRef(0);
@@ -67,10 +70,11 @@ export function SignInSheet({ open, onClose }: SignInSheetProps) {
   };
 
   const resetForm = () => {
-    setEmail("");
+    setIdentifier("");
     setPassword("");
     setShowPassword(false);
     setErrors({});
+    setFormError("");
     setStatusMessage("");
     setIsLoading(false);
   };
@@ -92,15 +96,16 @@ export function SignInSheet({ open, onClose }: SignInSheetProps) {
     }
 
     const nextErrors: FieldErrors = {
-      ...(email.trim() ? {} : { email: "Ingresa tu correo electrónico." }),
+      ...(identifier.trim() ? {} : { identifier: "Ingresa tu usuario o correo electrónico." }),
       ...(password.trim() ? {} : { password: "Ingresa tu contraseña." }),
     };
 
     setErrors(nextErrors);
+    setFormError("");
     setStatusMessage("");
 
-    if (nextErrors.email) {
-      emailRef.current?.focus();
+    if (nextErrors.identifier) {
+      identifierRef.current?.focus();
       return;
     }
 
@@ -119,7 +124,13 @@ export function SignInSheet({ open, onClose }: SignInSheetProps) {
 
       timerRef.current = null;
       setIsLoading(false);
-      setStatusMessage(SUCCESS_MESSAGE);
+
+      if (identifier.trim().toLowerCase() === "invalido") {
+        setFormError(INVALID_CREDENTIALS_MESSAGE);
+        return;
+      }
+
+      onSuccess();
     }, 600);
   };
 
@@ -267,23 +278,23 @@ export function SignInSheet({ open, onClose }: SignInSheetProps) {
             </Stack>
 
             <TextField
-              autoComplete="email"
+              autoComplete="username"
               autoFocus
-              error={Boolean(errors.email)}
+              error={Boolean(errors.identifier)}
               fullWidth
-              helperText={errors.email}
-              id="sign-in-email"
-              inputRef={emailRef}
-              label="Correo electrónico"
-              name="email"
+              helperText={errors.identifier}
+              id="sign-in-identifier"
+              inputRef={identifierRef}
+              label="Usuario o correo electrónico"
+              name="identifier"
               onChange={(event) => {
-                setEmail(event.target.value);
-                setErrors((current) => ({ ...current, email: undefined }));
+                setIdentifier(event.target.value);
+                setErrors((current) => ({ ...current, identifier: undefined }));
+                setFormError("");
               }}
               required
-              slotProps={{ htmlInput: { inputMode: "email" } }}
-              type="email"
-              value={email}
+              type="text"
+              value={identifier}
               variant="outlined"
             />
 
@@ -300,6 +311,7 @@ export function SignInSheet({ open, onClose }: SignInSheetProps) {
                 onChange={(event) => {
                   setPassword(event.target.value);
                   setErrors((current) => ({ ...current, password: undefined }));
+                  setFormError("");
                 }}
                 required
                 slotProps={{
@@ -325,7 +337,10 @@ export function SignInSheet({ open, onClose }: SignInSheetProps) {
                 variant="outlined"
               />
               <Button
-                onClick={() => setStatusMessage(RECOVERY_MESSAGE)}
+                onClick={() => {
+                  setFormError("");
+                  setStatusMessage(RECOVERY_MESSAGE);
+                }}
                 type="button"
                 variant="text"
                 sx={{
@@ -341,8 +356,18 @@ export function SignInSheet({ open, onClose }: SignInSheetProps) {
               </Button>
             </Stack>
 
-            <Box aria-live="polite" role="status" sx={{ minHeight: 24 }}>
-              {statusMessage && <DialogContentText>{statusMessage}</DialogContentText>}
+            <Box sx={{ minHeight: 24 }}>
+              {formError ? (
+                <DialogContentText color="error" role="alert">
+                  {formError}
+                </DialogContentText>
+              ) : (
+                statusMessage && (
+                  <DialogContentText aria-live="polite" role="status">
+                    {statusMessage}
+                  </DialogContentText>
+                )
+              )}
             </Box>
 
             <Box sx={{ flexGrow: 1 }} />

@@ -25,10 +25,10 @@ const bounceCompact = keyframes`
 
 const bubbles = [
   { size: 72, top: "10%", left: "8%", color: themeTokens.color.accent, animation: bounceWide, duration: "9s", delay: "-2s" },
-  { size: 42, top: "16%", left: "62%", color: themeTokens.color.brandNavy, animation: bounceTall, duration: "11s", delay: "-6s" },
+  { size: 42, top: "16%", left: "62%", color: themeTokens.color.brandDeep, animation: bounceTall, duration: "11s", delay: "-6s" },
   { size: 28, top: "48%", left: "18%", color: themeTokens.color.primary, animation: bounceCompact, duration: "8s", delay: "-4s" },
   { size: 56, top: "58%", left: "68%", color: themeTokens.color.accent, animation: bounceWide, duration: "12s", delay: "-8s" },
-  { size: 34, top: "76%", left: "36%", color: themeTokens.color.brandNavy, animation: bounceCompact, duration: "10s", delay: "-1s" },
+  { size: 34, top: "76%", left: "36%", color: themeTokens.color.brandDeep, animation: bounceCompact, duration: "10s", delay: "-1s" },
   { size: 20, top: "34%", left: "44%", color: themeTokens.color.primary, animation: bounceTall, duration: "13s", delay: "-9s" },
 ] as const;
 
@@ -62,7 +62,9 @@ export function BubbleField({ variant = "light" }: BubbleFieldProps) {
             bgcolor: isDark
               ? index % 3 === 0
                 ? themeTokens.color.accent
-                : themeTokens.color.onDark
+                : index % 3 === 1
+                  ? themeTokens.color.primary
+                  : themeTokens.color.onDark
               : bubble.color,
             opacity: isDark ? (index % 2 === 0 ? 0.09 : 0.05) : index % 2 === 0 ? 0.1 : 0.07,
             animation: `${bubble.animation} ${bubble.duration} ease-in-out ${bubble.delay} infinite`,
