@@ -43,6 +43,7 @@ function calculateDueStatus(dueDate: string, today = new Date()): DueStatus {
 }
 
 type CreditSummaryProps = Readonly<{
+  creditLimit: string;
   currentDebt: string;
   minimumPayment: string;
   dueDate: string;
@@ -53,6 +54,7 @@ type CreditSummaryProps = Readonly<{
 }>;
 
 export function CreditSummary({
+  creditLimit,
   currentDebt,
   minimumPayment,
   dueDate,
@@ -87,6 +89,11 @@ export function CreditSummary({
             </Box>
           </Stack>
 
+          <Box>
+            <Typography color="text.secondary" variant="body2">Límite de crédito</Typography>
+            <Typography sx={{ fontWeight: 700 }}>{creditLimit}</Typography>
+          </Box>
+
           <Stack spacing={1}>
             <Stack direction="row" sx={{ justifyContent: "space-between" }}>
               <Typography color="text.secondary" variant="body2">Crédito utilizado</Typography>
@@ -94,6 +101,7 @@ export function CreditSummary({
             </Stack>
             <LinearProgress
               aria-label="Crédito utilizado"
+              aria-valuenow={usedPercentage}
               aria-valuetext={`${usedPercentage} por ciento`}
               value={usedPercentage}
               variant="determinate"
