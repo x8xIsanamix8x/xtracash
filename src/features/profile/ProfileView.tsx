@@ -15,9 +15,6 @@ import { SecurityCard } from "./components/SecurityCard";
 import { profileMock } from "./mocks/profile";
 import type { ProfileStatus } from "./types";
 
-const changePasswordNotice =
-  "El cambio de contraseña estará disponible en la siguiente etapa.";
-
 export function ProfileView() {
   const [status, setStatus] = useState<ProfileStatus>(profileMock.initialStatus);
   const [notice, setNotice] = useState("");
@@ -108,7 +105,7 @@ export function ProfileView() {
                 <PersonalInformation user={profileMock.user} />
               </Box>
               <Box sx={{ gridArea: "security", minWidth: 0 }}>
-                <SecurityCard onChangePassword={() => setNotice(changePasswordNotice)} />
+                <SecurityCard />
               </Box>
             </Box>
           ) : (
