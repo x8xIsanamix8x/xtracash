@@ -2,27 +2,47 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowBackRounded } from "@mui/icons-material";
 import { Box, Container, IconButton, Snackbar, Stack, Typography } from "@mui/material";
 
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
+import {
+  sessionMock,
+  SessionExpiredView,
+  SignOutDialog,
+  type SessionStatus,
+} from "@/features/auth";
 import { themeTokens } from "@/theme/tokens";
 
 import { PersonalInformation } from "./components/PersonalInformation";
 import { ProfileState } from "./components/ProfileState";
 import { ProfileSummary } from "./components/ProfileSummary";
 import { SecurityCard } from "./components/SecurityCard";
+import { SessionCard } from "./components/SessionCard";
 import { profileMock } from "./mocks/profile";
 import type { ProfileStatus } from "./types";
 
 export function ProfileView() {
+  const router = useRouter();
   const [status, setStatus] = useState<ProfileStatus>(profileMock.initialStatus);
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>(
+    sessionMock.initialStatus,
+  );
+  const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const signOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionOperationRef = useRef(0);
 
   useEffect(() => () => {
     if (retryTimerRef.current !== null) {
       clearTimeout(retryTimerRef.current);
+    }
+
+    sessionOperationRef.current += 1;
+    if (signOutTimerRef.current !== null) {
+      clearTimeout(signOutTimerRef.current);
     }
   }, []);
 
@@ -37,6 +57,40 @@ export function ProfileView() {
       setStatus("ready");
     }, profileMock.retryDelay);
   };
+
+  const openSignOut = () => {
+    if (sessionStatus === "active") {
+      setIsSignOutOpen(true);
+    }
+  };
+
+  const cancelSignOut = () => {
+    if (sessionStatus === "active") {
+      setIsSignOutOpen(false);
+    }
+  };
+
+  const confirmSignOut = () => {
+    if (sessionStatus !== "active" || signOutTimerRef.current !== null) {
+      return;
+    }
+
+    setSessionStatus("signing-out");
+    const operation = sessionOperationRef.current + 1;
+    sessionOperationRef.current = operation;
+    signOutTimerRef.current = setTimeout(() => {
+      if (sessionOperationRef.current !== operation) {
+        return;
+      }
+
+      signOutTimerRef.current = null;
+      router.replace("/");
+    }, sessionMock.signOutDelay);
+  };
+
+  if (sessionStatus === "expired") {
+    return <SessionExpiredView onSignIn={() => router.replace("/")} />;
+  }
 
   return (
     <Box
@@ -88,8 +142,8 @@ export function ProfileView() {
                 display: "grid",
                 gap: 3,
                 gridTemplateAreas: {
-                  xs: '"summary" "information" "security"',
-                  md: '"summary information" "security information"',
+                  xs: '"summary" "information" "security" "session"',
+                  md: '"summary information" "security information" "session information"',
                 },
                 gridTemplateColumns: {
                   xs: "minmax(0, 1fr)",
@@ -106,6 +160,9 @@ export function ProfileView() {
               </Box>
               <Box sx={{ gridArea: "security", minWidth: 0 }}>
                 <SecurityCard />
+              </Box>
+              <Box sx={{ gridArea: "session", minWidth: 0 }}>
+                <SessionCard onSignOut={openSignOut} />
               </Box>
             </Box>
           ) : (
@@ -128,6 +185,12 @@ export function ProfileView() {
         onClose={() => setNotice("")}
         open={Boolean(notice)}
         sx={{ bottom: "calc(72px + env(safe-area-inset-bottom)) !important" }}
+      />
+      <SignOutDialog
+        isLoading={sessionStatus === "signing-out"}
+        onCancel={cancelSignOut}
+        onConfirm={confirmSignOut}
+        open={isSignOutOpen}
       />
     </Box>
   );
