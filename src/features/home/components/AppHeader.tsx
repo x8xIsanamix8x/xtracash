@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { NotificationsNoneRounded, PersonOutlineRounded } from "@mui/icons-material";
 import { IconButton, Stack, Typography } from "@mui/material";
 
@@ -6,10 +7,9 @@ import { themeTokens } from "@/theme/tokens";
 type AppHeaderProps = Readonly<{
   firstName: string;
   onNotifications: () => void;
-  onProfile: () => void;
 }>;
 
-export function AppHeader({ firstName, onNotifications, onProfile }: AppHeaderProps) {
+export function AppHeader({ firstName, onNotifications }: AppHeaderProps) {
   return (
     <Stack spacing={2}>
       <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
@@ -23,7 +23,12 @@ export function AppHeader({ firstName, onNotifications, onProfile }: AppHeaderPr
           <IconButton aria-label="Ver notificaciones" color="primary" onClick={onNotifications}>
             <NotificationsNoneRounded />
           </IconButton>
-          <IconButton aria-label="Ver perfil" color="primary" onClick={onProfile}>
+          <IconButton
+            aria-label="Ver perfil"
+            color="primary"
+            component={Link}
+            href="/profile"
+          >
             <PersonOutlineRounded />
           </IconButton>
         </Stack>

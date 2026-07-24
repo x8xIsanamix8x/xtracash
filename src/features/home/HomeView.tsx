@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { AddRounded } from "@mui/icons-material";
 import { Box, Button, Container, Snackbar, Stack } from "@mui/material";
 
-import { AppBottomNavigation } from "./components/AppBottomNavigation";
+import { AppBottomNavigation } from "@/components/AppBottomNavigation";
+
 import { AppHeader } from "./components/AppHeader";
 import { CreditCard } from "./components/CreditCard";
 import {
@@ -62,7 +63,6 @@ export function HomeView() {
           <AppHeader
             firstName={homeMock.user.firstName}
             onNotifications={() => setNotice("Las notificaciones estarán disponibles en la siguiente etapa.")}
-            onProfile={() => setNotice("El perfil estará disponible en la siguiente etapa.")}
           />
 
           {overviewStatus === "ready" ? (
@@ -105,6 +105,7 @@ export function HomeView() {
       </Container>
 
       <AppBottomNavigation
+        activeItem="home"
         onUnavailable={(label) => setNotice(`${label} estará disponible en la siguiente etapa.`)}
       />
       <Snackbar
