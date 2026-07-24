@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   CloseRounded,
   VisibilityOffRounded,
@@ -38,7 +39,6 @@ type FieldErrors = Readonly<{
   password?: string;
 }>;
 
-const RECOVERY_MESSAGE = "La recuperación de acceso estará disponible en la siguiente etapa.";
 const INVALID_CREDENTIALS_MESSAGE =
   "El usuario o la contraseña son incorrectos. Verifica los datos e inténtalo nuevamente.";
 
@@ -53,7 +53,6 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState("");
-  const [statusMessage, setStatusMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const identifierRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -75,7 +74,6 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
     setShowPassword(false);
     setErrors({});
     setFormError("");
-    setStatusMessage("");
     setIsLoading(false);
   };
 
@@ -102,8 +100,6 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
 
     setErrors(nextErrors);
     setFormError("");
-    setStatusMessage("");
-
     if (nextErrors.identifier) {
       identifierRef.current?.focus();
       return;
@@ -337,11 +333,9 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
                 variant="outlined"
               />
               <Button
-                onClick={() => {
-                  setFormError("");
-                  setStatusMessage(RECOVERY_MESSAGE);
-                }}
-                type="button"
+                component={Link}
+                href="/recover-password"
+                onClick={requestClose}
                 variant="text"
                 sx={{
                   alignSelf: "flex-end",
@@ -357,16 +351,10 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
             </Stack>
 
             <Box sx={{ minHeight: 24 }}>
-              {formError ? (
+              {formError && (
                 <DialogContentText color="error" role="alert">
                   {formError}
                 </DialogContentText>
-              ) : (
-                statusMessage && (
-                  <DialogContentText aria-live="polite" role="status">
-                    {statusMessage}
-                  </DialogContentText>
-                )
               )}
             </Box>
 
