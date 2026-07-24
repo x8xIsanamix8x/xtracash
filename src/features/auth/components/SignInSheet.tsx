@@ -157,14 +157,18 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
             width: "100%",
             maxWidth: { xs: "100%", md: 520 },
             height: {
-              xs: "calc(100dvh - 88px - env(safe-area-inset-top))",
+              xs: "min(82dvh, 720px)",
               md: "auto",
             },
             maxHeight: {
-              xs: "calc(100dvh - 88px - env(safe-area-inset-top))",
+              xs: "min(82dvh, 720px)",
               md: "80dvh",
             },
             borderRadius: { xs: "24px 24px 0 0", md: 3 },
+            "@media (max-height: 650px) and (max-width: 899.95px)": {
+              height: "calc(100dvh - 48px - env(safe-area-inset-top))",
+              maxHeight: "calc(100dvh - 48px - env(safe-area-inset-top))",
+            },
           },
         },
         transition: {
@@ -192,15 +196,23 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
             flex: 1,
             display: "flex",
             overflowY: "auto",
-            pb: "calc(24px + env(safe-area-inset-bottom))",
+            pt: { xs: 2, md: 2.5 },
+            pb: {
+              xs: "calc(16px + env(safe-area-inset-bottom))",
+              md: "calc(24px + env(safe-area-inset-bottom))",
+            },
             px: { xs: 2, sm: 3 },
           }}
         >
-          <Stack spacing={2.5} sx={{ width: "100%", minHeight: "100%" }}>
+          <Stack
+            spacing={{ xs: 1.75, md: 2.5 }}
+            sx={{ width: "100%", minHeight: "100%" }}
+            useFlexGap
+          >
             <Box
               sx={{
                 position: "relative",
-                mb: 2,
+                mb: { xs: 0.5, md: 2 },
                 "@media (max-height: 650px)": {
                   mb: 0,
                 },
@@ -252,7 +264,7 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
               </IconButton>
             </Box>
 
-            <Stack spacing={1.5}>
+            <Stack spacing={{ xs: 1, md: 1.5 }}>
               <DialogTitle
                 component="h2"
                 id="sign-in-title"
@@ -358,11 +370,11 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
               )}
             </Box>
 
-            <Box sx={{ flexGrow: 1 }} />
-
-            <Button fullWidth loading={isLoading} type="submit" variant="contained">
-              Ingresar
-            </Button>
+            <Box sx={{ mt: "auto", pt: { xs: 1, md: 0 } }}>
+              <Button fullWidth loading={isLoading} type="submit" variant="contained">
+                Ingresar
+              </Button>
+            </Box>
           </Stack>
         </DialogContent>
       </Box>
