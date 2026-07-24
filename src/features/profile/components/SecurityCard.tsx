@@ -1,11 +1,8 @@
+import Link from "next/link";
 import { LockOutlined } from "@mui/icons-material";
 import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
 
-type SecurityCardProps = Readonly<{
-  onChangePassword: () => void;
-}>;
-
-export function SecurityCard({ onChangePassword }: SecurityCardProps) {
+export function SecurityCard() {
   return (
     <Card component="section" variant="outlined" sx={{ boxShadow: "none" }}>
       <CardContent sx={{ p: { xs: 2.5, sm: 3 }, "&:last-child": { pb: { xs: 2.5, sm: 3 } } }}>
@@ -36,7 +33,12 @@ export function SecurityCard({ onChangePassword }: SecurityCardProps) {
               </Typography>
             </Stack>
           </Stack>
-          <Button fullWidth onClick={onChangePassword} variant="outlined">
+          <Button
+            component={Link}
+            fullWidth
+            href="/profile/change-password"
+            variant="outlined"
+          >
             Cambiar contraseña
           </Button>
         </Stack>
