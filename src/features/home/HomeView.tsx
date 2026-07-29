@@ -5,6 +5,10 @@ import { AddRounded } from "@mui/icons-material";
 import { Box, Button, Container, Snackbar, Stack } from "@mui/material";
 
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
+import {
+  CreditLineStatusNotice,
+  isCreditLineUsable,
+} from "@/features/credit-line";
 
 import { AppHeader } from "./components/AppHeader";
 import { CreditCard } from "./components/CreditCard";
@@ -37,6 +41,10 @@ export function HomeView() {
     setNotice("La solicitud de crédito estará disponible en la siguiente etapa.");
   };
 
+  const showHelpNotice = () => {
+    setNotice("La asistencia estará disponible en la siguiente etapa.");
+  };
+
   const retryCreditOverview = () => {
     if (retryTimerRef.current !== null) {
       clearTimeout(retryTimerRef.current);
@@ -67,6 +75,13 @@ export function HomeView() {
 
           {overviewStatus === "ready" ? (
             <>
+              {!isCreditLineUsable(homeMock.card.lineStatus) && (
+                <CreditLineStatusNotice
+                  onHelp={showHelpNotice}
+                  onPayDebt={showPaymentNotice}
+                  status={homeMock.card.lineStatus}
+                />
+              )}
               <Box
                 sx={{
                   display: "grid",

@@ -2,16 +2,20 @@
 
 import { useState } from "react";
 import { VisibilityOffRounded, VisibilityRounded } from "@mui/icons-material";
-import { Box, Chip, IconButton, Stack, Typography } from "@mui/material";
+import { Box, IconButton, Stack, Typography } from "@mui/material";
 
+import {
+  CreditLineStatusChip,
+  type CreditLineStatus,
+} from "@/features/credit-line";
 import { themeTokens } from "@/theme/tokens";
 
 type CreditCardProps = Readonly<{
-  status: string;
+  lineStatus: CreditLineStatus;
   available: string;
 }>;
 
-export function CreditCard({ status, available }: CreditCardProps) {
+export function CreditCard({ lineStatus, available }: CreditCardProps) {
   const [isAmountVisible, setIsAmountVisible] = useState(true);
 
   return (
@@ -51,11 +55,7 @@ export function CreditCard({ status, available }: CreditCardProps) {
           <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>
             XtraCash
           </Typography>
-          <Chip
-            label={status}
-            size="small"
-            sx={{ bgcolor: "background.paper", color: "secondary.main", fontWeight: 700 }}
-          />
+          <CreditLineStatusChip status={lineStatus} />
         </Stack>
         <Stack direction="row" sx={{ alignItems: "flex-end", justifyContent: "space-between" }}>
           <Stack spacing={0.5}>
