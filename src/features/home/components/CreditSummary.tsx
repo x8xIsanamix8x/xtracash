@@ -1,53 +1,34 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
 import { Box, Button, Card, CardContent, Chip, Divider, LinearProgress, Stack, Typography } from "@mui/material";
 
-type DueStatus = Readonly<{
-  color: "success" | "warning" | "error";
+type PaymentProximity = "upcoming" | "overdue";
+
+type PaymentProximityDefinition = Readonly<{
+  color: "warning" | "error";
   label: string;
-  relativeLabel: string;
 }>;
 
-const MILLISECONDS_PER_DAY = 86_400_000;
-const subscribeToClient = () => () => undefined;
-
-function getDayNumber(date: Date) {
-  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / MILLISECONDS_PER_DAY;
-}
-
-function calculateDueStatus(dueDate: string, today = new Date()): DueStatus {
-  const [year, month, day] = dueDate.split("-").map(Number);
-  const dueDayNumber = Date.UTC(year, month - 1, day) / MILLISECONDS_PER_DAY;
-  const daysRemaining = dueDayNumber - getDayNumber(today);
-
-  const relativeLabel = daysRemaining > 0
-    ? `Faltan ${daysRemaining} ${daysRemaining === 1 ? "día" : "días"}`
-    : daysRemaining === 0
-      ? "Vence hoy"
-      : `Venció hace ${Math.abs(daysRemaining)} ${daysRemaining === -1 ? "día" : "días"}`;
-
-  if (daysRemaining > 7) {
-    return { color: "success", label: "A tiempo", relativeLabel };
-  }
-
-  if (daysRemaining >= 3) {
-    return { color: "warning", label: "Vence pronto", relativeLabel };
-  }
-
-  if (daysRemaining >= 0) {
-    return { color: "error", label: "Pago cercano", relativeLabel };
-  }
-
-  return { color: "error", label: "Pago vencido", relativeLabel };
-}
+const paymentProximityConfig: Record<
+  PaymentProximity,
+  PaymentProximityDefinition
+> = {
+  upcoming: {
+    color: "warning",
+    label: "Pago próximo",
+  },
+  overdue: {
+    color: "error",
+    label: "Pago vencido",
+  },
+};
 
 type CreditSummaryProps = Readonly<{
   creditLimit: string;
   currentDebt: string;
   minimumPayment: string;
-  dueDate: string;
   dueDateLabel: string;
+  paymentProximity: PaymentProximity;
   usedPercentage: number;
   annualRate: string;
   onPay: () => void;
@@ -57,18 +38,13 @@ export function CreditSummary({
   creditLimit,
   currentDebt,
   minimumPayment,
-  dueDate,
   dueDateLabel,
+  paymentProximity,
   usedPercentage,
   annualRate,
   onPay,
 }: CreditSummaryProps) {
-  const calculatedDueStatus = useMemo(() => calculateDueStatus(dueDate), [dueDate]);
-  const dueStatus = useSyncExternalStore(
-    subscribeToClient,
-    () => calculatedDueStatus,
-    () => null,
-  );
+  const dueStatus = paymentProximityConfig[paymentProximity];
 
   return (
     <Card component="section" variant="outlined" sx={{ height: "100%" }}>
@@ -119,44 +95,31 @@ export function CreditSummary({
                 Próximo pago
               </Typography>
               <Box sx={{ display: "flex", minHeight: 24, minWidth: 112 }}>
-                {dueStatus && (
-                  <Chip
-                    aria-label={`${dueStatus.label}. ${dueStatus.relativeLabel}.`}
-                    label={
-                      <Stack component="span" direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
-                        <Box
-                          component="span"
-                          sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: `${dueStatus.color}.main` }}
-                        />
-                        <Box component="span">{dueStatus.label}</Box>
-                      </Stack>
-                    }
-                    size="small"
-                    sx={{
-                      borderColor: `${dueStatus.color}.main`,
-                      bgcolor: "background.paper",
-                      color: "text.primary",
-                      fontWeight: 700,
-                    }}
-                    variant="outlined"
-                  />
-                )}
+                <Chip
+                  aria-label={`${dueStatus.label}. Vence el ${dueDateLabel}.`}
+                  label={
+                    <Stack component="span" direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+                      <Box
+                        component="span"
+                        sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: `${dueStatus.color}.main` }}
+                      />
+                      <Box component="span">{dueStatus.label}</Box>
+                    </Stack>
+                  }
+                  size="small"
+                  sx={{
+                    borderColor: `${dueStatus.color}.main`,
+                    bgcolor: "background.paper",
+                    color: "text.primary",
+                    fontWeight: 700,
+                  }}
+                  variant="outlined"
+                />
               </Box>
             </Stack>
             <Typography color="text.secondary" variant="body2">Pago mínimo</Typography>
             <Typography variant="h4" sx={{ fontWeight: 700 }}>{minimumPayment}</Typography>
-            <Stack spacing={0.25}>
-              <Typography color="text.secondary">Vence el {dueDateLabel}</Typography>
-              <Typography
-                aria-live="polite"
-                color="text.secondary"
-                role="status"
-                variant="body2"
-                sx={{ minHeight: "1.5em" }}
-              >
-                {dueStatus?.relativeLabel ?? "\u00a0"}
-              </Typography>
-            </Stack>
+            <Typography color="text.secondary">Vence el {dueDateLabel}</Typography>
             <Button fullWidth onClick={onPay} variant="contained">Pagar</Button>
           </Stack>
         </Stack>
