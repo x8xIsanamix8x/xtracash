@@ -11,7 +11,7 @@ export const profileMock: Readonly<{
     fullName: "Andrés González",
     initials: "AG",
     document: "V-12.345.678",
-    email: "andres@xtracash.test",
+    email: "andres@impulsate.test",
     phone: "0412 123 4567",
   },
 };

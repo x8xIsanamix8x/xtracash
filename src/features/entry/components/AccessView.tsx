@@ -99,10 +99,16 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
           }}
         >
           <Typography
+            noWrap
             variant="h5"
-            sx={{ color: themeTokens.color.brandLogo, fontWeight: 800, letterSpacing: "-0.03em" }}
+            sx={{
+              color: themeTokens.color.brandLogo,
+              fontSize: { xs: "1.125rem", sm: "1.5rem" },
+              fontWeight: 800,
+              letterSpacing: "-0.03em",
+            }}
           >
-            xtracash
+            Impúlsate Móvil
           </Typography>
           <Button
             color="inherit"

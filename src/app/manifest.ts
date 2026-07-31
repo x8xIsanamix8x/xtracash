@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "XtraCash",
-    short_name: "XtraCash",
+    name: "Impúlsate Móvil",
+    short_name: "Impúlsate",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

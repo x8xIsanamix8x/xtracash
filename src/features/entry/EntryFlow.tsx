@@ -74,7 +74,7 @@ export function EntryFlow() {
             variant="h5"
             sx={{ color: themeTokens.color.brandLogo, fontWeight: 800, letterSpacing: "-0.03em" }}
           >
-            xtracash
+            Impúlsate Móvil
           </Typography>
           <Typography color="text.secondary" role="status" variant="body2">
             Preparando tu experiencia…

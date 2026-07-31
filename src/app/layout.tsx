@@ -4,8 +4,9 @@ import "./globals.css";
 import { AppProviders } from "./providers";
 
 export const metadata: Metadata = {
-  title: "XtraCash",
-  description: "XtraCash",
+  title: "Impúlsate Móvil",
+  description:
+    "Consulta y utiliza tu línea de financiamiento desde un solo lugar.",
 };
 
 export const viewport: Viewport = {
