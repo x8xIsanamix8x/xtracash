@@ -14,10 +14,16 @@ export function AppHeader({ firstName, onNotifications }: AppHeaderProps) {
     <Stack spacing={2}>
       <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
         <Typography
+          noWrap
           variant="h5"
-          sx={{ color: themeTokens.color.brandLogo, fontWeight: 800, letterSpacing: "-0.03em" }}
+          sx={{
+            color: themeTokens.color.brandLogo,
+            fontSize: { xs: "1.125rem", sm: "1.5rem" },
+            fontWeight: 800,
+            letterSpacing: "-0.03em",
+          }}
         >
-          XtraCash
+          Impúlsate Móvil
         </Typography>
         <Stack direction="row" spacing={0.5}>
           <IconButton aria-label="Ver notificaciones" color="primary" onClick={onNotifications}>
