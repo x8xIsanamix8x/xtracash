@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   ArrowForwardRounded,
   VisibilityOffRounded,
@@ -27,7 +28,6 @@ import type { FinancingSummary } from "../types";
 type CreditSummaryProps = Readonly<{
   financing: FinancingSummary;
   onReportPayment: () => void;
-  onRequestMobilePayment: () => void;
 }>;
 
 type MetricProps = Readonly<{
@@ -59,7 +59,6 @@ function Metric({ label, value, emphasized = false }: MetricProps) {
 export function CreditSummary({
   financing,
   onReportPayment,
-  onRequestMobilePayment,
 }: CreditSummaryProps) {
   const [isAvailableVisible, setIsAvailableVisible] = useState(true);
   const canRequestMobilePayment = isCreditLineUsable(financing.status);
@@ -213,10 +212,10 @@ export function CreditSummary({
           <Stack spacing={1.25} sx={{ mt: "auto" }}>
             {canRequestMobilePayment && (
               <Button
+                component={Link}
                 endIcon={<ArrowForwardRounded />}
                 fullWidth
-                onClick={onRequestMobilePayment}
-                type="button"
+                href="/mobile-payment"
                 variant="contained"
               >
                 Solicitar Pago Móvil

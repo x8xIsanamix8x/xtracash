@@ -30,12 +30,6 @@ export function HomeView() {
     }
   }, []);
 
-  const showMobilePaymentNotice = () => {
-    setNotice(
-      "La solicitud de Pago Móvil estará disponible en la siguiente etapa.",
-    );
-  };
-
   const showReportPaymentNotice = () => {
     setNotice(
       "El reporte de pagos estará disponible en la siguiente etapa.",
@@ -92,7 +86,6 @@ export function HomeView() {
                 <CreditSummary
                   financing={financing}
                   onReportPayment={showReportPaymentNotice}
-                  onRequestMobilePayment={showMobilePaymentNotice}
                 />
                 <RecentActivity items={homeMock.recentActivity} />
               </Box>
