@@ -1,7 +1,8 @@
 import {
   BlockRounded,
   CheckCircleRounded,
-  PauseCircleRounded,
+  LockClockRounded,
+  ScheduleRounded,
 } from "@mui/icons-material";
 import { Chip } from "@mui/material";
 import { alpha } from "@mui/material/styles";
@@ -16,9 +17,11 @@ type CreditLineStatusChipProps = Readonly<{
 }>;
 
 const statusIcons = {
-  active: CheckCircleRounded,
-  blocked: BlockRounded,
-  suspended: PauseCircleRounded,
+  ACTIVA: CheckCircleRounded,
+  MORA_NIVEL_1: ScheduleRounded,
+  CONGELADA_NIVEL_2: LockClockRounded,
+  BLOQUEADA_TERCER_CORTE: BlockRounded,
+  BLOQUEADA_RETIRO: BlockRounded,
 } as const;
 
 export function CreditLineStatusChip({

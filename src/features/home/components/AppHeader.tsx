@@ -37,7 +37,9 @@ export function AppHeader({ firstName, onNotifications }: AppHeaderProps) {
         <Typography component="h1" variant="h4" sx={{ color: "secondary.main", fontWeight: 700 }}>
           Hola, {firstName}
         </Typography>
-        <Typography color="text.secondary">Este es el estado de tu crédito</Typography>
+        <Typography color="text.secondary">
+          Este es el estado de tu financiamiento
+        </Typography>
       </Stack>
     </Stack>
   );

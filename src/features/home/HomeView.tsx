@@ -1,26 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AddRounded } from "@mui/icons-material";
-import { Box, Button, Container, Snackbar, Stack } from "@mui/material";
+import { Box, Container, Snackbar, Stack } from "@mui/material";
 
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
-import {
-  CreditLineStatusNotice,
-  isCreditLineUsable,
-} from "@/features/credit-line";
+import { CreditLineStatusNotice } from "@/features/credit-line";
 
 import { AppHeader } from "./components/AppHeader";
-import { CreditCard } from "./components/CreditCard";
 import {
   CreditOverviewState,
   type CreditOverviewStatus,
 } from "./components/CreditOverviewState";
 import { CreditSummary } from "./components/CreditSummary";
 import { RecentActivity } from "./components/RecentActivity";
-import { homeMock } from "./mocks/home";
+import { financingScenarioMocks, homeMock } from "./mocks/home";
 
 export function HomeView() {
+  const financing =
+    financingScenarioMocks[homeMock.initialFinancingStatus];
   const [notice, setNotice] = useState("");
   const [overviewStatus, setOverviewStatus] = useState<CreditOverviewStatus>(
     homeMock.initialOverviewStatus,
@@ -33,16 +30,16 @@ export function HomeView() {
     }
   }, []);
 
-  const showPaymentNotice = () => {
-    setNotice("Los pagos estarán disponibles en la siguiente etapa.");
+  const showMobilePaymentNotice = () => {
+    setNotice(
+      "La solicitud de Pago Móvil estará disponible en la siguiente etapa.",
+    );
   };
 
-  const showCreditRequestNotice = () => {
-    setNotice("La solicitud de crédito estará disponible en la siguiente etapa.");
-  };
-
-  const showHelpNotice = () => {
-    setNotice("La asistencia estará disponible en la siguiente etapa.");
+  const showReportPaymentNotice = () => {
+    setNotice(
+      "El reporte de pagos estará disponible en la siguiente etapa.",
+    );
   };
 
   const retryCreditOverview = () => {
@@ -70,48 +67,38 @@ export function HomeView() {
         <Stack spacing={3}>
           <AppHeader
             firstName={homeMock.user.firstName}
-            onNotifications={() => setNotice("Las notificaciones estarán disponibles en la siguiente etapa.")}
+            onNotifications={() => setNotice(
+              "Las notificaciones estarán disponibles en la siguiente etapa.",
+            )}
           />
 
           {overviewStatus === "ready" ? (
             <>
-              {!isCreditLineUsable(homeMock.card.lineStatus) && (
-                <CreditLineStatusNotice
-                  onHelp={showHelpNotice}
-                  onPayDebt={showPaymentNotice}
-                  status={homeMock.card.lineStatus}
-                />
-              )}
+              <CreditLineStatusNotice
+                onReportPayment={showReportPaymentNotice}
+                status={financing.status}
+              />
               <Box
                 sx={{
                   display: "grid",
                   gap: 3,
-                  alignItems: "start",
-                  gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) minmax(0, 1fr)" },
+                  alignItems: "stretch",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    md: "minmax(0, 1fr) minmax(0, 1fr)",
+                  },
                 }}
               >
-                <Stack spacing={2} sx={{ minWidth: 0 }}>
-                  <CreditCard {...homeMock.card} />
-                  <Button
-                    fullWidth
-                    onClick={showCreditRequestNotice}
-                    startIcon={<AddRounded />}
-                    variant="contained"
-                  >
-                    Solicitar crédito
-                  </Button>
-                </Stack>
                 <CreditSummary
-                  {...homeMock.credit}
-                  onPay={showPaymentNotice}
+                  financing={financing}
+                  onReportPayment={showReportPaymentNotice}
+                  onRequestMobilePayment={showMobilePaymentNotice}
                 />
+                <RecentActivity items={homeMock.recentActivity} />
               </Box>
-
-              <RecentActivity items={homeMock.activity} />
             </>
           ) : (
             <CreditOverviewState
-              onRequestCredit={showCreditRequestNotice}
               onRetry={retryCreditOverview}
               status={overviewStatus}
             />
@@ -121,7 +108,9 @@ export function HomeView() {
 
       <AppBottomNavigation
         activeItem="home"
-        onUnavailable={(label) => setNotice(`${label} estará disponible en la siguiente etapa.`)}
+        onUnavailable={(label) => setNotice(
+          `${label} estará disponible en la siguiente etapa.`,
+        )}
       />
       <Snackbar
         autoHideDuration={2800}
