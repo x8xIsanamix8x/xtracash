@@ -1,4 +1,8 @@
-import { BlockRounded, PauseCircleRounded } from "@mui/icons-material";
+import {
+  BlockRounded,
+  LockClockRounded,
+  ScheduleRounded,
+} from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -16,29 +20,30 @@ import {
 
 type CreditLineStatusNoticeProps = Readonly<{
   status: CreditLineStatus;
-  onHelp: () => void;
-  onPayDebt: () => void;
+  onReportPayment: () => void;
 }>;
 
 const noticeIcons = {
-  blocked: BlockRounded,
-  suspended: PauseCircleRounded,
+  MORA_NIVEL_1: ScheduleRounded,
+  CONGELADA_NIVEL_2: LockClockRounded,
+  BLOQUEADA_TERCER_CORTE: BlockRounded,
+  BLOQUEADA_RETIRO: BlockRounded,
 } as const;
 
 export function CreditLineStatusNotice({
   status,
-  onHelp,
-  onPayDebt,
+  onReportPayment,
 }: CreditLineStatusNoticeProps) {
   const definition = creditLineStatusConfig[status];
 
-  if (status === "active" || definition.notice === null) {
+  if (status === "ACTIVA" || definition.notice === null) {
     return null;
   }
 
   const NoticeIcon = noticeIcons[status];
-  const titleId = `credit-line-${status}-title`;
-  const descriptionId = `credit-line-${status}-description`;
+  const statusKey = status.toLowerCase();
+  const titleId = `credit-line-${statusKey}-title`;
+  const descriptionId = `credit-line-${statusKey}-description`;
 
   return (
     <Card
@@ -55,13 +60,13 @@ export function CreditLineStatusNotice({
     >
       <CardContent
         sx={{
-          p: { xs: 2, sm: 2.5 },
-          "&:last-child": { pb: { xs: 2, sm: 2.5 } },
+          p: { xs: 1.5, sm: 2 },
+          "&:last-child": { pb: { xs: 1.5, sm: 2 } },
         }}
       >
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          spacing={2}
+          spacing={1.5}
           sx={{ alignItems: { xs: "stretch", sm: "center" } }}
         >
           <Stack
@@ -72,8 +77,8 @@ export function CreditLineStatusNotice({
             <Box
               aria-hidden="true"
               sx={(theme) => ({
-                width: 44,
-                height: 44,
+                width: 36,
+                height: 36,
                 flexShrink: 0,
                 display: "grid",
                 placeItems: "center",
@@ -88,7 +93,7 @@ export function CreditLineStatusNotice({
               <Typography
                 component="h2"
                 id={titleId}
-                variant="h6"
+                variant="subtitle1"
                 sx={{ color: "secondary.main", fontWeight: 700 }}
               >
                 {definition.notice.title}
@@ -99,9 +104,10 @@ export function CreditLineStatusNotice({
             </Stack>
           </Stack>
           <Button
-            onClick={status === "blocked" ? onPayDebt : onHelp}
+            onClick={onReportPayment}
             sx={{
-              width: { xs: "100%", sm: "auto" },
+              width: "auto",
+              alignSelf: { xs: "flex-end", sm: "center" },
               flexShrink: 0,
             }}
             type="button"

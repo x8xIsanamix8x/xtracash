@@ -1,16 +1,10 @@
 import { CheckCircleOutlineRounded, PaymentsOutlined, TuneRounded } from "@mui/icons-material";
 import { Avatar, Card, CardContent, List, ListItem, ListItemAvatar, ListItemText, Stack, Typography } from "@mui/material";
 
-type ActivityItem = Readonly<{
-  id: number;
-  kind: "payment" | "approval" | "adjustment";
-  title: string;
-  amount: string;
-  date: string;
-}>;
+import type { RecentActivityItem } from "../types";
 
 type RecentActivityProps = Readonly<{
-  items: readonly ActivityItem[];
+  items: readonly RecentActivityItem[];
 }>;
 
 const activityIcons = {

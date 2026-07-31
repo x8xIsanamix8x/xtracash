@@ -1,12 +1,19 @@
-import { AddRounded, AddCardRounded, CloudOffRounded, ReplayRounded } from "@mui/icons-material";
-import { Box, Button, Card, CardContent, Skeleton, Stack, Typography } from "@mui/material";
+import { AddCardRounded, CloudOffRounded, ReplayRounded } from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Skeleton,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
 export type CreditOverviewStatus = "loading" | "ready" | "error" | "empty";
 
 type CreditOverviewStateProps = Readonly<{
   status: Exclude<CreditOverviewStatus, "ready">;
-  onRequestCredit: () => void;
   onRetry: () => void;
 }>;
 
@@ -18,67 +25,45 @@ const reducedMotionStyles = {
 
 function CreditOverviewSkeleton() {
   return (
-    <Stack
+    <Box
       component="section"
       aria-busy="true"
-      aria-label="Cargando resumen del crédito"
+      aria-label="Cargando resumen del financiamiento"
       aria-live="polite"
       role="status"
-      spacing={3}
+      sx={{
+        display: "grid",
+        gap: 3,
+        alignItems: "start",
+        gridTemplateColumns: {
+          xs: "1fr",
+          md: "minmax(0, 1fr) minmax(0, 1fr)",
+        },
+      }}
     >
-      <Box
-        sx={{
-          display: "grid",
-          gap: 3,
-          alignItems: "start",
-          gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) minmax(0, 1fr)" },
-        }}
-      >
-        <Stack spacing={2} sx={{ minWidth: 0 }}>
-          <Skeleton
-            aria-hidden="true"
-            animation="wave"
-            variant="rounded"
-            sx={{
-              width: "100%",
-              maxWidth: 480,
-              aspectRatio: "1.586 / 1",
-              ...reducedMotionStyles,
-            }}
-          />
-          <Skeleton
-            aria-hidden="true"
-            animation="wave"
-            height={48}
-            variant="rounded"
-            sx={reducedMotionStyles}
-          />
-        </Stack>
-        <Skeleton
-          aria-hidden="true"
-          animation="wave"
-          variant="rounded"
-          sx={{
-            width: "100%",
-            minHeight: { xs: 440, md: 480 },
-            ...reducedMotionStyles,
-          }}
-        />
-      </Box>
       <Skeleton
         aria-hidden="true"
         animation="wave"
-        height={220}
+        variant="rounded"
+        sx={{
+          width: "100%",
+          minHeight: { xs: 430, sm: 450 },
+          ...reducedMotionStyles,
+        }}
+      />
+      <Skeleton
+        aria-hidden="true"
+        animation="wave"
+        height={320}
         variant="rounded"
         sx={reducedMotionStyles}
       />
-    </Stack>
+    </Box>
   );
 }
 
 export function CreditOverviewState({
   status,
-  onRequestCredit,
   onRetry,
 }: CreditOverviewStateProps) {
   if (status === "loading") {
@@ -88,11 +73,11 @@ export function CreditOverviewState({
   const isError = status === "error";
   const StateIcon = isError ? CloudOffRounded : AddCardRounded;
   const title = isError
-    ? "No pudimos cargar tu crédito"
-    : "Aún no tienes una línea de crédito activa";
+    ? "No pudimos cargar tu financiamiento"
+    : "Aún no tienes un financiamiento asignado";
   const description = isError
-    ? "No pudimos cargar la información de tu crédito. Inténtalo nuevamente."
-    : "Cuando tengas una línea disponible, podrás consultar aquí sus montos, pagos y movimientos.";
+    ? "No pudimos cargar la información de tu financiamiento. Inténtalo nuevamente."
+    : "Cuando tengas un financiamiento disponible, podrás consultar aquí sus montos, cortes y movimientos.";
   const titleId = `credit-overview-${status}-title`;
   const descriptionId = `credit-overview-${status}-description`;
 
@@ -159,15 +144,18 @@ export function CreditOverviewState({
               {description}
             </Typography>
           </Stack>
-          <Button
-            fullWidth
-            onClick={isError ? onRetry : onRequestCredit}
-            startIcon={isError ? <ReplayRounded /> : <AddRounded />}
-            sx={{ maxWidth: 320 }}
-            variant="contained"
-          >
-            {isError ? "Reintentar" : "Solicitar crédito"}
-          </Button>
+          {isError && (
+            <Button
+              fullWidth
+              onClick={onRetry}
+              startIcon={<ReplayRounded />}
+              sx={{ maxWidth: 320 }}
+              type="button"
+              variant="contained"
+            >
+              Reintentar
+            </Button>
+          )}
         </Stack>
       </CardContent>
     </Card>
