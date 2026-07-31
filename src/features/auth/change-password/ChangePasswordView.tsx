@@ -387,7 +387,9 @@ export function ChangePasswordView() {
           <IconButton aria-label="Volver al perfil" component={Link} href="/profile">
             <ArrowBackRounded />
           </IconButton>
-          <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>xtracash</Typography>
+          <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>
+            Impúlsate Móvil
+          </Typography>
         </Stack>
         <Box sx={{ flex: 1, width: "100%", display: "flex", flexDirection: "column", py: { xs: 2, sm: 4 } }}>
           <Paper

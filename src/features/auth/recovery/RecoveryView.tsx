@@ -401,7 +401,7 @@ export function RecoveryView() {
             <ArrowBackRounded />
           </IconButton>
           <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>
-            xtracash
+            Impúlsate Móvil
           </Typography>
         </Stack>
 

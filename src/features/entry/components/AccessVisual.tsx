@@ -42,9 +42,15 @@ export function AccessVisual() {
         })}
       >
         <Typography
-          sx={{ color: themeTokens.color.brandLogo, fontWeight: 800, letterSpacing: "-0.03em" }}
+          noWrap
+          sx={{
+            color: themeTokens.color.brandLogo,
+            fontSize: "clamp(0.7rem, 2.4vw, 1rem)",
+            fontWeight: 800,
+            letterSpacing: "-0.03em",
+          }}
         >
-          xtracash
+          Impúlsate Móvil
         </Typography>
         <LoginRounded sx={{ width: "34%", height: "34%" }} />
       </Stack>

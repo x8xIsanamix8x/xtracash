@@ -126,13 +126,15 @@ export function ProfileView() {
               Perfil
             </Typography>
             <Typography
+              noWrap
               sx={{
                 color: themeTokens.color.brandLogo,
+                fontSize: { xs: "0.875rem", sm: "1rem" },
                 fontWeight: 800,
                 letterSpacing: "-0.03em",
               }}
             >
-              XtraCash
+              Impúlsate Móvil
             </Typography>
           </Stack>
 

@@ -217,7 +217,7 @@ export function RegistrationView() {
                 Tu cuenta está lista
               </Typography>
               <Typography color="text.secondary">
-                Completaste el registro correctamente. Ahora puedes ingresar y continuar con tu experiencia XtraCash.
+                Completaste el registro correctamente. Ahora puedes ingresar y continuar con tu experiencia Impúlsate Móvil.
               </Typography>
               <Button component={Link} fullWidth href="/" variant="contained">Ir a iniciar sesión</Button>
             </Stack>
@@ -245,7 +245,9 @@ export function RegistrationView() {
           <IconButton aria-label="Volver a la pantalla de acceso" component={Link} href="/">
             <ArrowBackRounded />
           </IconButton>
-          <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>xtracash</Typography>
+          <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>
+            Impúlsate Móvil
+          </Typography>
         </Stack>
 
         <Box
