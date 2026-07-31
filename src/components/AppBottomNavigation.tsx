@@ -7,7 +7,7 @@ import {
 } from "@mui/icons-material";
 import { BottomNavigation, BottomNavigationAction, Paper } from "@mui/material";
 
-export type AppDestination = "home" | "profile";
+export type AppDestination = "home" | "mobile-payment" | "profile";
 
 type AppBottomNavigationProps = Readonly<{
   activeItem: AppDestination;
@@ -51,10 +51,12 @@ export function AppBottomNavigation({
           value="requests"
         />
         <BottomNavigationAction
+          aria-current={activeItem === "mobile-payment" ? "page" : undefined}
+          component={Link}
+          href="/mobile-payment"
           icon={<PaymentsOutlined />}
-          label="Pagos"
-          onClick={() => onUnavailable("Pagos")}
-          value="payments"
+          label="Pago Móvil"
+          value="mobile-payment"
         />
         <BottomNavigationAction
           aria-current={activeItem === "profile" ? "page" : undefined}

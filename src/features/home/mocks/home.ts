@@ -1,10 +1,13 @@
-import type { CreditLineStatus } from "@/features/credit-line";
+import {
+  demoCreditLineSnapshot,
+  type CreditLineStatus,
+} from "@/features/credit-line";
 
 import type { FinancingSummary, RecentActivityItem } from "../types";
 
 const baseFinancing = {
   assignedLimit: "Bs. 15.740,00",
-  totalAvailable: "Bs. 12.500,00",
+  totalAvailable: demoCreditLineSnapshot.totalAvailableLabel,
   currentDebt: "Bs. 3.240,00",
   minimumPayment: "Bs. 648,00",
   nextCutDate: "5 de agosto",
@@ -14,13 +17,13 @@ export const financingScenarioMocks = {
   ACTIVA: {
     ...baseFinancing,
     status: "ACTIVA",
-    usableAvailable: "Bs. 12.500,00",
+    usableAvailable: demoCreditLineSnapshot.usableAvailableLabel,
     frozenAmount: null,
   },
   MORA_NIVEL_1: {
     ...baseFinancing,
     status: "MORA_NIVEL_1",
-    usableAvailable: "Bs. 12.500,00",
+    usableAvailable: demoCreditLineSnapshot.usableAvailableLabel,
     frozenAmount: null,
   },
   CONGELADA_NIVEL_2: {
@@ -32,13 +35,13 @@ export const financingScenarioMocks = {
   BLOQUEADA_TERCER_CORTE: {
     ...baseFinancing,
     status: "BLOQUEADA_TERCER_CORTE",
-    usableAvailable: "Bs. 12.500,00",
+    usableAvailable: demoCreditLineSnapshot.usableAvailableLabel,
     frozenAmount: null,
   },
   BLOQUEADA_RETIRO: {
     ...baseFinancing,
     status: "BLOQUEADA_RETIRO",
-    usableAvailable: "Bs. 12.500,00",
+    usableAvailable: demoCreditLineSnapshot.usableAvailableLabel,
     frozenAmount: null,
   },
 } satisfies Record<CreditLineStatus, FinancingSummary>;
@@ -69,7 +72,8 @@ const recentActivity = [
 
 export const homeMock = {
   initialOverviewStatus: "ready",
-  initialFinancingStatus: "ACTIVA" satisfies CreditLineStatus,
+  initialFinancingStatus:
+    demoCreditLineSnapshot.status satisfies CreditLineStatus,
   user: {
     firstName: "Andrés",
   },
