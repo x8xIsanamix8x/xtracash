@@ -33,10 +33,9 @@ type CreditSummaryProps = Readonly<{
 type MetricProps = Readonly<{
   label: string;
   value: string;
-  emphasized?: boolean;
 }>;
 
-function Metric({ label, value, emphasized = false }: MetricProps) {
+function Metric({ label, value }: MetricProps) {
   return (
     <Box sx={{ minWidth: 0 }}>
       <Typography color="text.secondary" variant="body2">
@@ -44,11 +43,11 @@ function Metric({ label, value, emphasized = false }: MetricProps) {
       </Typography>
       <Typography
         sx={{
-          color: emphasized ? "secondary.main" : "text.primary",
+          color: "text.primary",
           fontWeight: 700,
           overflowWrap: "anywhere",
         }}
-        variant={emphasized ? "h5" : "body1"}
+        variant="body1"
       >
         {value}
       </Typography>
@@ -60,7 +59,7 @@ export function CreditSummary({
   financing,
   onReportPayment,
 }: CreditSummaryProps) {
-  const [isAvailableVisible, setIsAvailableVisible] = useState(true);
+  const [isAvailableVisible, setIsAvailableVisible] = useState(false);
   const canRequestMobilePayment = isCreditLineUsable(financing.status);
   const hasFrozenAmount = financing.frozenAmount !== null;
   const availableLabel = canRequestMobilePayment
@@ -173,6 +172,45 @@ export function CreditSummary({
             </IconButton>
           </Stack>
 
+          <Box
+            sx={(theme) => ({
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "minmax(0, 1fr)",
+                sm: "minmax(0, 1.25fr) minmax(0, 0.75fr)",
+              },
+              gap: 2,
+              alignItems: "center",
+              p: { xs: 1.75, sm: 2 },
+              borderRadius: 2,
+              borderLeft: `4px solid ${alpha(theme.palette.primary.main, 0.55)}`,
+              background: `linear-gradient(135deg, ${alpha(
+                theme.palette.primary.main,
+                0.08,
+              )} 0%, ${theme.palette.background.paper} 72%, ${alpha(
+                theme.palette.primary.main,
+                0.05,
+              )} 100%)`,
+            })}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography color="text.secondary" variant="body2">
+                Próximo corte
+              </Typography>
+              <Typography
+                sx={{
+                  color: "secondary.main",
+                  fontWeight: 800,
+                  overflowWrap: "anywhere",
+                }}
+                variant="h5"
+              >
+                {financing.nextCutDate}
+              </Typography>
+            </Box>
+            <Metric label="Deuda actual" value={financing.currentDebt} />
+          </Box>
+
           {hasFrozenAmount && (
             <Box
               sx={(theme) => ({
@@ -200,13 +238,7 @@ export function CreditSummary({
             }}
           >
             <Metric label="Límite asignado" value={financing.assignedLimit} />
-            <Metric label="Deuda actual" value={financing.currentDebt} />
             <Metric label="Pago mínimo" value={financing.minimumPayment} />
-            <Metric
-              emphasized
-              label="Próximo corte"
-              value={financing.nextCutDate}
-            />
           </Box>
 
           <Stack spacing={1.25} sx={{ mt: "auto" }}>

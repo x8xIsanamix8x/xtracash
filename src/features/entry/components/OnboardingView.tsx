@@ -26,10 +26,14 @@ export function OnboardingView({
   onSkip,
 }: OnboardingViewProps) {
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const previousStepIndexRef = useRef(stepIndex);
   const isLastStep = stepIndex === totalSteps - 1;
 
   useEffect(() => {
-    titleRef.current?.focus();
+    if (previousStepIndexRef.current !== stepIndex) {
+      titleRef.current?.focus();
+      previousStepIndexRef.current = stepIndex;
+    }
   }, [stepIndex]);
 
   return (

@@ -153,18 +153,20 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
         },
         paper: {
           sx: {
+            boxSizing: "border-box",
             m: { xs: 0, md: 2 },
             width: "100%",
             maxWidth: { xs: "100%", md: 520 },
             height: {
-              xs: "calc(100dvh - 88px - env(safe-area-inset-top))",
+              xs: "85dvh",
               md: "auto",
             },
             maxHeight: {
-              xs: "calc(100dvh - 88px - env(safe-area-inset-top))",
+              xs: "calc(100dvh - 16px - env(safe-area-inset-top))",
               md: "80dvh",
             },
             borderRadius: { xs: "24px 24px 0 0", md: 3 },
+            overflow: "hidden",
           },
         },
         transition: {
@@ -184,6 +186,7 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          overflowX: "hidden",
         }}
       >
         <DialogContent
@@ -191,17 +194,27 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
             minHeight: 0,
             flex: 1,
             display: "flex",
+            boxSizing: "border-box",
+            overflowX: "hidden",
             overflowY: "auto",
             pb: "calc(24px + env(safe-area-inset-bottom))",
             px: { xs: 2, sm: 3 },
           }}
         >
-          <Stack spacing={2.5} sx={{ width: "100%", minHeight: "100%" }}>
+          <Stack
+            spacing={2}
+            sx={{
+              boxSizing: "border-box",
+              width: "100%",
+              minHeight: "100%",
+              "@media (max-height: 700px)": { gap: 1.5 },
+            }}
+          >
             <Box
               sx={{
                 position: "relative",
                 mb: 2,
-                "@media (max-height: 650px)": {
+                "@media (max-height: 700px)": {
                   mb: 0,
                 },
                 "@media (max-height: 450px)": {
