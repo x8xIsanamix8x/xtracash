@@ -145,7 +145,7 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
           flexDirection: "column",
           pt: { xs: 8, md: 10 },
           pr: "calc(24px + env(safe-area-inset-right))",
-          pb: "calc(12px + env(safe-area-inset-bottom))",
+          pb: 0,
           pl: "calc(24px + env(safe-area-inset-left))",
           "@media (max-height: 650px)": { pt: 4 },
           "@media (max-height: 520px)": { pt: 3 },
@@ -178,6 +178,10 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
             mx: "auto",
             mt: "auto",
             pt: 3,
+            pb: {
+              xs: "calc(28px + env(safe-area-inset-bottom))",
+              sm: "calc(36px + env(safe-area-inset-bottom))",
+            },
             "@media (max-height: 650px)": { gap: 1, pt: 2 },
           }}
         >
