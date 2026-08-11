@@ -137,9 +137,20 @@ export function maskPhone(phone: string) {
   return `${phone.slice(0, 4)} ••• ${phone.slice(-4)}`;
 }
 
+export function formatPhone(phone: string) {
+  return `${phone.slice(0, 4)}-${phone.slice(4)}`;
+}
+
 export function maskDocument(
   nationality: Nationality,
   documentNumber: string,
 ) {
   return `${nationality}-••.•••.${documentNumber.slice(-3)}`;
+}
+
+export function formatDocument(
+  nationality: Nationality,
+  documentNumber: string,
+) {
+  return `${nationality}-${groupWholeUnits(documentNumber)}`;
 }

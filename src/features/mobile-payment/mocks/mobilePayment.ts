@@ -42,4 +42,6 @@ export const directoryContacts = [
 export const mobilePaymentMock = {
   initialDirectoryStatus: "ready" satisfies DirectoryStatus,
   directoryRetryDelay: 600,
+  directoryDeleteDelay: 600,
+  directoryDeleteShouldFail: false,
 } as const;
