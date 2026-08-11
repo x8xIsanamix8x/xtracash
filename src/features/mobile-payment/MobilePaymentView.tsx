@@ -25,7 +25,11 @@ import {
 } from "@/features/credit-line";
 import { themeTokens } from "@/theme/tokens";
 
-import { DirectoryDialog } from "./components/DirectoryDialog";
+import {
+  DirectoryDialog,
+  type DirectoryFocusDestination,
+  type DirectoryFocusRequest,
+} from "./components/DirectoryDialog";
 import { RecipientDetailsStep } from "./components/RecipientDetailsStep";
 import { ReviewStep } from "./components/ReviewStep";
 import {
@@ -41,6 +45,7 @@ import {
 import type {
   DetailsErrors,
   DetailsField,
+  DirectoryContact,
   DirectoryStatus,
   ManualRecipientData,
   RecipientMode,
@@ -75,19 +80,39 @@ export function MobilePaymentView() {
   const [focusRequest, setFocusRequest] = useState(0);
   const [lineError, setLineError] = useState("");
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
+  const [directoryEntries, setDirectoryEntries] =
+    useState<readonly DirectoryContact[]>(() => [...directoryContacts]);
   const [directoryStatus, setDirectoryStatus] =
     useState<DirectoryStatus>(mobilePaymentMock.initialDirectoryStatus);
+  const [contactToDeleteId, setContactToDeleteId] =
+    useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeletingContact, setIsDeletingContact] = useState(false);
+  const [suppressDeleteFocusRestore, setSuppressDeleteFocusRestore] =
+    useState(false);
+  const [directoryFocusRequest, setDirectoryFocusRequest] =
+    useState<DirectoryFocusRequest | null>(null);
   const [confirmationPending, setConfirmationPending] = useState(false);
   const [navigationNotice, setNavigationNotice] = useState("");
   const directoryTimerRef = useRef<number | null>(null);
   const directoryOperationRef = useRef(0);
+  const deleteTimerRef = useRef<number | null>(null);
+  const deleteOperationRef = useRef(0);
+  const pendingDeleteFocusRef = useRef<DirectoryFocusDestination | null>(null);
+  const focusRequestIdRef = useRef(0);
   const reviewTitleRef = useRef<HTMLHeadingElement>(null);
 
   const selectedContact = useMemo(
-    () => directoryContacts.find(
+    () => directoryEntries.find(
       (contact) => contact.id === selectedContactId,
     ) ?? null,
-    [selectedContactId],
+    [directoryEntries, selectedContactId],
+  );
+  const contactToDelete = useMemo(
+    () => directoryEntries.find(
+      (contact) => contact.id === contactToDeleteId,
+    ) ?? null,
+    [contactToDeleteId, directoryEntries],
   );
 
   const resolvedRecipient = useMemo<ResolvedRecipient | null>(() => {
@@ -124,6 +149,11 @@ export function MobilePaymentView() {
 
     if (directoryTimerRef.current !== null) {
       window.clearTimeout(directoryTimerRef.current);
+    }
+
+    deleteOperationRef.current += 1;
+    if (deleteTimerRef.current !== null) {
+      window.clearTimeout(deleteTimerRef.current);
     }
   }, []);
 
@@ -174,6 +204,100 @@ export function MobilePaymentView() {
     setRecipientMode("directory");
     setIsDirectoryOpen(false);
     clearDetailsError("recipient");
+  };
+
+  const requestDeleteContact = (
+    contactId: string,
+    focusDestination: DirectoryFocusDestination,
+  ) => {
+    if (isDeletingContact) {
+      return;
+    }
+
+    pendingDeleteFocusRef.current = focusDestination;
+    setDeleteError("");
+    setContactToDeleteId(contactId);
+  };
+
+  const cancelDeleteContact = () => {
+    if (isDeletingContact) {
+      return;
+    }
+
+    pendingDeleteFocusRef.current = null;
+    setDeleteError("");
+    setContactToDeleteId(null);
+  };
+
+  const confirmDeleteContact = () => {
+    if (
+      contactToDelete === null
+      || isDeletingContact
+      || deleteTimerRef.current !== null
+    ) {
+      return;
+    }
+
+    const contactId = contactToDelete.id;
+    const contactName = contactToDelete.name;
+    const operation = deleteOperationRef.current + 1;
+    deleteOperationRef.current = operation;
+    setDeleteError("");
+    setIsDeletingContact(true);
+
+    deleteTimerRef.current = window.setTimeout(() => {
+      if (deleteOperationRef.current !== operation) {
+        return;
+      }
+
+      deleteTimerRef.current = null;
+      setIsDeletingContact(false);
+
+      if (mobilePaymentMock.directoryDeleteShouldFail) {
+        setDeleteError(
+          `No pudimos eliminar a ${contactName}. Inténtalo nuevamente o cancela para conservarlo en tu directorio.`,
+        );
+        return;
+      }
+
+      setDirectoryEntries((current) => current.filter(
+        (contact) => contact.id !== contactId,
+      ));
+      setNavigationNotice(`Se eliminó a ${contactName} del directorio`);
+      setSuppressDeleteFocusRestore(true);
+      setDeleteError("");
+      setContactToDeleteId(null);
+    }, mobilePaymentMock.directoryDeleteDelay);
+  };
+
+  const completeDeleteDialogExit = () => {
+    const focusDestination = pendingDeleteFocusRef.current;
+
+    if (focusDestination !== null && suppressDeleteFocusRestore) {
+      focusRequestIdRef.current += 1;
+      setDirectoryFocusRequest({
+        ...focusDestination,
+        requestId: focusRequestIdRef.current,
+      });
+      pendingDeleteFocusRef.current = null;
+    }
+
+    setSuppressDeleteFocusRestore(false);
+  };
+
+  const completeDirectoryFocus = (requestId: number) => {
+    setDirectoryFocusRequest((current) => (
+      current?.requestId === requestId ? null : current
+    ));
+  };
+
+  const closeDirectory = () => {
+    if (isDeletingContact) {
+      return;
+    }
+
+    cancelDeleteContact();
+    setIsDirectoryOpen(false);
   };
 
   const changeRecipient = () => {
@@ -376,12 +500,22 @@ export function MobilePaymentView() {
 
       <DirectoryDialog
         banks={destinationBanks}
-        contacts={directoryContacts}
-        onClose={() => setIsDirectoryOpen(false)}
+        contacts={directoryEntries}
+        contactToDelete={contactToDelete}
+        deleteError={deleteError}
+        focusRequest={directoryFocusRequest}
+        isDeleting={isDeletingContact}
+        onCancelDelete={cancelDeleteContact}
+        onClose={closeDirectory}
+        onConfirmDelete={confirmDeleteContact}
+        onDeleteDialogExited={completeDeleteDialogExit}
+        onFocusHandled={completeDirectoryFocus}
+        onRequestDelete={requestDeleteContact}
         onRetry={startDirectoryLoading}
         onSelect={selectDirectoryContact}
         open={isDirectoryOpen}
         status={directoryStatus}
+        suppressDeleteFocusRestore={suppressDeleteFocusRestore}
       />
 
       <AppBottomNavigation

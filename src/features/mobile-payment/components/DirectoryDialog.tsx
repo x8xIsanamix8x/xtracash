@@ -1,23 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AccountBalanceRounded,
   CloseRounded,
   ContactsRounded,
+  DeleteOutlineRounded,
+  PersonOutlineRounded,
   ReplayRounded,
   SearchRounded,
 } from "@mui/icons-material";
 import {
   Button,
+  CircularProgress,
   Dialog,
+  DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   IconButton,
   InputAdornment,
   List,
+  ListItem,
   ListItemButton,
-  ListItemText,
   Skeleton,
   Slide,
   Stack,
@@ -30,9 +34,9 @@ import type { SlideProps } from "@mui/material/Slide";
 
 import {
   formatBank,
+  formatDocument,
+  formatPhone,
   getBank,
-  maskDocument,
-  maskPhone,
 } from "../format";
 import type {
   Bank,
@@ -40,12 +44,33 @@ import type {
   DirectoryStatus,
 } from "../types";
 
+export type DirectoryFocusDestination =
+  | Readonly<{ type: "contact"; contactId: string }>
+  | Readonly<{ type: "search" | "empty" }>;
+
+export type DirectoryFocusRequest = DirectoryFocusDestination & Readonly<{
+  requestId: number;
+}>;
+
 type DirectoryDialogProps = Readonly<{
   banks: readonly Bank[];
   contacts: readonly DirectoryContact[];
+  contactToDelete: DirectoryContact | null;
+  deleteError: string;
+  focusRequest: DirectoryFocusRequest | null;
+  isDeleting: boolean;
   open: boolean;
   status: DirectoryStatus;
+  suppressDeleteFocusRestore: boolean;
+  onCancelDelete: () => void;
   onClose: () => void;
+  onConfirmDelete: () => void;
+  onDeleteDialogExited: () => void;
+  onFocusHandled: (requestId: number) => void;
+  onRequestDelete: (
+    contactId: string,
+    focusDestination: DirectoryFocusDestination,
+  ) => void;
   onRetry: () => void;
   onSelect: (contactId: string) => void;
 }>;
@@ -64,9 +89,19 @@ function normalizeSearch(value: string) {
 export function DirectoryDialog({
   banks,
   contacts,
+  contactToDelete,
+  deleteError,
+  focusRequest,
+  isDeleting,
   open,
   status,
+  suppressDeleteFocusRestore,
+  onCancelDelete,
   onClose,
+  onConfirmDelete,
+  onDeleteDialogExited,
+  onFocusHandled,
+  onRequestDelete,
   onRetry,
   onSelect,
 }: DirectoryDialogProps) {
@@ -76,6 +111,9 @@ export function DirectoryDialog({
     "(prefers-reduced-motion: reduce)",
   );
   const [search, setSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const emptyTitleRef = useRef<HTMLHeadingElement>(null);
+  const contactRefs = useRef(new Map<string, HTMLDivElement>());
 
   const filteredContacts = useMemo(() => {
     const normalizedSearch = normalizeSearch(search.trim());
@@ -91,6 +129,28 @@ export function DirectoryDialog({
     ));
   }, [contacts, search]);
 
+  useEffect(() => {
+    if (focusRequest === null) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      if (focusRequest.type === "contact") {
+        contactRefs.current.get(focusRequest.contactId)?.focus({
+          preventScroll: true,
+        });
+      } else if (focusRequest.type === "search") {
+        searchRef.current?.focus({ preventScroll: true });
+      } else {
+        emptyTitleRef.current?.focus({ preventScroll: true });
+      }
+
+      onFocusHandled(focusRequest.requestId);
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [focusRequest, onFocusHandled]);
+
   const closeDirectory = () => {
     setSearch("");
     onClose();
@@ -100,6 +160,38 @@ export function DirectoryDialog({
     setSearch("");
     onSelect(contactId);
   };
+
+  const requestDelete = (
+    event: MouseEvent<HTMLButtonElement>,
+    contactId: string,
+  ) => {
+    event.stopPropagation();
+    const visibleIndex = filteredContacts.findIndex(
+      (contact) => contact.id === contactId,
+    );
+    const remainingVisibleContacts = filteredContacts.filter(
+      (contact) => contact.id !== contactId,
+    );
+    const nextVisibleContact = remainingVisibleContacts[visibleIndex]
+      ?? remainingVisibleContacts.at(-1);
+    const remainingContactCount = contacts.length - 1;
+    const focusDestination: DirectoryFocusDestination = nextVisibleContact
+      ? { type: "contact", contactId: nextVisibleContact.id }
+      : remainingContactCount > 0
+        ? { type: "search" }
+        : { type: "empty" };
+
+    onRequestDelete(contactId, focusDestination);
+  };
+
+  const closeDeleteConfirmation = () => {
+    if (!isDeleting) {
+      onCancelDelete();
+    }
+  };
+
+  const isDirectoryEmpty = status === "empty"
+    || (status === "ready" && contacts.length === 0);
 
   return (
     <Dialog
@@ -152,12 +244,13 @@ export function DirectoryDialog({
         sx={{ pb: "calc(24px + env(safe-area-inset-bottom))" }}
       >
         <Stack spacing={2}>
-          {status === "ready" && (
+          {status === "ready" && contacts.length > 0 && (
             <TextField
               autoFocus={isDesktop}
               fullWidth
               label="Buscar contacto"
               name="directorySearch"
+              inputRef={searchRef}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Nombre o teléfono"
               slotProps={{
@@ -224,7 +317,7 @@ export function DirectoryDialog({
             </Stack>
           )}
 
-          {status === "empty" && (
+          {isDirectoryEmpty && (
             <Stack
               aria-live="polite"
               role="status"
@@ -234,10 +327,12 @@ export function DirectoryDialog({
               <ContactsRounded color="primary" sx={{ width: 44, height: 44 }} />
               <Typography
                 component="h2"
+                ref={emptyTitleRef}
+                tabIndex={-1}
                 variant="h6"
                 sx={{ color: "secondary.main", fontWeight: 700 }}
               >
-                Aún no tienes contactos
+                Todavía no existen beneficiarios guardados
               </Typography>
               <Typography color="text.secondary">
                 Puedes cerrar el directorio e ingresar un destinatario nuevo.
@@ -245,7 +340,9 @@ export function DirectoryDialog({
             </Stack>
           )}
 
-          {status === "ready" && filteredContacts.length === 0 && (
+          {status === "ready"
+            && contacts.length > 0
+            && filteredContacts.length === 0 && (
             <Typography
               aria-live="polite"
               color="text.secondary"
@@ -262,39 +359,147 @@ export function DirectoryDialog({
                 const bank = getBank(banks, contact.bankCode);
 
                 return (
-                  <ListItemButton
+                  <ListItem
+                    disablePadding
                     key={contact.id}
-                    onClick={() => selectContact(contact.id)}
+                    secondaryAction={
+                      <IconButton
+                        aria-label={`Eliminar a ${contact.name} del directorio`}
+                        color="error"
+                        onClick={(event) => requestDelete(event, contact.id)}
+                        sx={{ minWidth: 44, minHeight: 44 }}
+                        type="button"
+                      >
+                        <DeleteOutlineRounded />
+                      </IconButton>
+                    }
                     sx={{
-                      minHeight: 72,
-                      borderRadius: 2,
                       mb: 1,
                       border: "1px solid",
                       borderColor: "divider",
+                      borderRadius: 2,
                     }}
                   >
-                    <AccountBalanceRounded
-                      aria-hidden="true"
-                      color="primary"
-                      sx={{ mr: 1.5 }}
-                    />
-                    <ListItemText
-                      primary={contact.name}
-                      secondary={`${bank ? formatBank(bank) : "Banco no disponible"} · ${maskPhone(contact.phone)} · ${maskDocument(contact.nationality, contact.documentNumber)}`}
-                      slotProps={{
-                        primary: { sx: { fontWeight: 700 } },
-                        secondary: {
-                          sx: { overflowWrap: "anywhere" },
-                        },
+                    <ListItemButton
+                      onClick={() => selectContact(contact.id)}
+                      ref={(node) => {
+                        if (node) {
+                          contactRefs.current.set(contact.id, node);
+                        } else {
+                          contactRefs.current.delete(contact.id);
+                        }
                       }}
-                    />
-                  </ListItemButton>
+                      sx={{ minHeight: 96, borderRadius: 2, py: 1.5, pr: 7 }}
+                    >
+                      <PersonOutlineRounded
+                        aria-hidden="true"
+                        color="primary"
+                        sx={{ mr: 1.5, flexShrink: 0 }}
+                      />
+                      <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+                        <Typography sx={{ fontWeight: 700, overflowWrap: "anywhere" }}>
+                          {contact.name}
+                        </Typography>
+                        <Typography color="text.secondary" variant="body2">
+                          {bank
+                            ? formatBank(bank)
+                            : `${contact.bankCode} · Banco no disponible`}
+                        </Typography>
+                        <Typography color="text.secondary" variant="body2">
+                          {formatDocument(
+                            contact.nationality,
+                            contact.documentNumber,
+                          )}
+                        </Typography>
+                        <Typography color="text.secondary" variant="body2">
+                          {formatPhone(contact.phone)}
+                        </Typography>
+                      </Stack>
+                    </ListItemButton>
+                  </ListItem>
                 );
               })}
             </List>
           )}
         </Stack>
       </DialogContent>
+
+      <Dialog
+        aria-busy={isDeleting}
+        aria-describedby="delete-directory-contact-description"
+        aria-labelledby="delete-directory-contact-title"
+        disableRestoreFocus={suppressDeleteFocusRestore}
+        fullWidth
+        maxWidth="xs"
+        onClose={(_event, reason) => {
+          if (
+            !isDeleting
+            && (reason === "backdropClick" || reason === "escapeKeyDown")
+          ) {
+            onCancelDelete();
+          }
+        }}
+        open={contactToDelete !== null}
+        slotProps={{
+          transition: { onExited: onDeleteDialogExited },
+        }}
+      >
+        <DialogTitle
+          id="delete-directory-contact-title"
+          sx={{ color: "secondary.main", fontWeight: 700 }}
+        >
+          Eliminar beneficiario
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-directory-contact-description">
+            ¿Deseas eliminar a {contactToDelete?.name} de tu directorio? Esta
+            acción no afectará tus operaciones anteriores.
+          </DialogContentText>
+          <Typography
+            aria-live={deleteError ? "assertive" : "polite"}
+            color="error"
+            role={deleteError ? "alert" : isDeleting ? "status" : undefined}
+            sx={{ minHeight: "1.5em", mt: 2 }}
+            variant="body2"
+          >
+            {deleteError || (isDeleting ? "Eliminando…" : "\u00a0")}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Stack
+            direction={{ xs: "column-reverse", sm: "row" }}
+            spacing={1.5}
+            sx={{ width: "100%", justifyContent: "flex-end" }}
+          >
+            <Button
+              autoFocus
+              disabled={isDeleting}
+              onClick={closeDeleteConfirmation}
+              sx={{ width: { xs: "100%", sm: "auto" }, minWidth: { sm: 128 } }}
+              type="button"
+              variant="outlined"
+            >
+              Cancelar
+            </Button>
+            <Button
+              aria-busy={isDeleting}
+              color="error"
+              disabled={isDeleting}
+              onClick={onConfirmDelete}
+              startIcon={
+                isDeleting
+                  ? <CircularProgress aria-hidden="true" color="inherit" size={18} />
+                  : <DeleteOutlineRounded />
+              }
+              sx={{ width: { xs: "100%", sm: 176 }, minHeight: 48 }}
+              type="button"
+              variant="contained"
+            >
+              {isDeleting ? "Eliminando…" : deleteError ? "Reintentar" : "Eliminar"}
+            </Button>
+          </Stack>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }
