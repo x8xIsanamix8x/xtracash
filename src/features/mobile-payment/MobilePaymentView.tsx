@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowBackRounded } from "@mui/icons-material";
 import {
   Box,
@@ -32,6 +33,7 @@ import {
 } from "./components/DirectoryDialog";
 import { RecipientDetailsStep } from "./components/RecipientDetailsStep";
 import { ReviewStep } from "./components/ReviewStep";
+import { TransferResultView } from "./components/TransferResultView";
 import {
   formatAmountOnBlur,
   formatMinorUnits,
@@ -48,9 +50,12 @@ import type {
   DirectoryContact,
   DirectoryStatus,
   ManualRecipientData,
+  MobilePaymentStep,
   RecipientMode,
   ResolvedRecipient,
+  TransferResult,
 } from "./types";
+import { simulateMobilePayment } from "./simulation";
 import { validateDetails } from "./validation";
 
 const initialManualRecipient: ManualRecipientData = {
@@ -63,7 +68,8 @@ const initialManualRecipient: ManualRecipientData = {
 };
 
 export function MobilePaymentView() {
-  const [step, setStep] = useState<"details" | "review">("details");
+  const router = useRouter();
+  const [step, setStep] = useState<MobilePaymentStep>("details");
   const [recipientMode, setRecipientMode] =
     useState<RecipientMode>("choice");
   const [manualRecipient, setManualRecipient] =
@@ -92,7 +98,9 @@ export function MobilePaymentView() {
     useState(false);
   const [directoryFocusRequest, setDirectoryFocusRequest] =
     useState<DirectoryFocusRequest | null>(null);
-  const [confirmationPending, setConfirmationPending] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [transferResult, setTransferResult] =
+    useState<TransferResult | null>(null);
   const [navigationNotice, setNavigationNotice] = useState("");
   const directoryTimerRef = useRef<number | null>(null);
   const directoryOperationRef = useRef(0);
@@ -100,7 +108,9 @@ export function MobilePaymentView() {
   const deleteOperationRef = useRef(0);
   const pendingDeleteFocusRef = useRef<DirectoryFocusDestination | null>(null);
   const focusRequestIdRef = useRef(0);
+  const transferAbortRef = useRef<AbortController | null>(null);
   const reviewTitleRef = useRef<HTMLHeadingElement>(null);
+  const resultTitleRef = useRef<HTMLHeadingElement>(null);
 
   const selectedContact = useMemo(
     () => directoryEntries.find(
@@ -130,7 +140,7 @@ export function MobilePaymentView() {
 
     if (recipientMode === "manual") {
       return {
-        name: manualRecipient.alias.trim() || "Destinatario nuevo",
+        name: manualRecipient.alias.trim() || mobilePaymentMock.manualRecipientName,
         ...manualRecipient,
       };
     }
@@ -141,6 +151,8 @@ export function MobilePaymentView() {
   useEffect(() => {
     if (step === "review") {
       reviewTitleRef.current?.focus();
+    } else if (step === "result") {
+      resultTitleRef.current?.focus({ preventScroll: true });
     }
   }, [step]);
 
@@ -155,6 +167,10 @@ export function MobilePaymentView() {
     if (deleteTimerRef.current !== null) {
       window.clearTimeout(deleteTimerRef.current);
     }
+
+    const transferRequest = transferAbortRef.current;
+    transferAbortRef.current = null;
+    transferRequest?.abort();
   }, []);
 
   const clearDetailsError = (field: DetailsField) => {
@@ -163,7 +179,6 @@ export function MobilePaymentView() {
       [field]: undefined,
     }));
     setLineError("");
-    setConfirmationPending(false);
   };
 
   const chooseManual = () => {
@@ -304,7 +319,7 @@ export function MobilePaymentView() {
     setStep("details");
     setRecipientMode("choice");
     setSelectedContactId(null);
-    setConfirmationPending(false);
+    setTransferResult(null);
     setLineError("");
     setDetailsErrors({});
   };
@@ -372,18 +387,102 @@ export function MobilePaymentView() {
 
     setAmountMinorUnits(validation.amountMinorUnits);
     setAmount(formatAmountOnBlur(amount));
-    setConfirmationPending(false);
+    setTransferResult(null);
     setStep("review");
   };
 
   const returnToDetails = () => {
-    setConfirmationPending(false);
+    if (isSubmitting) {
+      return;
+    }
+
     setStep("details");
   };
 
   const reviewBank = resolvedRecipient
     ? getBank(destinationBanks, resolvedRecipient.bankCode)
     : undefined;
+
+  const submitTransfer = async () => {
+    if (
+      isSubmitting
+      || transferAbortRef.current !== null
+      || resolvedRecipient === null
+      || reviewBank === undefined
+      || amountMinorUnits === null
+    ) {
+      return;
+    }
+
+    const abortController = new AbortController();
+    transferAbortRef.current = abortController;
+    setIsSubmitting(true);
+
+    try {
+      const result = await simulateMobilePayment(
+        {
+          amountMinorUnits,
+          beneficiaryName: resolvedRecipient.name,
+          bankCode: reviewBank.code,
+          bankName: reviewBank.name,
+          nationality: resolvedRecipient.nationality,
+          documentNumber: resolvedRecipient.documentNumber,
+          phone: resolvedRecipient.phone,
+        },
+        abortController.signal,
+      );
+
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      setTransferResult(result);
+      setStep("result");
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        setNavigationNotice(
+          "No pudimos procesar la transferencia. Inténtalo nuevamente.",
+        );
+      }
+    } finally {
+      if (transferAbortRef.current === abortController) {
+        transferAbortRef.current = null;
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const resetTransaction = () => {
+    transferAbortRef.current?.abort();
+    transferAbortRef.current = null;
+    setStep("details");
+    setRecipientMode("choice");
+    setManualRecipient(initialManualRecipient);
+    setSelectedContactId(null);
+    setAmount("");
+    setAmountMinorUnits(null);
+    setDetailsErrors({});
+    setFocusField(null);
+    setLineError("");
+    setIsSubmitting(false);
+    setTransferResult(null);
+  };
+
+  const startNewPayment = () => {
+    setNavigationNotice("");
+    resetTransaction();
+  };
+
+  const reviewRejectedTransfer = () => {
+    setTransferResult(null);
+    setStep("review");
+  };
+
+  const returnHome = () => {
+    setNavigationNotice("");
+    resetTransaction();
+    router.replace("/home");
+  };
 
   return (
     <Box
@@ -436,13 +535,14 @@ export function MobilePaymentView() {
           sx={{
             width: "100%",
             maxWidth: 720,
-            minHeight: { xs: 520, sm: 600 },
-            flex: "1 0 auto",
+            minHeight: step === "result" ? 0 : { xs: 520, sm: 600 },
+            flex: step === "result" ? "0 0 auto" : "1 0 auto",
             display: "flex",
             flexDirection: "column",
             mx: "auto",
             mt: 2,
-            p: { xs: 2, sm: 3.5 },
+            p: step === "result" ? 0 : { xs: 2, sm: 3.5 },
+            overflow: "hidden",
             boxShadow: "none",
           }}
         >
@@ -476,7 +576,7 @@ export function MobilePaymentView() {
               recipientMode={recipientMode}
               selectedContact={selectedContact}
             />
-          ) : (
+          ) : step === "review" ? (
             resolvedRecipient
             && reviewBank
             && amountMinorUnits !== null
@@ -487,11 +587,22 @@ export function MobilePaymentView() {
                   demoCreditLineSnapshot.usableAvailableLabel
                 }
                 bank={reviewBank}
-                confirmationPending={confirmationPending}
+                isSubmitting={isSubmitting}
                 onBack={returnToDetails}
-                onConfirm={() => setConfirmationPending(true)}
+                onConfirm={submitTransfer}
                 recipient={resolvedRecipient}
                 titleRef={reviewTitleRef}
+              />
+            )
+          ) : (
+            transferResult && (
+              <TransferResultView
+                onBackHome={returnHome}
+                onNewPayment={startNewPayment}
+                onNotice={setNavigationNotice}
+                onReview={reviewRejectedTransfer}
+                result={transferResult}
+                titleRef={resultTitleRef}
               />
             )
           )}

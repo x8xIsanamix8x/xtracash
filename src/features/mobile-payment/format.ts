@@ -154,3 +154,27 @@ export function formatDocument(
 ) {
   return `${nationality}-${groupWholeUnits(documentNumber)}`;
 }
+
+export function formatTransactionDate(transactionDate: string) {
+  const date = new Date(transactionDate);
+  const dateLabel = new Intl.DateTimeFormat("es-VE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+  const timeParts = new Intl.DateTimeFormat("es-VE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(date);
+  const hour = timeParts.find((part) => part.type === "hour")?.value ?? "";
+  const minute = timeParts.find((part) => part.type === "minute")?.value ?? "";
+  const dayPeriod = timeParts
+    .find((part) => part.type === "dayPeriod")
+    ?.value.replace(/\s/g, "\u00a0") ?? "";
+
+  return {
+    date: dateLabel,
+    time: `${hour}:${minute}\u00a0${dayPeriod}`,
+  } as const;
+}
