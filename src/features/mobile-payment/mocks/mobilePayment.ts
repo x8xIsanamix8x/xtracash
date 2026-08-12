@@ -2,6 +2,7 @@ import type {
   Bank,
   DirectoryContact,
   DirectoryStatus,
+  TransferResultStatus,
 } from "../types";
 
 export const destinationBanks = [
@@ -44,4 +45,8 @@ export const mobilePaymentMock = {
   directoryRetryDelay: 600,
   directoryDeleteDelay: 600,
   directoryDeleteShouldFail: false,
+  transferDelay: 800,
+  transferResultStatus: "success" as TransferResultStatus,
+  transferReference: "001234567890",
+  manualRecipientName: "Mariana González",
 } as const;

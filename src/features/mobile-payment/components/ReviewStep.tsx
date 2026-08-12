@@ -2,13 +2,13 @@ import type { Ref } from "react";
 import {
   AccountBalanceRounded,
   ArrowBackRounded,
-  InfoOutlined,
 } from "@mui/icons-material";
 import {
   Box,
   Button,
   Card,
   CardContent,
+  CircularProgress,
   Stack,
   Typography,
 } from "@mui/material";
@@ -23,7 +23,7 @@ type ReviewStepProps = Readonly<{
   amountLabel: string;
   availableLabel: string;
   bank: Bank;
-  confirmationPending: boolean;
+  isSubmitting: boolean;
   recipient: ResolvedRecipient;
   titleRef: Ref<HTMLHeadingElement>;
   onBack: () => void;
@@ -52,7 +52,7 @@ export function ReviewStep({
   amountLabel,
   availableLabel,
   bank,
-  confirmationPending,
+  isSubmitting,
   recipient,
   titleRef,
   onBack,
@@ -60,6 +60,7 @@ export function ReviewStep({
 }: ReviewStepProps) {
   return (
     <Box
+      aria-busy={isSubmitting}
       component="section"
       aria-labelledby="mobile-payment-review-title"
       sx={{
@@ -174,7 +175,7 @@ export function ReviewStep({
           </CardContent>
         </Card>
 
-        {confirmationPending && (
+        {isSubmitting && (
           <Stack
             aria-live="polite"
             role="status"
@@ -187,10 +188,9 @@ export function ReviewStep({
               bgcolor: alpha(theme.palette.primary.main, 0.08),
             })}
           >
-            <InfoOutlined color="primary" />
+            <CircularProgress aria-hidden="true" size={22} />
             <Typography>
-              La confirmación y ejecución de Pago Móvil estarán disponibles
-              cuando exista integración.
+              Procesando transferencia…
             </Typography>
           </Stack>
         )}
@@ -202,6 +202,7 @@ export function ReviewStep({
         sx={{ mt: "auto", pt: 3 }}
       >
         <Button
+          disabled={isSubmitting}
           fullWidth
           onClick={onBack}
           startIcon={<ArrowBackRounded />}
@@ -211,14 +212,14 @@ export function ReviewStep({
           Atrás
         </Button>
         <Button
-          disabled={confirmationPending}
+          disabled={isSubmitting}
           fullWidth
           onClick={onConfirm}
           type="button"
           variant="contained"
         >
-          {confirmationPending
-            ? "Confirmación pendiente"
+          {isSubmitting
+            ? "Procesando transferencia…"
             : "Confirmar solicitud"}
         </Button>
       </Stack>

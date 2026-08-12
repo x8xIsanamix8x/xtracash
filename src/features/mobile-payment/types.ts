@@ -1,4 +1,6 @@
-export type MobilePaymentStep = "details" | "review";
+export type MobilePaymentStep = "details" | "review" | "result";
+
+export type TransferResultStatus = "success" | "processing" | "rejected";
 
 export type RecipientMode = "choice" | "manual" | "directory";
 
@@ -47,4 +49,28 @@ export type ResolvedRecipient = Readonly<{
   phone: string;
   saveToDirectory: boolean;
   alias: string;
+}>;
+
+export type TransferResult = Readonly<{
+  status: TransferResultStatus;
+  amountMinorUnits: number;
+  beneficiaryName: string;
+  bankCode: string;
+  bankName: string;
+  nationality: Nationality;
+  documentNumber: string;
+  phone: string;
+  transactionDate: string;
+  bankReference?: string;
+  userMessage?: string;
+}>;
+
+export type TransferRequest = Readonly<{
+  amountMinorUnits: number;
+  beneficiaryName: string;
+  bankCode: string;
+  bankName: string;
+  nationality: Nationality;
+  documentNumber: string;
+  phone: string;
 }>;
