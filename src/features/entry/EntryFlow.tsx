@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 
+import { consumeRegistrationSubmittedMarker } from "@/lib/registrationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
 import { BubbleField } from "./components/BubbleField";
@@ -20,10 +21,23 @@ type EntryScreen = "checking" | "onboarding" | "access";
 export function EntryFlow() {
   const [screen, setScreen] = useState<EntryScreen>("checking");
   const [stepIndex, setStepIndex] = useState(0);
+  const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
+  const registrationSubmissionMarkerRef = useRef<boolean | null>(null);
 
   useEffect(() => {
+    if (registrationSubmissionMarkerRef.current === null) {
+      registrationSubmissionMarkerRef.current = consumeRegistrationSubmittedMarker();
+    }
+
+    const wasRegistrationSubmitted = registrationSubmissionMarkerRef.current;
+
     const checkPreference = window.setTimeout(() => {
-      setScreen(hasCompletedOnboarding() ? "access" : "onboarding");
+      if (wasRegistrationSubmitted) {
+        setRegistrationSubmitted(true);
+        setScreen("access");
+      } else {
+        setScreen(hasCompletedOnboarding() ? "access" : "onboarding");
+      }
     }, 0);
 
     return () => window.clearTimeout(checkPreference);
@@ -97,5 +111,11 @@ export function EntryFlow() {
     );
   }
 
-  return <AccessView onRepeatOnboarding={repeatOnboarding} />;
+  return (
+    <AccessView
+      onRegistrationSubmittedConsumed={() => setRegistrationSubmitted(false)}
+      onRepeatOnboarding={repeatOnboarding}
+      registrationSubmitted={registrationSubmitted}
+    />
+  );
 }

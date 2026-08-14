@@ -1,4 +1,3 @@
-import { registrationMock } from "./mocks/registration";
 import type { RegistrationData, RegistrationErrors } from "./types";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -13,17 +12,18 @@ export const passwordRules = [
 
 export function validateIdentification(data: RegistrationData): RegistrationErrors {
   const errors: RegistrationErrors = {};
+  const normalizedDocument = data.documentNumber.trim();
+  const normalizedFirstName = data.firstName.trim().replace(/\s+/g, " ");
+  const normalizedLastName = data.lastName.trim().replace(/\s+/g, " ");
 
-  if (!/^\d{6,8}$/.test(data.documentNumber)) {
+  if (!/^\d{6,8}$/.test(normalizedDocument)) {
     errors.documentNumber = "Ingresa una cédula de 6 a 8 dígitos.";
-  } else if (data.documentNumber === registrationMock.duplicateDocument) {
-    errors.documentNumber = "Esta cédula ya se encuentra registrada.";
   }
 
-  if (!namePattern.test(data.firstName)) {
+  if (!namePattern.test(normalizedFirstName)) {
     errors.firstName = "Ingresa únicamente letras y espacios.";
   }
-  if (!namePattern.test(data.lastName)) {
+  if (!namePattern.test(normalizedLastName)) {
     errors.lastName = "Ingresa únicamente letras y espacios.";
   }
 
@@ -34,14 +34,12 @@ export function validateContact(data: RegistrationData): RegistrationErrors {
   const errors: RegistrationErrors = {};
   const normalizedEmail = data.email.trim().toLowerCase();
 
-  if (!/^\d{11}$/.test(data.phone)) {
-    errors.phone = "Ingresa un teléfono de 11 dígitos.";
+  if (!/^04(12|14|16|22|24|26)\d{7}$/.test(data.phone.trim())) {
+    errors.phone = "Ingresa un teléfono móvil venezolano válido.";
   }
 
   if (!emailPattern.test(normalizedEmail)) {
     errors.email = "Ingresa un correo electrónico válido.";
-  } else if (normalizedEmail === registrationMock.duplicateEmail) {
-    errors.email = "Este correo electrónico ya se encuentra registrado.";
   }
 
   if (!passwordRules.every((rule) => rule.test(data.password))) {

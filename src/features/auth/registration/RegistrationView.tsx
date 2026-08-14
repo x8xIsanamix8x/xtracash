@@ -2,8 +2,10 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowBackRounded } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   Container,
@@ -14,6 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { registrationSubmittedUrl } from "@/lib/registrationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
 import { ConfirmationStep } from "./components/ConfirmationStep";
@@ -23,11 +26,16 @@ import {
   RegistrationStepVisual,
   type RegistrationVisualKey,
 } from "./components/RegistrationStepVisual";
-import { registrationMock } from "./mocks/registration";
+import {
+  createRegistrationRequest,
+  registerUser,
+  RegistrationServiceError,
+} from "./services/registration";
 import type {
   RegistrationData,
   RegistrationErrors,
   RegistrationField,
+  RegistrationFlowState,
   RegistrationInputRefs,
 } from "./types";
 import { validateContact, validateIdentification } from "./validation";
@@ -60,27 +68,44 @@ const stepContent: readonly Readonly<{
   },
   {
     title: "Revisa y confirma",
-    description: "Verifica que tus datos estén correctos antes de solicitar el código de seguridad.",
+    description: "Verifica que tus datos estén correctos antes de crear tu cuenta.",
     visualKey: "confirmation",
   },
 ];
 
-const otpContent = {
-  title: "Confirma tu registro",
-  description: "Ingresa el código de 6 dígitos que enviamos a tu medio de contacto.",
-  visualKey: "otp",
-} as const;
+const identificationFields: RegistrationField[] = ["documentNumber", "firstName", "lastName"];
+const contactFields: RegistrationField[] = ["phone", "email", "password", "passwordConfirmation"];
+const allFields: RegistrationField[] = [...identificationFields, ...contactFields];
+
+function getRegistrationErrorMessage(error: unknown): string {
+  if (!(error instanceof RegistrationServiceError)) {
+    return "No pudimos completar el registro en este momento. Inténtalo nuevamente.";
+  }
+
+  if (error.type === "network") {
+    return "No pudimos conectarnos. Revisa tu conexión e inténtalo nuevamente.";
+  }
+
+  if (error.type === "http") {
+    return "No pudimos completar el registro. Inténtalo nuevamente más tarde.";
+  }
+
+  return "El registro no está disponible en este momento. Inténtalo nuevamente más tarde.";
+}
+
+function getStepIndex(flowState: RegistrationFlowState): number {
+  if (flowState.name === "identification") return 0;
+  if (flowState.name === "contactSecurity") return 1;
+  return 2;
+}
 
 export function RegistrationView() {
-  const [step, setStep] = useState(0);
+  const router = useRouter();
+  const [flowState, setFlowState] = useState<RegistrationFlowState>({ name: "identification" });
   const [data, setData] = useState<RegistrationData>(initialData);
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isOtpVisible, setIsOtpVisible] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [isComplete, setIsComplete] = useState(false);
+  const [submissionError, setSubmissionError] = useState("");
   const titleRef = useRef<HTMLHeadingElement>(null);
   const documentRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -89,8 +114,9 @@ export function RegistrationView() {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmationRef = useRef<HTMLInputElement>(null);
-  const otpRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<number | null>(null);
+  const submissionRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   const inputRefs: RegistrationInputRefs = {
     documentNumber: documentRef,
@@ -102,23 +128,31 @@ export function RegistrationView() {
     passwordConfirmation: confirmationRef,
   };
 
-  useEffect(() => {
-    titleRef.current?.focus();
-  }, [step, isComplete]);
+  const isSubmitting = flowState.name === "submitting";
+  const step = getStepIndex(flowState);
+  const currentContent = stepContent[step];
 
   useEffect(() => {
-    if (isOtpVisible) otpRef.current?.focus();
-  }, [isOtpVisible]);
+    if (flowState.name !== "submitting") {
+      titleRef.current?.focus();
+    }
+  }, [flowState.name]);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     return () => {
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      isMountedRef.current = false;
+      abortControllerRef.current?.abort();
     };
   }, []);
 
   const updateField = (field: RegistrationField, value: string) => {
+    if (isSubmitting) return;
+
     setData((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+    setSubmissionError("");
 
     if (field === "password" && data.passwordConfirmation) {
       setErrors((current) => ({
@@ -136,96 +170,104 @@ export function RegistrationView() {
 
   const submitStep = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const fields: RegistrationField[] = step === 0
-      ? ["documentNumber", "firstName", "lastName"]
-      : ["phone", "email", "password", "passwordConfirmation"];
-    const nextErrors = step === 0 ? validateIdentification(data) : validateContact(data);
-    setErrors(nextErrors);
 
-    if (Object.keys(nextErrors).length > 0) {
-      focusFirstError(nextErrors, fields);
+    if (flowState.name === "identification") {
+      const nextErrors = validateIdentification(data);
+      setErrors(nextErrors);
+
+      if (Object.keys(nextErrors).length > 0) {
+        focusFirstError(nextErrors, identificationFields);
+        return;
+      }
+
+      setSubmissionError("");
+      setFlowState({ name: "contactSecurity" });
       return;
     }
 
-    setStep((current) => current + 1);
+    if (flowState.name === "contactSecurity") {
+      const nextErrors = validateContact(data);
+      setErrors(nextErrors);
+
+      if (Object.keys(nextErrors).length > 0) {
+        focusFirstError(nextErrors, contactFields);
+        return;
+      }
+
+      setSubmissionError("");
+      setFlowState({ name: "review" });
+    }
   };
 
   const goBack = () => {
-    if (step === 2) {
-      if (timerRef.current !== null) {
-        window.clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      setIsSendingOtp(false);
-      setIsOtpVisible(false);
-      setTermsAccepted(false);
-      setOtp("");
-      setOtpError("");
-    }
+    if (isSubmitting) return;
+
     setErrors({});
-    setStep((current) => Math.max(0, current - 1));
+    setSubmissionError("");
+
+    if (flowState.name === "review") {
+      setFlowState({ name: "contactSecurity" });
+    } else if (flowState.name === "contactSecurity") {
+      setFlowState({ name: "identification" });
+    }
   };
 
-  const sendOtp = () => {
-    if (!termsAccepted || isSendingOtp) return;
-    setIsSendingOtp(true);
-    timerRef.current = window.setTimeout(() => {
-      timerRef.current = null;
-      setIsSendingOtp(false);
-      setIsOtpVisible(true);
-    }, registrationMock.otpDelay);
-  };
-
-  const confirmOtp = (event: FormEvent<HTMLFormElement>) => {
+  const submitRegistration = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const nextError = !otp
-      ? "Ingresa el código de verificación."
-      : !/^\d{6}$/.test(otp)
-        ? "Ingresa únicamente 6 dígitos."
-        : otp !== registrationMock.validOtp
-          ? "El código ingresado es incorrecto. Inténtalo nuevamente."
-          : "";
-    setOtpError(nextError);
-    if (nextError) {
-      otpRef.current?.focus();
+
+    if (submissionRef.current || flowState.name !== "review") return;
+
+    const nextErrors = {
+      ...validateIdentification(data),
+      ...validateContact(data),
+    };
+    setErrors(nextErrors);
+    setSubmissionError("");
+
+    if (Object.keys(nextErrors).length > 0) {
+      focusFirstError(nextErrors, allFields);
       return;
     }
-    setData((current) => ({ ...current, password: "", passwordConfirmation: "" }));
-    setIsComplete(true);
+
+    if (!termsAccepted) {
+      setSubmissionError("Debes aceptar los términos y condiciones antes de crear tu cuenta.");
+      return;
+    }
+
+    const request = createRegistrationRequest(data, termsAccepted);
+    const controller = new AbortController();
+    submissionRef.current = true;
+    abortControllerRef.current = controller;
+    setFlowState({ name: "submitting" });
+
+    try {
+      await registerUser(request, controller.signal);
+
+      if (!isMountedRef.current) return;
+
+      setData(initialData);
+      setErrors({});
+      setTermsAccepted(false);
+      setSubmissionError("");
+      setFlowState({ name: "identification" });
+      router.replace(registrationSubmittedUrl);
+    } catch (error) {
+      if (!isMountedRef.current) return;
+
+      setFlowState({ name: "review" });
+
+      if (error instanceof RegistrationServiceError && error.type === "aborted") {
+        return;
+      }
+
+      setSubmissionError(getRegistrationErrorMessage(error));
+    } finally {
+      submissionRef.current = false;
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
+    }
   };
-
-  const currentContent = step === 2 && isOtpVisible ? otpContent : stepContent[step];
-
-  if (isComplete) {
-    return (
-      <Box component="main" sx={{ minHeight: "100dvh", display: "grid", placeItems: "center", bgcolor: "background.default" }}>
-        <Container maxWidth={false} sx={{ width: "100%", maxWidth: 1120, py: 3 }}>
-          <Paper
-            variant="outlined"
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 38fr) minmax(0, 62fr)" },
-              overflow: "hidden",
-              boxShadow: "none",
-            }}
-          >
-            <Box sx={{ minWidth: 0, overflow: "hidden", bgcolor: "background.default" }}>
-              <RegistrationStepVisual visualKey="success" />
-            </Box>
-            <Stack spacing={2} sx={{ justifyContent: "center", p: { xs: 3, lg: 5 }, textAlign: { xs: "center", lg: "left" } }}>
-              <Typography component="h1" ref={titleRef} tabIndex={-1} variant="h4" sx={{ color: "secondary.main", fontWeight: 700 }}>
-                Tu cuenta está lista
-              </Typography>
-              <Typography color="text.secondary">
-                Completaste el registro correctamente. Ahora puedes ingresar y continuar con tu experiencia Impúlsate Móvil.
-              </Typography>
-              <Button component={Link} fullWidth href="/" variant="contained">Ir a iniciar sesión</Button>
-            </Stack>
-          </Paper>
-        </Container>
-      </Box>
-    );
-  }
 
   return (
     <Box component="main" sx={{ minHeight: "100dvh", bgcolor: "background.default" }}>
@@ -270,85 +312,118 @@ export function RegistrationView() {
               boxShadow: "none",
             }}
           >
-          <Box
-            sx={{
-              minWidth: 0,
-              overflow: "hidden",
-              bgcolor: "background.default",
-              borderBottom: { xs: "1px solid", lg: 0 },
-              borderRight: { xs: 0, lg: "1px solid" },
-              borderColor: "divider",
-            }}
-          >
-            <RegistrationStepVisual visualKey={currentContent.visualKey} />
-          </Box>
-
-          <Box
-            sx={{
-              display: "flex",
-              width: "100%",
-              maxWidth: { xs: 680, lg: "none" },
-              minWidth: 0,
-              mx: "auto",
-              flexDirection: "column",
-              p: { xs: 2, sm: 3, lg: 4 },
-            }}
-          >
-            <Stack spacing={1}>
-              <Typography color="text.secondary" id="registration-progress-label" variant="body2">
-                Paso {step + 1} de 3
-              </Typography>
-              <LinearProgress
-                aria-labelledby="registration-progress-label"
-                value={((step + 1) / 3) * 100}
-                variant="determinate"
-              />
-              <Typography component="h1" ref={titleRef} tabIndex={-1} variant="h4" sx={{ pt: 1, color: "secondary.main", fontWeight: 700 }}>
-                {currentContent.title}
-              </Typography>
-              <Typography color="text.secondary">{currentContent.description}</Typography>
-            </Stack>
+            <Box
+              sx={{
+                minWidth: 0,
+                overflow: "hidden",
+                bgcolor: "background.default",
+                borderBottom: { xs: "1px solid", lg: 0 },
+                borderRight: { xs: 0, lg: "1px solid" },
+                borderColor: "divider",
+              }}
+            >
+              <RegistrationStepVisual visualKey={currentContent.visualKey} />
+            </Box>
 
             <Box
-              component="form"
-              noValidate
-              onSubmit={step < 2 ? submitStep : isOtpVisible ? confirmOtp : (event) => { event.preventDefault(); sendOtp(); }}
-              sx={{ flex: 1, display: "flex", flexDirection: "column", pt: 3 }}
+              sx={{
+                display: "flex",
+                width: "100%",
+                maxWidth: { xs: 680, lg: "none" },
+                minWidth: 0,
+                mx: "auto",
+                flexDirection: "column",
+                p: { xs: 2, sm: 3, lg: 4 },
+              }}
             >
-              {step === 0 && <IdentificationStep data={data} errors={errors} inputRefs={inputRefs} onChange={updateField} />}
-              {step === 1 && <ContactSecurityStep data={data} errors={errors} inputRefs={inputRefs} onChange={updateField} />}
-              {step === 2 && (
-                <ConfirmationStep
-                  data={data}
-                  isOtpVisible={isOtpVisible}
-                  onOtpChange={(value) => { setOtp(value); setOtpError(""); }}
-                  onResend={() => setOtpError("")}
-                  onTermsChange={setTermsAccepted}
-                  otp={otp}
-                  otpError={otpError}
-                  otpRef={otpRef}
-                  termsAccepted={termsAccepted}
+              <Stack spacing={1}>
+                <Typography color="text.secondary" id="registration-progress-label" variant="body2">
+                  Paso {step + 1} de 3
+                </Typography>
+                <LinearProgress
+                  aria-labelledby="registration-progress-label"
+                  value={((step + 1) / 3) * 100}
+                  variant="determinate"
                 />
-              )}
-
-              <Stack
-                direction={{ xs: "column-reverse", sm: "row" }}
-                spacing={1.5}
-                sx={{ mt: 3, pt: 3, borderTop: "1px solid", borderColor: "divider" }}
-              >
-                {step > 0 && <Button fullWidth onClick={goBack} type="button" variant="outlined">Atrás</Button>}
-                <Button
-                  disabled={step === 2 && !isOtpVisible && !termsAccepted}
-                  fullWidth
-                  loading={isSendingOtp}
-                  type="submit"
-                  variant="contained"
+                <Typography
+                  component="h1"
+                  ref={titleRef}
+                  tabIndex={-1}
+                  variant="h4"
+                  sx={{ pt: 1, color: "secondary.main", fontWeight: 700 }}
                 >
-                  {step < 2 ? "Continuar" : isOtpVisible ? "Confirmar registro" : "Enviar código"}
-                </Button>
+                  {currentContent.title}
+                </Typography>
+                <Typography color="text.secondary">{currentContent.description}</Typography>
               </Stack>
+
+              <Box
+                aria-busy={isSubmitting}
+                component="form"
+                noValidate
+                onSubmit={
+                  flowState.name === "identification" || flowState.name === "contactSecurity"
+                    ? submitStep
+                    : submitRegistration
+                }
+                sx={{ flex: 1, display: "flex", flexDirection: "column", pt: 3 }}
+              >
+                {flowState.name === "identification" && (
+                  <IdentificationStep
+                    data={data}
+                    errors={errors}
+                    inputRefs={inputRefs}
+                    onChange={updateField}
+                  />
+                )}
+                {flowState.name === "contactSecurity" && (
+                  <ContactSecurityStep
+                    data={data}
+                    errors={errors}
+                    inputRefs={inputRefs}
+                    onChange={updateField}
+                  />
+                )}
+                {(flowState.name === "review" || flowState.name === "submitting") && (
+                  <ConfirmationStep
+                    data={data}
+                    isSubmitting={isSubmitting}
+                    onTermsChange={(checked) => {
+                      setTermsAccepted(checked);
+                      setSubmissionError("");
+                    }}
+                    termsAccepted={termsAccepted}
+                  />
+                )}
+
+                {submissionError && (
+                  <Alert role="alert" severity="error" sx={{ mt: 2 }}>
+                    {submissionError}
+                  </Alert>
+                )}
+
+                <Stack
+                  direction={{ xs: "column-reverse", sm: "row" }}
+                  spacing={1.5}
+                  sx={{ mt: 3, pt: 3, borderTop: "1px solid", borderColor: "divider" }}
+                >
+                  {step > 0 && (
+                    <Button disabled={isSubmitting} fullWidth onClick={goBack} type="button" variant="outlined">
+                      Atrás
+                    </Button>
+                  )}
+                  <Button
+                    disabled={isSubmitting || (step === 2 && !termsAccepted)}
+                    fullWidth
+                    loading={isSubmitting}
+                    type="submit"
+                    variant="contained"
+                  >
+                    {step < 2 ? "Continuar" : "Crear cuenta"}
+                  </Button>
+                </Stack>
+              </Box>
             </Box>
-          </Box>
           </Paper>
         </Box>
       </Container>

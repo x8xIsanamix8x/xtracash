@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CloseRounded } from "@mui/icons-material";
 import {
+  Alert,
+  AlertTitle,
   Box,
   Button,
   Dialog,
@@ -11,6 +14,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  IconButton,
+  Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
@@ -22,13 +27,30 @@ import { AccessVisual } from "./AccessVisual";
 import { BubbleField } from "./BubbleField";
 
 type AccessViewProps = Readonly<{
+  registrationSubmitted: boolean;
+  onRegistrationSubmittedConsumed: () => void;
   onRepeatOnboarding: () => void;
 }>;
 
-export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
+export function AccessView({
+  registrationSubmitted,
+  onRegistrationSubmittedConsumed,
+  onRepeatOnboarding,
+}: AccessViewProps) {
   const router = useRouter();
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isRegistrationNoticeOpen, setIsRegistrationNoticeOpen] = useState(false);
+  const registrationSubmissionHandledRef = useRef(false);
+
+  useEffect(() => {
+    if (!registrationSubmitted || registrationSubmissionHandledRef.current) return;
+
+    registrationSubmissionHandledRef.current = true;
+    setIsSignInOpen(true);
+    setIsRegistrationNoticeOpen(true);
+    onRegistrationSubmittedConsumed();
+  }, [onRegistrationSubmittedConsumed, registrationSubmitted]);
 
   const repeatOnboarding = () => {
     setIsHelpOpen(false);
@@ -48,7 +70,8 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
   };
 
   return (
-    <Box
+    <>
+      <Box
       component="main"
       sx={{
         position: "relative",
@@ -204,6 +227,8 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
         </Stack>
       </Box>
 
+      </Box>
+
       <Dialog
         aria-describedby="help-dialog-description"
         aria-labelledby="help-dialog-title"
@@ -228,6 +253,42 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
         </DialogActions>
       </Dialog>
       <SignInSheet onClose={closeSignIn} onSuccess={completeSignIn} open={isSignInOpen} />
-    </Box>
+      <Snackbar
+        anchorOrigin={{ horizontal: "center", vertical: "top" }}
+        autoHideDuration={9000}
+        onClose={(_event, reason) => {
+          if (reason !== "clickaway") setIsRegistrationNoticeOpen(false);
+        }}
+        open={isRegistrationNoticeOpen}
+        sx={(theme) => ({
+          top: "calc(16px + env(safe-area-inset-top)) !important",
+          right: { xs: 2, sm: "auto" },
+          left: { xs: 2, sm: "50%" },
+          width: { xs: "auto", sm: "min(560px, calc(100% - 32px))" },
+          transform: { xs: "none", sm: "translateX(-50%)" },
+          zIndex: theme.zIndex.modal + 1,
+        })}
+      >
+        <Alert
+          action={
+            <IconButton
+              aria-label="Cerrar aviso de registro"
+              color="inherit"
+              onClick={() => setIsRegistrationNoticeOpen(false)}
+              size="small"
+            >
+              <CloseRounded fontSize="small" />
+            </IconButton>
+          }
+          aria-live="polite"
+          role="status"
+          severity="success"
+          sx={{ width: "100%", alignItems: "flex-start" }}
+        >
+          <AlertTitle>Registro procesado correctamente</AlertTitle>
+          Revisa tu bandeja de entrada o correo no deseado y utiliza el enlace recibido para activar tu cuenta antes de iniciar sesión.
+        </Alert>
+      </Snackbar>
+    </>
   );
 }

@@ -16,6 +16,22 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Environment configuration
+
+Copy `.env.example` to `.env.local` and set the Core API base URL before running the registration flow:
+
+```bash
+NEXT_PUBLIC_CORE_API_URL=https://core-api.sandbox.impulsa.vc
+```
+
+Public Next.js environment variables are embedded during `next build`, so configure this value for each deployment environment before building the application.
+
+## Registration behavior
+
+After the Core API accepts registration with any HTTP `2xx` response, the PWA returns to the access route, opens the existing simulated login, and shows a one-time notice asking the user to review their inbox or spam folder. Account activation remains the responsibility of Keycloak; the PWA does not verify activation and the login flow is still simulated.
+
+A real browser test continues to depend on the Core API allowing CORS for the PWA origin.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
