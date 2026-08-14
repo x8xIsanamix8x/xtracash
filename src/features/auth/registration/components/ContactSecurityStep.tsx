@@ -129,7 +129,10 @@ export function ContactSecurityStep({ data, errors, inputRefs, onChange }: Conta
                   <ListItemIcon sx={{ minWidth: 32, color: isMet ? "success.main" : "text.secondary" }}>
                     {isMet ? <CheckCircleRounded fontSize="small" /> : <RadioButtonUncheckedRounded fontSize="small" />}
                   </ListItemIcon>
-                  <ListItemText primary={`${rule.label}: ${isMet ? "cumplida" : "pendiente"}`} />
+                  <ListItemText
+                    primary={`${rule.label}: ${isMet ? "cumplida" : "pendiente"}`}
+                    secondary={rule.helpText}
+                  />
                 </ListItem>
               );
             })}

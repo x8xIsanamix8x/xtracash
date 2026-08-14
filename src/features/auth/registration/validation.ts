@@ -3,12 +3,23 @@ import type { RegistrationData, RegistrationErrors } from "./types";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const namePattern = /^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u;
 
-export const passwordRules = [
+type PasswordRule = Readonly<{
+  label: string;
+  helpText?: string;
+  test: (value: string) => boolean;
+}>;
+
+export const passwordRules: readonly PasswordRule[] = [
   { label: "8 caracteres como mínimo", test: (value: string) => value.length >= 8 },
   { label: "Una letra mayúscula", test: (value: string) => /[A-Z]/.test(value) },
   { label: "Una letra minúscula", test: (value: string) => /[a-z]/.test(value) },
   { label: "Un número", test: (value: string) => /\d/.test(value) },
-] as const;
+  {
+    label: "Un carácter especial",
+    helpText: "Por ejemplo: ! @ # $ % ^ & * ( ) _ +",
+    test: (value: string) => /[^\p{L}\p{N}\s]/u.test(value),
+  },
+];
 
 export function validateIdentification(data: RegistrationData): RegistrationErrors {
   const errors: RegistrationErrors = {};
@@ -43,7 +54,7 @@ export function validateContact(data: RegistrationData): RegistrationErrors {
   }
 
   if (!passwordRules.every((rule) => rule.test(data.password))) {
-    errors.password = "La contraseña debe cumplir las cuatro reglas indicadas.";
+    errors.password = "La contraseña debe cumplir las cinco reglas indicadas.";
   }
 
   if (!data.passwordConfirmation) {

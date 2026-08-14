@@ -47,6 +47,7 @@ export async function registerUser(
   try {
     response = await fetch(`${configuration.baseUrl}/api/registro`, {
       method: "POST",
+      cache: "no-store",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
       signal,
