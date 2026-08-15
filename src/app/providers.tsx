@@ -4,6 +4,7 @@ import { CssBaseline, ThemeProvider } from "@mui/material";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import type { ReactNode } from "react";
 
+import { AuthSessionMonitor } from "@/features/auth/session/components/AuthSessionMonitor";
 import { theme } from "@/theme";
 
 type AppProvidersProps = Readonly<{
@@ -15,6 +16,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     <AppRouterCacheProvider>
       <ThemeProvider theme={theme}>
         <CssBaseline />
+        <AuthSessionMonitor />
         {children}
       </ThemeProvider>
     </AppRouterCacheProvider>

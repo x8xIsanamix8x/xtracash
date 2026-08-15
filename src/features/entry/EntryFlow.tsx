@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 
 import {
-  consumeAccessNotification,
-  type AccessNotification,
+  consumeAccessNavigationRequest,
+  type AccessNavigationRequest,
 } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
@@ -24,19 +24,19 @@ type EntryScreen = "checking" | "onboarding" | "access";
 export function EntryFlow() {
   const [screen, setScreen] = useState<EntryScreen>("checking");
   const [stepIndex, setStepIndex] = useState(0);
-  const [accessNotification, setAccessNotification] = useState<AccessNotification | null>(null);
-  const accessNotificationRef = useRef<AccessNotification | null | undefined>(undefined);
+  const [accessRequest, setAccessRequest] = useState<AccessNavigationRequest | null>(null);
+  const accessRequestRef = useRef<AccessNavigationRequest | null | undefined>(undefined);
 
   useEffect(() => {
-    if (accessNotificationRef.current === undefined) {
-      accessNotificationRef.current = consumeAccessNotification();
+    if (accessRequestRef.current === undefined) {
+      accessRequestRef.current = consumeAccessNavigationRequest();
     }
 
-    const requestedNotification = accessNotificationRef.current;
+    const requestedAccess = accessRequestRef.current;
 
     const checkPreference = window.setTimeout(() => {
-      if (requestedNotification) {
-        setAccessNotification(requestedNotification);
+      if (requestedAccess) {
+        setAccessRequest(requestedAccess);
         setScreen("access");
       } else {
         setScreen(hasCompletedOnboarding() ? "access" : "onboarding");
@@ -116,8 +116,8 @@ export function EntryFlow() {
 
   return (
     <AccessView
-      accessNotification={accessNotification}
-      onAccessNotificationConsumed={() => setAccessNotification(null)}
+      accessRequest={accessRequest}
+      onAccessRequestConsumed={() => setAccessRequest(null)}
       onRepeatOnboarding={repeatOnboarding}
     />
   );

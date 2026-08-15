@@ -8,11 +8,11 @@ import { Box, Container, IconButton, Snackbar, Stack, Typography } from "@mui/ma
 
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
 import {
-  sessionMock,
   SessionExpiredView,
   SignOutDialog,
   type SessionStatus,
 } from "@/features/auth";
+import { signOut } from "@/features/auth/session/services/session";
 import { themeTokens } from "@/theme/tokens";
 
 import { PersonalInformation } from "./components/PersonalInformation";
@@ -26,24 +26,19 @@ import type { ProfileStatus } from "./types";
 export function ProfileView() {
   const router = useRouter();
   const [status, setStatus] = useState<ProfileStatus>(profileMock.initialStatus);
-  const [sessionStatus, setSessionStatus] = useState<SessionStatus>(
-    sessionMock.initialStatus,
-  );
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>("active");
   const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const signOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sessionOperationRef = useRef(0);
+  const signOutControllerRef = useRef<AbortController | null>(null);
+  const signOutSubmissionRef = useRef(false);
 
   useEffect(() => () => {
     if (retryTimerRef.current !== null) {
       clearTimeout(retryTimerRef.current);
     }
 
-    sessionOperationRef.current += 1;
-    if (signOutTimerRef.current !== null) {
-      clearTimeout(signOutTimerRef.current);
-    }
+    signOutControllerRef.current?.abort();
   }, []);
 
   const retryProfile = () => {
@@ -70,22 +65,31 @@ export function ProfileView() {
     }
   };
 
-  const confirmSignOut = () => {
-    if (sessionStatus !== "active" || signOutTimerRef.current !== null) {
+  const confirmSignOut = async () => {
+    if (sessionStatus !== "active" || signOutSubmissionRef.current) {
       return;
     }
 
+    const controller = new AbortController();
+    signOutSubmissionRef.current = true;
+    signOutControllerRef.current = controller;
     setSessionStatus("signing-out");
-    const operation = sessionOperationRef.current + 1;
-    sessionOperationRef.current = operation;
-    signOutTimerRef.current = setTimeout(() => {
-      if (sessionOperationRef.current !== operation) {
-        return;
-      }
 
-      signOutTimerRef.current = null;
+    try {
+      await signOut(controller.signal);
       router.replace("/");
-    }, sessionMock.signOutDelay);
+    } catch {
+      if (!controller.signal.aborted) {
+        setSessionStatus("active");
+        setIsSignOutOpen(false);
+        setNotice("No pudimos cerrar la sesión. Inténtalo nuevamente.");
+      }
+    } finally {
+      signOutSubmissionRef.current = false;
+      if (signOutControllerRef.current === controller) {
+        signOutControllerRef.current = null;
+      }
+    }
   };
 
   if (sessionStatus === "expired") {

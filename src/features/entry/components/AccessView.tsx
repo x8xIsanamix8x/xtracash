@@ -21,15 +21,18 @@ import {
 } from "@mui/material";
 
 import { SignInSheet } from "@/features/auth";
-import type { AccessNotification } from "@/lib/accessNotificationNavigation";
+import type {
+  AccessNavigationRequest,
+  AccessNotification,
+} from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
 import { AccessVisual } from "./AccessVisual";
 import { BubbleField } from "./BubbleField";
 
 type AccessViewProps = Readonly<{
-  accessNotification: AccessNotification | null;
-  onAccessNotificationConsumed: () => void;
+  accessRequest: AccessNavigationRequest | null;
+  onAccessRequestConsumed: () => void;
   onRepeatOnboarding: () => void;
 }>;
 
@@ -48,11 +51,16 @@ const accessNotificationContent: Readonly<
     message:
       "Recibirás un enlace único para restablecer tu contraseña. Podrás utilizarlo una sola vez y vencerá en 12 horas. Si no aparece en tu bandeja de entrada, revisa la carpeta de correo no deseado.",
   },
+  sessionExpired: {
+    closeLabel: "Cerrar aviso de sesión expirada",
+    title: "Tu sesión ha expirado",
+    message: "Por seguridad, inicia sesión nuevamente para continuar.",
+  },
 };
 
 export function AccessView({
-  accessNotification,
-  onAccessNotificationConsumed,
+  accessRequest,
+  onAccessRequestConsumed,
   onRepeatOnboarding,
 }: AccessViewProps) {
   const router = useRouter();
@@ -63,13 +71,13 @@ export function AccessView({
   const accessNotificationHandledRef = useRef(false);
 
   useEffect(() => {
-    if (!accessNotification || accessNotificationHandledRef.current) return;
+    if (!accessRequest || accessNotificationHandledRef.current) return;
 
     accessNotificationHandledRef.current = true;
     setIsSignInOpen(true);
-    setVisibleAccessNotification(accessNotification);
-    onAccessNotificationConsumed();
-  }, [accessNotification, onAccessNotificationConsumed]);
+    setVisibleAccessNotification(accessRequest.notification);
+    onAccessRequestConsumed();
+  }, [accessRequest, onAccessRequestConsumed]);
 
   const notificationContent = visibleAccessNotification
     ? accessNotificationContent[visibleAccessNotification]

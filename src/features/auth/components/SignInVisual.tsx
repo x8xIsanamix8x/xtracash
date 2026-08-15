@@ -22,6 +22,10 @@ export function SignInVisual() {
         overflow: "hidden",
         pointerEvents: "none",
         p: { xs: 3, md: 4 },
+        "@media (min-width: 900px) and (max-height: 820px)": {
+          height: "clamp(150px, 21dvh, 180px)",
+          p: 2,
+        },
         "@media (max-height: 700px)": {
           height: "clamp(120px, 22dvh, 150px)",
           p: 2,
