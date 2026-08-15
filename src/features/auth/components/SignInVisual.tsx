@@ -7,7 +7,10 @@ export function SignInVisual() {
       aria-hidden="true"
       sx={{
         position: "relative",
+        boxSizing: "border-box",
         width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
         height: { xs: "clamp(160px, 28dvh, 240px)", md: "clamp(280px, 34dvh, 320px)" },
         mx: "auto",
         borderRadius: "22px",

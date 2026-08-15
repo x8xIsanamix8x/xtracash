@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   CloseRounded,
@@ -29,6 +29,7 @@ import { themeTokens } from "@/theme/tokens";
 import { SignInVisual } from "./SignInVisual";
 
 type SignInSheetProps = Readonly<{
+  notification?: ReactNode;
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -46,7 +47,7 @@ function BottomSheetTransition(props: SlideProps) {
   return <Slide {...props} direction="up" />;
 }
 
-export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
+export function SignInSheet({ notification, open, onClose, onSuccess }: SignInSheetProps) {
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -149,14 +150,20 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
           sx: { bgcolor: "secondary.main", opacity: 0.78 },
         },
         container: {
-          sx: { alignItems: { xs: "flex-end", md: "center" } },
+          sx: {
+            minWidth: 0,
+            maxWidth: "100%",
+            alignItems: { xs: "flex-end", md: "center" },
+            overflowX: "hidden",
+          },
         },
         paper: {
           sx: {
             boxSizing: "border-box",
             m: { xs: 0, md: 2 },
             width: "100%",
-            maxWidth: { xs: "100%", md: 520 },
+            minWidth: 0,
+            maxWidth: { xs: "100%", md: "min(520px, calc(100% - 32px))" },
             height: {
               xs: "85dvh",
               md: "auto",
@@ -166,6 +173,8 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
               md: "80dvh",
             },
             borderRadius: { xs: "24px 24px 0 0", md: 3 },
+            display: "flex",
+            flexDirection: "column",
             overflow: "hidden",
           },
         },
@@ -181,8 +190,14 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
         onSubmit={submitForm}
         sx={{
           position: "relative",
+          boxSizing: "border-box",
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
           minHeight: 0,
-          height: "100%",
+          height: { xs: "100%", md: "auto" },
+          maxHeight: "100%",
+          flex: "1 1 auto",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -192,13 +207,23 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
         <DialogContent
           sx={{
             minHeight: 0,
-            flex: 1,
+            flex: "1 1 auto",
             display: "flex",
             boxSizing: "border-box",
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
             overflowX: "hidden",
             overflowY: "auto",
-            pb: "calc(24px + env(safe-area-inset-bottom))",
-            px: { xs: 2, sm: 3 },
+            pb: { xs: 1.5, sm: 2 },
+            pr: {
+              xs: "calc(16px + env(safe-area-inset-right))",
+              sm: "calc(24px + env(safe-area-inset-right))",
+            },
+            pl: {
+              xs: "calc(16px + env(safe-area-inset-left))",
+              sm: "calc(24px + env(safe-area-inset-left))",
+            },
           }}
         >
           <Stack
@@ -206,13 +231,20 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
             sx={{
               boxSizing: "border-box",
               width: "100%",
-              minHeight: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
               "@media (max-height: 700px)": { gap: 1.5 },
             }}
           >
+            {notification}
+
             <Box
               sx={{
                 position: "relative",
+                boxSizing: "border-box",
+                width: "100%",
+                maxWidth: "100%",
+                minWidth: 0,
                 mb: 2,
                 "@media (max-height: 700px)": {
                   mb: 0,
@@ -265,7 +297,7 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
               </IconButton>
             </Box>
 
-            <Stack spacing={1.5}>
+            <Stack spacing={1.5} sx={{ maxWidth: "100%", minWidth: 0 }}>
               <DialogTitle
                 component="h2"
                 id="sign-in-title"
@@ -305,9 +337,10 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
               type="text"
               value={identifier}
               variant="outlined"
+              sx={{ boxSizing: "border-box", maxWidth: "100%", minWidth: 0 }}
             />
 
-            <Stack spacing={0.5}>
+            <Stack spacing={0.5} sx={{ maxWidth: "100%", minWidth: 0 }}>
               <TextField
                 autoComplete="current-password"
                 error={Boolean(errors.password)}
@@ -344,6 +377,7 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 variant="outlined"
+                sx={{ boxSizing: "border-box", maxWidth: "100%", minWidth: 0 }}
               />
               <Button
                 component={Link}
@@ -352,6 +386,9 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
                 variant="text"
                 sx={{
                   alignSelf: "flex-end",
+                  boxSizing: "border-box",
+                  maxWidth: "100%",
+                  minWidth: 0,
                   minHeight: 44,
                   color: themeTokens.color.brandLogo,
                   "&:focus-visible": {
@@ -363,21 +400,48 @@ export function SignInSheet({ open, onClose, onSuccess }: SignInSheetProps) {
               </Button>
             </Stack>
 
-            <Box sx={{ minHeight: 24 }}>
-              {formError && (
-                <DialogContentText color="error" role="alert">
-                  {formError}
-                </DialogContentText>
-              )}
-            </Box>
-
-            <Box sx={{ flexGrow: 1 }} />
-
-            <Button fullWidth loading={isLoading} type="submit" variant="contained">
-              Ingresar
-            </Button>
+            {formError && (
+              <DialogContentText color="error" role="alert">
+                {formError}
+              </DialogContentText>
+            )}
           </Stack>
         </DialogContent>
+
+        <Box
+          component="footer"
+          sx={{
+            boxSizing: "border-box",
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            flexShrink: 0,
+            bgcolor: "background.paper",
+            pt: { xs: 1.5, sm: 2 },
+            pr: {
+              xs: "calc(16px + env(safe-area-inset-right))",
+              sm: "calc(24px + env(safe-area-inset-right))",
+            },
+            pb: {
+              xs: "calc(16px + env(safe-area-inset-bottom))",
+              sm: "calc(24px + env(safe-area-inset-bottom))",
+            },
+            pl: {
+              xs: "calc(16px + env(safe-area-inset-left))",
+              sm: "calc(24px + env(safe-area-inset-left))",
+            },
+          }}
+        >
+          <Button
+            fullWidth
+            loading={isLoading}
+            sx={{ boxSizing: "border-box", width: "100%", maxWidth: "100%", minWidth: 0 }}
+            type="submit"
+            variant="contained"
+          >
+            Ingresar
+          </Button>
+        </Box>
       </Box>
     </Dialog>
   );
