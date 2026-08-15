@@ -21,36 +21,59 @@ import {
 } from "@mui/material";
 
 import { SignInSheet } from "@/features/auth";
+import type { AccessNotification } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
 import { AccessVisual } from "./AccessVisual";
 import { BubbleField } from "./BubbleField";
 
 type AccessViewProps = Readonly<{
-  registrationSubmitted: boolean;
-  onRegistrationSubmittedConsumed: () => void;
+  accessNotification: AccessNotification | null;
+  onAccessNotificationConsumed: () => void;
   onRepeatOnboarding: () => void;
 }>;
 
+const accessNotificationContent: Readonly<
+  Record<AccessNotification, Readonly<{ closeLabel: string; message: string; title: string }>>
+> = {
+  registrationSubmitted: {
+    closeLabel: "Cerrar aviso de registro",
+    title: "Registro procesado correctamente",
+    message:
+      "Revisa tu bandeja de entrada o correo no deseado y utiliza el enlace recibido para activar tu cuenta antes de iniciar sesión.",
+  },
+  recoveryRequested: {
+    closeLabel: "Cerrar aviso de recuperación",
+    title: "Revisa tu correo",
+    message:
+      "Recibirás un enlace único para restablecer tu contraseña. Podrás utilizarlo una sola vez y vencerá en 12 horas. Si no aparece en tu bandeja de entrada, revisa la carpeta de correo no deseado.",
+  },
+};
+
 export function AccessView({
-  registrationSubmitted,
-  onRegistrationSubmittedConsumed,
+  accessNotification,
+  onAccessNotificationConsumed,
   onRepeatOnboarding,
 }: AccessViewProps) {
   const router = useRouter();
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
-  const [isRegistrationNoticeOpen, setIsRegistrationNoticeOpen] = useState(false);
-  const registrationSubmissionHandledRef = useRef(false);
+  const [visibleAccessNotification, setVisibleAccessNotification] =
+    useState<AccessNotification | null>(null);
+  const accessNotificationHandledRef = useRef(false);
 
   useEffect(() => {
-    if (!registrationSubmitted || registrationSubmissionHandledRef.current) return;
+    if (!accessNotification || accessNotificationHandledRef.current) return;
 
-    registrationSubmissionHandledRef.current = true;
+    accessNotificationHandledRef.current = true;
     setIsSignInOpen(true);
-    setIsRegistrationNoticeOpen(true);
-    onRegistrationSubmittedConsumed();
-  }, [onRegistrationSubmittedConsumed, registrationSubmitted]);
+    setVisibleAccessNotification(accessNotification);
+    onAccessNotificationConsumed();
+  }, [accessNotification, onAccessNotificationConsumed]);
+
+  const notificationContent = visibleAccessNotification
+    ? accessNotificationContent[visibleAccessNotification]
+    : null;
 
   const repeatOnboarding = () => {
     setIsHelpOpen(false);
@@ -252,43 +275,66 @@ export function AccessView({
           </Button>
         </DialogActions>
       </Dialog>
-      <SignInSheet onClose={closeSignIn} onSuccess={completeSignIn} open={isSignInOpen} />
-      <Snackbar
-        anchorOrigin={{ horizontal: "center", vertical: "top" }}
-        autoHideDuration={9000}
-        onClose={(_event, reason) => {
-          if (reason !== "clickaway") setIsRegistrationNoticeOpen(false);
-        }}
-        open={isRegistrationNoticeOpen}
-        sx={(theme) => ({
-          top: "calc(16px + env(safe-area-inset-top)) !important",
-          right: { xs: 2, sm: "auto" },
-          left: { xs: 2, sm: "50%" },
-          width: { xs: "auto", sm: "min(560px, calc(100% - 32px))" },
-          transform: { xs: "none", sm: "translateX(-50%)" },
-          zIndex: theme.zIndex.modal + 1,
-        })}
-      >
-        <Alert
-          action={
-            <IconButton
-              aria-label="Cerrar aviso de registro"
-              color="inherit"
-              onClick={() => setIsRegistrationNoticeOpen(false)}
-              size="small"
+      <SignInSheet
+        notification={(
+          <Snackbar
+            anchorOrigin={{ horizontal: "center", vertical: "top" }}
+            autoHideDuration={9000}
+            onClose={(_event, reason) => {
+              if (reason !== "clickaway") setVisibleAccessNotification(null);
+            }}
+            open={Boolean(visibleAccessNotification)}
+            sx={{
+              position: "static",
+              inset: "auto",
+              boxSizing: "border-box",
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              flexShrink: 0,
+              transform: "none !important",
+            }}
+          >
+            <Alert
+              action={
+                <IconButton
+                  aria-label={notificationContent?.closeLabel}
+                  color="inherit"
+                  onClick={() => setVisibleAccessNotification(null)}
+                  size="small"
+                >
+                  <CloseRounded fontSize="small" />
+                </IconButton>
+              }
+              aria-live="polite"
+              role="status"
+              severity="success"
+              sx={{
+                boxSizing: "border-box",
+                width: "100%",
+                maxWidth: "100%",
+                minWidth: 0,
+                alignItems: "flex-start",
+                "& .MuiAlert-message": {
+                  minWidth: 0,
+                  overflowWrap: "anywhere",
+                },
+                "& .MuiAlert-action": {
+                  flexShrink: 0,
+                  ml: 1,
+                  mr: 0,
+                },
+              }}
             >
-              <CloseRounded fontSize="small" />
-            </IconButton>
-          }
-          aria-live="polite"
-          role="status"
-          severity="success"
-          sx={{ width: "100%", alignItems: "flex-start" }}
-        >
-          <AlertTitle>Registro procesado correctamente</AlertTitle>
-          Revisa tu bandeja de entrada o correo no deseado y utiliza el enlace recibido para activar tu cuenta antes de iniciar sesión.
-        </Alert>
-      </Snackbar>
+              <AlertTitle>{notificationContent?.title}</AlertTitle>
+              {notificationContent?.message}
+            </Alert>
+          </Snackbar>
+        )}
+        onClose={closeSignIn}
+        onSuccess={completeSignIn}
+        open={isSignInOpen}
+      />
     </>
   );
 }

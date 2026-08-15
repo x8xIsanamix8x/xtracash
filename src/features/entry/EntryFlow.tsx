@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 
-import { consumeRegistrationSubmittedMarker } from "@/lib/registrationNavigation";
+import {
+  consumeAccessNotification,
+  type AccessNotification,
+} from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
 import { BubbleField } from "./components/BubbleField";
@@ -21,19 +24,19 @@ type EntryScreen = "checking" | "onboarding" | "access";
 export function EntryFlow() {
   const [screen, setScreen] = useState<EntryScreen>("checking");
   const [stepIndex, setStepIndex] = useState(0);
-  const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
-  const registrationSubmissionMarkerRef = useRef<boolean | null>(null);
+  const [accessNotification, setAccessNotification] = useState<AccessNotification | null>(null);
+  const accessNotificationRef = useRef<AccessNotification | null | undefined>(undefined);
 
   useEffect(() => {
-    if (registrationSubmissionMarkerRef.current === null) {
-      registrationSubmissionMarkerRef.current = consumeRegistrationSubmittedMarker();
+    if (accessNotificationRef.current === undefined) {
+      accessNotificationRef.current = consumeAccessNotification();
     }
 
-    const wasRegistrationSubmitted = registrationSubmissionMarkerRef.current;
+    const requestedNotification = accessNotificationRef.current;
 
     const checkPreference = window.setTimeout(() => {
-      if (wasRegistrationSubmitted) {
-        setRegistrationSubmitted(true);
+      if (requestedNotification) {
+        setAccessNotification(requestedNotification);
         setScreen("access");
       } else {
         setScreen(hasCompletedOnboarding() ? "access" : "onboarding");
@@ -113,9 +116,9 @@ export function EntryFlow() {
 
   return (
     <AccessView
-      onRegistrationSubmittedConsumed={() => setRegistrationSubmitted(false)}
+      accessNotification={accessNotification}
+      onAccessNotificationConsumed={() => setAccessNotification(null)}
       onRepeatOnboarding={repeatOnboarding}
-      registrationSubmitted={registrationSubmitted}
     />
   );
 }

@@ -16,7 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import { registrationSubmittedUrl } from "@/lib/registrationNavigation";
+import { registrationSubmittedUrl } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
 import { ConfirmationStep } from "./components/ConfirmationStep";

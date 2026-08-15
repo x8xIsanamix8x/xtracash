@@ -2,383 +2,177 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowBackRounded } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   Container,
   IconButton,
-  LinearProgress,
   Paper,
   Stack,
   Typography,
 } from "@mui/material";
 
+import { recoveryRequestedUrl } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
-import { RecoveryCodeStep } from "./components/RecoveryCodeStep";
-import { RecoveryPasswordStep } from "./components/RecoveryPasswordStep";
 import { RecoveryRequestStep } from "./components/RecoveryRequestStep";
+import { RecoveryStepVisual } from "./components/RecoveryStepVisual";
 import {
-  RecoveryStepVisual,
-  type RecoveryVisualKey,
-} from "./components/RecoveryStepVisual";
-import { recoveryMock } from "./mocks/recovery";
-import type {
-  RecoveryData,
-  RecoveryErrors,
-  RecoveryField,
-  RecoveryStep,
-} from "./types";
+  clearRecoveryCooldown,
+  formatRecoveryCooldownTime,
+  getRecoveryCooldownRemainingSeconds,
+  getRecoveryCooldownUntil,
+  startRecoveryCooldown,
+} from "./lib/recoveryCooldown";
 import {
-  validateRecoveryCode,
-  validateRecoveryIdentifier,
-  validateRecoveryPassword,
-} from "./validation";
+  createRecoveryRequest,
+  requestPasswordRecovery,
+  RecoveryServiceError,
+} from "./services/recovery";
+import type { RecoveryData } from "./types";
+import { validateRecoveryIdentifier } from "./validation";
 
 const initialData: RecoveryData = {
   identifier: "",
-  password: "",
-  passwordConfirmation: "",
 };
 
-const requestStatusMessage =
-  "Si los datos coinciden con una cuenta registrada, recibirás un código de validación.";
-
-const stepContent: readonly Readonly<{
-  title: string;
-  description: string;
-  visualKey: RecoveryVisualKey;
-}>[] = [
-  {
-    title: "Recupera tu acceso",
-    description: "Ingresa el correo o teléfono asociado a tu cuenta para continuar.",
-    visualKey: "request",
-  },
-  {
-    title: "Confirma que eres tú",
-    description: "Ingresa el código de 6 dígitos enviado a tu medio de contacto.",
-    visualKey: "code",
-  },
-  {
-    title: "Crea una nueva contraseña",
-    description: "",
-    visualKey: "password",
-  },
-];
-
-function maskIdentifier(identifier: string) {
-  const value = identifier.trim();
-
-  if (!value.includes("@")) {
-    return `Teléfono ••••••• ${value.slice(-4)}`;
+function getRecoveryErrorMessage(error: unknown): string {
+  if (!(error instanceof RecoveryServiceError)) {
+    return "No pudimos procesar la solicitud. Inténtalo nuevamente.";
   }
 
-  const [localPart, domain = ""] = value.split("@");
-  const domainParts = domain.split(".");
-  const domainName = domainParts[0] ?? "";
-  const extension = domainParts.at(-1);
-  const visibleLocal = localPart.slice(0, Math.min(2, localPart.length));
-  const visibleDomain = domainName.slice(0, 1);
+  if (error.type === "network") {
+    return "No pudimos conectarnos. Revisa tu conexión e inténtalo nuevamente.";
+  }
 
-  return `Correo ${visibleLocal}•••@${visibleDomain}•••${extension ? `.${extension}` : ""}`;
-}
+  if (error.type === "http") {
+    return "No pudimos procesar la solicitud. Inténtalo nuevamente más tarde.";
+  }
 
-function formatCountdown(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `El código vence en ${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+  return "La recuperación no está disponible en este momento. Inténtalo nuevamente más tarde.";
 }
 
 export function RecoveryView() {
-  const [step, setStep] = useState<RecoveryStep>(0);
+  const router = useRouter();
   const [data, setData] = useState<RecoveryData>(initialData);
-  const [errors, setErrors] = useState<RecoveryErrors>({});
+  const [fieldError, setFieldError] = useState("");
   const [requestError, setRequestError] = useState("");
-  const [requestGeneralError, setRequestGeneralError] = useState("");
-  const [requestStatus, setRequestStatus] = useState("");
-  const [code, setCode] = useState("");
-  const [codeError, setCodeError] = useState("");
-  const [attemptsRemaining, setAttemptsRemaining] = useState<number>(recoveryMock.maximumAttempts);
-  const [isCodeUnavailable, setIsCodeUnavailable] = useState(false);
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(recoveryMock.codeLifetimeSeconds);
-  const [resendMessage, setResendMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cooldownSecondsRemaining, setCooldownSecondsRemaining] = useState<number | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const identifierRef = useRef<HTMLInputElement>(null);
-  const codeRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
-  const confirmationRef = useRef<HTMLInputElement>(null);
-  const simulationTimerRef = useRef<number | null>(null);
-  const countdownTimerRef = useRef<number | null>(null);
-  const expiresAtRef = useRef<number | null>(null);
-  const operationRef = useRef(0);
+  const submissionRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const cooldownUntilRef = useRef<number | null>(null);
+  const cooldownIntervalRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
-  const clearSimulation = () => {
-    operationRef.current += 1;
+  useEffect(() => {
+    isMountedRef.current = true;
+    titleRef.current?.focus();
 
-    if (simulationTimerRef.current !== null) {
-      window.clearTimeout(simulationTimerRef.current);
-      simulationTimerRef.current = null;
-    }
+    const stopCooldownTicker = () => {
+      if (cooldownIntervalRef.current === null) return;
 
-    setIsLoading(false);
-  };
+      window.clearInterval(cooldownIntervalRef.current);
+      cooldownIntervalRef.current = null;
+    };
 
-  const clearCountdown = () => {
-    if (countdownTimerRef.current !== null) {
-      window.clearInterval(countdownTimerRef.current);
-      countdownTimerRef.current = null;
-    }
-  };
+    const updateCooldown = () => {
+      const cooldownUntil = cooldownUntilRef.current;
+      if (cooldownUntil === null) {
+        setCooldownSecondsRemaining(0);
+        return;
+      }
 
-  const expireCode = () => {
-    clearCountdown();
-    setSecondsRemaining(0);
-    setIsCodeUnavailable(true);
-    setCodeError("El código venció. Solicita uno nuevo.");
-  };
+      const remainingSeconds = getRecoveryCooldownRemainingSeconds(cooldownUntil);
+      setCooldownSecondsRemaining(remainingSeconds);
 
-  const startCountdown = (expiresAt = Date.now() + recoveryMock.codeLifetimeSeconds * 1000) => {
-    clearCountdown();
-    expiresAtRef.current = expiresAt;
-
-    const updateCountdown = () => {
-      const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
-      setSecondsRemaining(remaining);
-
-      if (remaining === 0) {
-        expireCode();
+      if (remainingSeconds === 0) {
+        cooldownUntilRef.current = null;
+        clearRecoveryCooldown();
+        stopCooldownTicker();
       }
     };
 
-    updateCountdown();
-    if (expiresAt > Date.now()) {
-      countdownTimerRef.current = window.setInterval(updateCountdown, 1000);
-    }
-  };
+    const initializationTimeout = window.setTimeout(() => {
+      cooldownUntilRef.current = getRecoveryCooldownUntil();
+      updateCooldown();
 
-  const resetCodeSession = () => {
-    setCode("");
-    setCodeError("");
-    setAttemptsRemaining(recoveryMock.maximumAttempts);
-    setIsCodeUnavailable(false);
-    setResendMessage("");
-    startCountdown();
-  };
+      if (cooldownUntilRef.current !== null) {
+        cooldownIntervalRef.current = window.setInterval(updateCooldown, 1000);
+      }
+    }, 0);
 
-  useEffect(() => {
-    titleRef.current?.focus();
-  }, [step, isComplete]);
-
-  useEffect(() => {
     return () => {
-      operationRef.current += 1;
-      if (simulationTimerRef.current !== null) window.clearTimeout(simulationTimerRef.current);
-      if (countdownTimerRef.current !== null) window.clearInterval(countdownTimerRef.current);
+      isMountedRef.current = false;
+      abortControllerRef.current?.abort();
+      window.clearTimeout(initializationTimeout);
+      stopCooldownTicker();
     };
   }, []);
 
-  const updateData = (field: RecoveryField, value: string) => {
-    setData((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined }));
+  const isCooldownChecking = cooldownSecondsRemaining === null;
+  const isCooldownActive = (cooldownSecondsRemaining ?? 0) > 0;
 
-    if (field === "identifier") {
-      setRequestError("");
-      setRequestGeneralError("");
-      setRequestStatus("");
-    }
+  const updateIdentifier = (value: string) => {
+    if (isSubmitting) return;
 
-    if (field === "password" && data.passwordConfirmation) {
-      setErrors((current) => ({
-        ...current,
-        passwordConfirmation:
-          data.passwordConfirmation === value ? undefined : "Las contraseñas no coinciden.",
-      }));
-    }
+    setData({ identifier: value });
+    setFieldError("");
+    setRequestError("");
   };
 
-  const submitRequest = (event: FormEvent<HTMLFormElement>) => {
+  const submitRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isLoading) return;
 
-    const identifierError = validateRecoveryIdentifier(data.identifier);
-    setRequestError(identifierError);
-    setRequestGeneralError("");
-    setRequestStatus("");
+    if (submissionRef.current || isCooldownChecking || isCooldownActive) return;
 
-    if (identifierError) {
+    const nextFieldError = validateRecoveryIdentifier(data.identifier);
+    setFieldError(nextFieldError);
+    setRequestError("");
+
+    if (nextFieldError) {
       identifierRef.current?.focus();
       return;
     }
 
-    setIsLoading(true);
-    setRequestStatus(requestStatusMessage);
-    const operation = operationRef.current + 1;
-    operationRef.current = operation;
-    simulationTimerRef.current = window.setTimeout(() => {
-      if (operationRef.current !== operation) return;
+    const request = createRecoveryRequest(data.identifier);
+    const controller = new AbortController();
+    submissionRef.current = true;
+    abortControllerRef.current = controller;
+    setIsSubmitting(true);
 
-      simulationTimerRef.current = null;
-      setIsLoading(false);
+    try {
+      await requestPasswordRecovery(request, controller.signal);
 
-      if (data.identifier.trim().toLowerCase() === recoveryMock.requestErrorIdentifier) {
-        setRequestStatus("");
-        setRequestGeneralError("No pudimos procesar la solicitud. Inténtalo nuevamente.");
+      startRecoveryCooldown();
+
+      if (!isMountedRef.current) return;
+
+      setData(initialData);
+      setFieldError("");
+      setRequestError("");
+      router.replace(recoveryRequestedUrl);
+    } catch (error) {
+      if (!isMountedRef.current) return;
+
+      if (error instanceof RecoveryServiceError && error.type === "aborted") {
         return;
       }
 
-      resetCodeSession();
-      setStep(1);
-    }, recoveryMock.simulationDelay);
-  };
-
-  const submitCode = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (isCodeUnavailable) return;
-
-    if (expiresAtRef.current === null || expiresAtRef.current <= Date.now()) {
-      expireCode();
-      return;
-    }
-
-    const formatError = validateRecoveryCode(code);
-    if (formatError) {
-      setCodeError(formatError);
-      codeRef.current?.focus();
-      return;
-    }
-
-    if (code !== recoveryMock.validCode) {
-      const nextAttempts = attemptsRemaining - 1;
-      setAttemptsRemaining(nextAttempts);
-
-      if (nextAttempts === 0) {
-        clearCountdown();
-        setIsCodeUnavailable(true);
-        setCodeError("Alcanzaste el número máximo de intentos. Solicita un nuevo código.");
-      } else {
-        setCodeError(`El código es incorrecto. Te quedan ${nextAttempts} intentos.`);
+      setRequestError(getRecoveryErrorMessage(error));
+    } finally {
+      submissionRef.current = false;
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
       }
-      codeRef.current?.focus();
-      return;
+      if (isMountedRef.current) setIsSubmitting(false);
     }
-
-    clearCountdown();
-    setCodeError("");
-    setStep(2);
   };
-
-  const resendCode = () => {
-    resetCodeSession();
-    setResendMessage("Código reenviado de forma demostrativa.");
-    window.setTimeout(() => codeRef.current?.focus(), 0);
-  };
-
-  const submitPassword = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (isLoading) return;
-
-    const nextErrors = validateRecoveryPassword(data);
-    setErrors(nextErrors);
-
-    if (nextErrors.password) {
-      passwordRef.current?.focus();
-      return;
-    }
-
-    if (nextErrors.passwordConfirmation) {
-      confirmationRef.current?.focus();
-      return;
-    }
-
-    setIsLoading(true);
-    const operation = operationRef.current + 1;
-    operationRef.current = operation;
-    simulationTimerRef.current = window.setTimeout(() => {
-      if (operationRef.current !== operation) return;
-
-      simulationTimerRef.current = null;
-      setIsLoading(false);
-      setData(initialData);
-      setCode("");
-      setIsComplete(true);
-    }, recoveryMock.simulationDelay);
-  };
-
-  const goBack = () => {
-    clearSimulation();
-    setErrors({});
-
-    if (step === 1) {
-      clearCountdown();
-      expiresAtRef.current = null;
-      setCode("");
-      setCodeError("");
-      setResendMessage("");
-      setStep(0);
-      return;
-    }
-
-    const expiresAt = expiresAtRef.current;
-    setStep(1);
-    setCodeError("");
-
-    if (expiresAt === null || expiresAt <= Date.now()) {
-      expireCode();
-      return;
-    }
-
-    setIsCodeUnavailable(false);
-    startCountdown(expiresAt);
-  };
-
-  const currentContent = stepContent[step];
-  const destinationLabel = maskIdentifier(data.identifier);
-  const countdownLabel = secondsRemaining === 0
-    ? "El código ya no está vigente"
-    : formatCountdown(secondsRemaining);
-
-  if (isComplete) {
-    return (
-      <Box component="main" sx={{ minHeight: "100dvh", display: "grid", placeItems: "center", bgcolor: "background.default" }}>
-        <Container
-          maxWidth={false}
-          sx={{
-            width: "100%",
-            maxWidth: 1120,
-            pt: "calc(24px + env(safe-area-inset-top))",
-            pr: "calc(16px + env(safe-area-inset-right))",
-            pb: "calc(24px + env(safe-area-inset-bottom))",
-            pl: "calc(16px + env(safe-area-inset-left))",
-          }}
-        >
-          <Paper
-            aria-live="polite"
-            role="status"
-            variant="outlined"
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 38fr) minmax(0, 62fr)" },
-              overflow: "hidden",
-              boxShadow: "none",
-            }}
-          >
-            <RecoveryStepVisual visualKey="success" />
-            <Stack spacing={2} sx={{ justifyContent: "center", p: { xs: 3, lg: 5 }, textAlign: { xs: "center", lg: "left" } }}>
-              <Typography component="h1" ref={titleRef} tabIndex={-1} variant="h4" sx={{ color: "secondary.main", fontWeight: 700 }}>
-                Contraseña actualizada
-              </Typography>
-              <Button component={Link} fullWidth href="/" variant="contained">
-                Iniciar sesión
-              </Button>
-            </Stack>
-          </Paper>
-        </Container>
-      </Box>
-    );
-  }
 
   return (
     <Box component="main" sx={{ minHeight: "100dvh", bgcolor: "background.default" }}>
@@ -413,7 +207,7 @@ export function RecoveryView() {
               display: "grid",
               gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 38fr) minmax(0, 62fr)" },
               gridTemplateRows: { xs: "auto minmax(min-content, 1fr)", lg: "minmax(min-content, 1fr)" },
-              minHeight: { sm: 640, lg: 600 },
+              minHeight: { sm: 520, lg: 520 },
               my: { xs: 0, sm: "auto" },
               overflow: "hidden",
               boxShadow: "none",
@@ -429,7 +223,7 @@ export function RecoveryView() {
                 borderColor: "divider",
               }}
             >
-              <RecoveryStepVisual visualKey={currentContent.visualKey} />
+              <RecoveryStepVisual />
             </Box>
             <Box
               sx={{
@@ -439,114 +233,62 @@ export function RecoveryView() {
                 minWidth: 0,
                 mx: "auto",
                 flexDirection: "column",
+                justifyContent: "center",
                 p: { xs: 2, sm: 3, lg: 4 },
               }}
             >
               <Stack spacing={1}>
-                <Typography color="text.secondary" id="recovery-progress-label" variant="body2">
-                  Paso {step + 1} de 3
-                </Typography>
-                <LinearProgress
-                  aria-labelledby="recovery-progress-label"
-                  value={((step + 1) / 3) * 100}
-                  variant="determinate"
-                />
                 <Typography
                   component="h1"
                   ref={titleRef}
                   tabIndex={-1}
                   variant="h4"
-                  sx={{ pt: 1, color: "secondary.main", fontWeight: 700 }}
+                  sx={{ color: "secondary.main", fontWeight: 700 }}
                 >
-                  {currentContent.title}
+                  Recupera tu acceso
                 </Typography>
-                {currentContent.description && (
-                  <Typography color="text.secondary">{currentContent.description}</Typography>
-                )}
+                <Typography color="text.secondary">
+                  Ingresa el correo electrónico asociado a tu cuenta para recibir las instrucciones de recuperación.
+                </Typography>
               </Stack>
 
               <Box
+                aria-busy={isSubmitting || isCooldownChecking}
                 component="form"
                 noValidate
-                onSubmit={step === 0 ? submitRequest : step === 1 ? submitCode : submitPassword}
-                sx={{ flex: 1, display: "flex", flexDirection: "column", pt: 3 }}
+                onSubmit={submitRequest}
+                sx={{ display: "flex", flexDirection: "column", pt: 3 }}
               >
-                <Box
-                  sx={{
-                    flex: 1,
-                    width: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: step === 0 ? "center" : "flex-start",
-                  }}
-                >
-                  {step === 0 && (
-                    <RecoveryRequestStep
-                      fieldError={requestError}
-                      generalError={requestGeneralError}
-                      identifier={data.identifier}
-                      inputRef={identifierRef}
-                      onChange={(value) => updateData("identifier", value)}
-                      statusMessage={requestStatus}
-                    />
-                  )}
-                  {step === 1 && (
-                    <RecoveryCodeStep
-                      code={code}
-                      countdownLabel={countdownLabel}
-                      destinationLabel={destinationLabel}
-                      error={codeError}
-                      inputRef={codeRef}
-                      isUnavailable={isCodeUnavailable}
-                      onChange={(value) => {
-                        setCode(value);
-                        if (!isCodeUnavailable) setCodeError("");
-                      }}
-                      onResend={resendCode}
-                      requestStatus={requestStatusMessage}
-                      resendMessage={resendMessage}
-                    />
-                  )}
-                  {step === 2 && (
-                    <RecoveryPasswordStep
-                      confirmationRef={confirmationRef}
-                      data={data}
-                      errors={errors}
-                      onChange={updateData}
-                      passwordRef={passwordRef}
-                    />
-                  )}
-                </Box>
+                <RecoveryRequestStep
+                  disabled={isSubmitting}
+                  error={fieldError}
+                  identifier={data.identifier}
+                  inputRef={identifierRef}
+                  onChange={updateIdentifier}
+                />
 
-                <Stack
-                  direction={{ xs: "column-reverse", sm: "row" }}
-                  spacing={1.5}
-                  sx={{
-                    mt: "auto",
-                    pt: 3,
-                    borderTop: "1px solid",
-                    borderColor: "divider",
-                  }}
+                {requestError && (
+                  <Alert role="alert" severity="error" sx={{ mt: 2 }}>
+                    {requestError}
+                  </Alert>
+                )}
+
+                {cooldownSecondsRemaining !== null && cooldownSecondsRemaining > 0 && (
+                  <Typography aria-live="polite" role="status" sx={{ mt: 2, color: "text.secondary" }}>
+                    Podrás solicitar otro enlace en {formatRecoveryCooldownTime(cooldownSecondsRemaining)}
+                  </Typography>
+                )}
+
+                <Button
+                  disabled={isSubmitting || isCooldownChecking || isCooldownActive}
+                  fullWidth
+                  loading={isSubmitting}
+                  sx={{ mt: 3 }}
+                  type="submit"
+                  variant="contained"
                 >
-                  {step > 0 && (
-                    <Button fullWidth onClick={goBack} type="button" variant="outlined">
-                      Atrás
-                    </Button>
-                  )}
-                  <Button
-                    disabled={step === 1 && isCodeUnavailable}
-                    fullWidth
-                    loading={isLoading}
-                    type="submit"
-                    variant="contained"
-                  >
-                    {step === 0
-                      ? "Enviar código"
-                      : step === 1
-                        ? "Validar código"
-                        : "Actualizar contraseña"}
-                  </Button>
-                </Stack>
+                  Enviar enlace
+                </Button>
               </Box>
             </Box>
           </Paper>
