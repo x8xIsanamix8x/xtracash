@@ -1,0 +1,1 @@
+export { MobilePaymentView } from "./MobilePaymentView";

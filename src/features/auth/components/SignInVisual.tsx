@@ -7,8 +7,11 @@ export function SignInVisual() {
       aria-hidden="true"
       sx={{
         position: "relative",
+        boxSizing: "border-box",
         width: "100%",
-        height: { xs: "clamp(210px, 38dvh, 340px)", md: "clamp(280px, 34dvh, 320px)" },
+        maxWidth: "100%",
+        minWidth: 0,
+        height: { xs: "clamp(160px, 28dvh, 240px)", md: "clamp(280px, 34dvh, 320px)" },
         mx: "auto",
         borderRadius: "22px",
         bgcolor: "background.paper",
@@ -19,6 +22,14 @@ export function SignInVisual() {
         overflow: "hidden",
         pointerEvents: "none",
         p: { xs: 3, md: 4 },
+        "@media (min-width: 900px) and (max-height: 820px)": {
+          height: "clamp(150px, 21dvh, 180px)",
+          p: 2,
+        },
+        "@media (max-height: 700px)": {
+          height: "clamp(120px, 22dvh, 150px)",
+          p: 2,
+        },
         "@media (max-height: 520px)": {
           height: "clamp(120px, 28dvh, 150px)",
           p: 2,

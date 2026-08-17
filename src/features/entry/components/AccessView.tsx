@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CloseRounded } from "@mui/icons-material";
 import {
+  Alert,
+  AlertTitle,
   Box,
   Button,
   Dialog,
@@ -11,24 +14,74 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  IconButton,
+  Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
 
 import { SignInSheet } from "@/features/auth";
+import type {
+  AccessNavigationRequest,
+  AccessNotification,
+} from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
 import { AccessVisual } from "./AccessVisual";
 import { BubbleField } from "./BubbleField";
 
 type AccessViewProps = Readonly<{
+  accessRequest: AccessNavigationRequest | null;
+  onAccessRequestConsumed: () => void;
   onRepeatOnboarding: () => void;
 }>;
 
-export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
+const accessNotificationContent: Readonly<
+  Record<AccessNotification, Readonly<{ closeLabel: string; message: string; title: string }>>
+> = {
+  registrationSubmitted: {
+    closeLabel: "Cerrar aviso de registro",
+    title: "Registro procesado correctamente",
+    message:
+      "Revisa tu bandeja de entrada o correo no deseado y utiliza el enlace recibido para activar tu cuenta antes de iniciar sesión.",
+  },
+  recoveryRequested: {
+    closeLabel: "Cerrar aviso de recuperación",
+    title: "Revisa tu correo",
+    message:
+      "Recibirás un enlace único para restablecer tu contraseña. Podrás utilizarlo una sola vez y vencerá en 12 horas. Si no aparece en tu bandeja de entrada, revisa la carpeta de correo no deseado.",
+  },
+  sessionExpired: {
+    closeLabel: "Cerrar aviso de sesión expirada",
+    title: "Tu sesión ha expirado",
+    message: "Por seguridad, inicia sesión nuevamente para continuar.",
+  },
+};
+
+export function AccessView({
+  accessRequest,
+  onAccessRequestConsumed,
+  onRepeatOnboarding,
+}: AccessViewProps) {
   const router = useRouter();
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [visibleAccessNotification, setVisibleAccessNotification] =
+    useState<AccessNotification | null>(null);
+  const accessNotificationHandledRef = useRef(false);
+
+  useEffect(() => {
+    if (!accessRequest || accessNotificationHandledRef.current) return;
+
+    accessNotificationHandledRef.current = true;
+    setIsSignInOpen(true);
+    setVisibleAccessNotification(accessRequest.notification);
+    onAccessRequestConsumed();
+  }, [accessRequest, onAccessRequestConsumed]);
+
+  const notificationContent = visibleAccessNotification
+    ? accessNotificationContent[visibleAccessNotification]
+    : null;
 
   const repeatOnboarding = () => {
     setIsHelpOpen(false);
@@ -48,7 +101,8 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
   };
 
   return (
-    <Box
+    <>
+      <Box
       component="main"
       sx={{
         position: "relative",
@@ -145,7 +199,7 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
           flexDirection: "column",
           pt: { xs: 8, md: 10 },
           pr: "calc(24px + env(safe-area-inset-right))",
-          pb: "calc(12px + env(safe-area-inset-bottom))",
+          pb: 0,
           pl: "calc(24px + env(safe-area-inset-left))",
           "@media (max-height: 650px)": { pt: 4 },
           "@media (max-height: 520px)": { pt: 3 },
@@ -178,6 +232,10 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
             mx: "auto",
             mt: "auto",
             pt: 3,
+            pb: {
+              xs: "calc(28px + env(safe-area-inset-bottom))",
+              sm: "calc(36px + env(safe-area-inset-bottom))",
+            },
             "@media (max-height: 650px)": { gap: 1, pt: 2 },
           }}
         >
@@ -198,6 +256,8 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
             Registrarme
           </Button>
         </Stack>
+      </Box>
+
       </Box>
 
       <Dialog
@@ -223,7 +283,66 @@ export function AccessView({ onRepeatOnboarding }: AccessViewProps) {
           </Button>
         </DialogActions>
       </Dialog>
-      <SignInSheet onClose={closeSignIn} onSuccess={completeSignIn} open={isSignInOpen} />
-    </Box>
+      <SignInSheet
+        notification={(
+          <Snackbar
+            anchorOrigin={{ horizontal: "center", vertical: "top" }}
+            autoHideDuration={9000}
+            onClose={(_event, reason) => {
+              if (reason !== "clickaway") setVisibleAccessNotification(null);
+            }}
+            open={Boolean(visibleAccessNotification)}
+            sx={{
+              position: "static",
+              inset: "auto",
+              boxSizing: "border-box",
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              flexShrink: 0,
+              transform: "none !important",
+            }}
+          >
+            <Alert
+              action={
+                <IconButton
+                  aria-label={notificationContent?.closeLabel}
+                  color="inherit"
+                  onClick={() => setVisibleAccessNotification(null)}
+                  size="small"
+                >
+                  <CloseRounded fontSize="small" />
+                </IconButton>
+              }
+              aria-live="polite"
+              role="status"
+              severity="success"
+              sx={{
+                boxSizing: "border-box",
+                width: "100%",
+                maxWidth: "100%",
+                minWidth: 0,
+                alignItems: "flex-start",
+                "& .MuiAlert-message": {
+                  minWidth: 0,
+                  overflowWrap: "anywhere",
+                },
+                "& .MuiAlert-action": {
+                  flexShrink: 0,
+                  ml: 1,
+                  mr: 0,
+                },
+              }}
+            >
+              <AlertTitle>{notificationContent?.title}</AlertTitle>
+              {notificationContent?.message}
+            </Alert>
+          </Snackbar>
+        )}
+        onClose={closeSignIn}
+        onSuccess={completeSignIn}
+        open={isSignInOpen}
+      />
+    </>
   );
 }
