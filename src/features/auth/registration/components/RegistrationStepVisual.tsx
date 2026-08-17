@@ -1,7 +1,5 @@
 import {
   BadgeRounded,
-  CheckCircleRounded,
-  PhonelinkLockRounded,
   SecurityRounded,
   VerifiedUserRounded,
 } from "@mui/icons-material";
@@ -10,30 +8,24 @@ import { alpha } from "@mui/material/styles";
 
 import { themeTokens } from "@/theme/tokens";
 
-export type RegistrationVisualKey = "identity" | "security" | "confirmation" | "otp" | "success";
+export type RegistrationVisualKey = "identity" | "security" | "confirmation";
 
 const visualIcons = {
   identity: BadgeRounded,
   security: SecurityRounded,
   confirmation: VerifiedUserRounded,
-  otp: PhonelinkLockRounded,
-  success: CheckCircleRounded,
 } as const;
 
 const compositions = {
   identity: { iconLeft: "22%", orbLeft: "66%", orbTop: "-42%", lineRotation: "-8deg" },
   security: { iconLeft: "50%", orbLeft: "8%", orbTop: "42%", lineRotation: "7deg" },
   confirmation: { iconLeft: "72%", orbLeft: "2%", orbTop: "-48%", lineRotation: "-5deg" },
-  otp: { iconLeft: "34%", orbLeft: "70%", orbTop: "32%", lineRotation: "9deg" },
-  success: { iconLeft: "50%", orbLeft: "68%", orbTop: "-46%", lineRotation: "0deg" },
 } as const;
 
 const panelMessages = {
   identity: "Tu información, protegida desde el inicio.",
   security: "Seguridad para acompañar cada decisión.",
   confirmation: "Un último paso para confirmar tu cuenta.",
-  otp: "Un último paso para confirmar tu cuenta.",
-  success: "",
 } as const;
 
 type RegistrationStepVisualProps = Readonly<{
@@ -74,7 +66,7 @@ export function RegistrationStepVisual({ visualKey }: RegistrationStepVisualProp
       <Box
         sx={(theme) => ({
           position: "absolute",
-          left: visualKey === "security" || visualKey === "otp" ? "72%" : "8%",
+          left: visualKey === "security" ? "72%" : "8%",
           bottom: visualKey === "confirmation" ? "-34%" : "-48%",
           width: { xs: 116, sm: 150, lg: "64%" },
           aspectRatio: "1",
@@ -98,7 +90,7 @@ export function RegistrationStepVisual({ visualKey }: RegistrationStepVisualProp
       <Box
         sx={(theme) => ({
           position: "absolute",
-          left: visualKey === "identity" || visualKey === "otp" ? "45%" : "18%",
+          left: visualKey === "identity" ? "45%" : "18%",
           top: "26%",
           width: { xs: "34%", sm: "42%", lg: "72%" },
           height: 2,
@@ -122,7 +114,7 @@ export function RegistrationStepVisual({ visualKey }: RegistrationStepVisualProp
         sx={{
           position: "absolute",
           zIndex: 1,
-          top: visualKey === "otp" ? "20%" : "15%",
+          top: "15%",
           right: visualKey === "confirmation" ? "42%" : "12%",
           width: { xs: 10, sm: 14, lg: 18 },
           aspectRatio: "1",

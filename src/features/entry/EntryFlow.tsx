@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 
+import {
+  consumeAccessNavigationRequest,
+  type AccessNavigationRequest,
+} from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
 import { BubbleField } from "./components/BubbleField";
@@ -20,10 +24,23 @@ type EntryScreen = "checking" | "onboarding" | "access";
 export function EntryFlow() {
   const [screen, setScreen] = useState<EntryScreen>("checking");
   const [stepIndex, setStepIndex] = useState(0);
+  const [accessRequest, setAccessRequest] = useState<AccessNavigationRequest | null>(null);
+  const accessRequestRef = useRef<AccessNavigationRequest | null | undefined>(undefined);
 
   useEffect(() => {
+    if (accessRequestRef.current === undefined) {
+      accessRequestRef.current = consumeAccessNavigationRequest();
+    }
+
+    const requestedAccess = accessRequestRef.current;
+
     const checkPreference = window.setTimeout(() => {
-      setScreen(hasCompletedOnboarding() ? "access" : "onboarding");
+      if (requestedAccess) {
+        setAccessRequest(requestedAccess);
+        setScreen("access");
+      } else {
+        setScreen(hasCompletedOnboarding() ? "access" : "onboarding");
+      }
     }, 0);
 
     return () => window.clearTimeout(checkPreference);
@@ -97,5 +114,11 @@ export function EntryFlow() {
     );
   }
 
-  return <AccessView onRepeatOnboarding={repeatOnboarding} />;
+  return (
+    <AccessView
+      accessRequest={accessRequest}
+      onAccessRequestConsumed={() => setAccessRequest(null)}
+      onRepeatOnboarding={repeatOnboarding}
+    />
+  );
 }
