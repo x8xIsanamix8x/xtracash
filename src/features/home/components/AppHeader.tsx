@@ -5,7 +5,7 @@ import { IconButton, Stack, Typography } from "@mui/material";
 import { themeTokens } from "@/theme/tokens";
 
 type AppHeaderProps = Readonly<{
-  firstName: string;
+  firstName: string | null;
   onNotifications: () => void;
 }>;
 
@@ -41,7 +41,7 @@ export function AppHeader({ firstName, onNotifications }: AppHeaderProps) {
       </Stack>
       <Stack spacing={0.5}>
         <Typography component="h1" variant="h4" sx={{ color: "secondary.main", fontWeight: 700 }}>
-          Hola, {firstName}
+          {firstName ? `Hola, ${firstName}` : "Hola"}
         </Typography>
         <Typography color="text.secondary">
           Este es el estado de tu financiamiento

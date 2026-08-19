@@ -1,9 +1,8 @@
 export type CreditLineStatus =
-  | "ACTIVA"
-  | "MORA_NIVEL_1"
-  | "CONGELADA_NIVEL_2"
-  | "BLOQUEADA_TERCER_CORTE"
-  | "BLOQUEADA_RETIRO";
+  | "AL_DIA"
+  | "CON_MORA"
+  | "LIMITE_REDUCIDO"
+  | "BLOQUEADA";
 
 type CreditLineStatusTone = "success" | "error" | "warning";
 
@@ -24,13 +23,13 @@ export const creditLineStatusConfig: Record<
   CreditLineStatus,
   CreditLineStatusDefinition
 > = {
-  ACTIVA: {
+  AL_DIA: {
     label: "Activa",
     accessibleMessage: "Tu financiamiento está activo.",
     tone: "success",
     notice: null,
   },
-  MORA_NIVEL_1: {
+  CON_MORA: {
     label: "Pago pendiente",
     accessibleMessage:
       "Tu financiamiento tiene un pago pendiente y continúa disponible.",
@@ -42,39 +41,27 @@ export const creditLineStatusConfig: Record<
       actionLabel: "Reportar pago",
     },
   },
-  CONGELADA_NIVEL_2: {
-    label: "Disponible congelado",
+  LIMITE_REDUCIDO: {
+    label: "Disponible limitado",
     accessibleMessage:
-      "Parte de tu disponible está congelada. Puedes utilizar el monto restante.",
+      "Tu disponible está limitado. Puedes utilizar el monto informado.",
     tone: "warning",
     notice: {
-      title: "Parte de tu disponible está congelada",
+      title: "Tu disponible está limitado",
       description:
-        "Puedes utilizar únicamente el disponible restante y reportar el pago para su verificación.",
+        "Puedes utilizar el disponible informado y reportar un pago pendiente cuando lo realices.",
       actionLabel: "Reportar pago",
     },
   },
-  BLOQUEADA_TERCER_CORTE: {
+  BLOQUEADA: {
     label: "Bloqueada",
     accessibleMessage:
-      "Tu financiamiento está bloqueado. Solo puedes consultar y reportar pagos.",
+      "Tu financiamiento está bloqueado y no permite realizar Pago Móvil.",
     tone: "error",
     notice: {
       title: "Tu financiamiento está bloqueado",
       description:
-        "Por ahora solo puedes consultar la información y reportar pagos.",
-      actionLabel: "Reportar pago",
-    },
-  },
-  BLOQUEADA_RETIRO: {
-    label: "Bloqueada",
-    accessibleMessage:
-      "Tu financiamiento no permite nuevas solicitudes. Puedes consultar y reportar pagos.",
-    tone: "error",
-    notice: {
-      title: "Tu financiamiento no admite nuevas solicitudes",
-      description:
-        "Puedes continuar consultando la información y reportando pagos.",
+        "No puedes realizar Pago Móvil en este momento. Puedes seguir consultando la información de tu financiamiento.",
       actionLabel: "Reportar pago",
     },
   },
@@ -86,8 +73,8 @@ export const creditLineStatusConfig: Record<
  */
 export function isCreditLineUsable(status: CreditLineStatus) {
   return (
-    status === "ACTIVA"
-    || status === "MORA_NIVEL_1"
-    || status === "CONGELADA_NIVEL_2"
+    status === "AL_DIA"
+    || status === "CON_MORA"
+    || status === "LIMITE_REDUCIDO"
   );
 }
