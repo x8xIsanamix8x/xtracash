@@ -1,4 +1,9 @@
-import { AddCardRounded, CloudOffRounded, ReplayRounded } from "@mui/icons-material";
+import {
+  AddCardRounded,
+  CloudOffRounded,
+  DoNotDisturbOnRounded,
+  ReplayRounded,
+} from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -10,7 +15,12 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
-export type CreditOverviewStatus = "loading" | "ready" | "error" | "empty";
+export type CreditOverviewStatus =
+  | "loading"
+  | "ready"
+  | "error"
+  | "empty"
+  | "unavailable";
 
 type CreditOverviewStateProps = Readonly<{
   status: Exclude<CreditOverviewStatus, "ready">;
@@ -71,13 +81,22 @@ export function CreditOverviewState({
   }
 
   const isError = status === "error";
-  const StateIcon = isError ? CloudOffRounded : AddCardRounded;
+  const isUnavailable = status === "unavailable";
+  const StateIcon = isError
+    ? CloudOffRounded
+    : isUnavailable
+      ? DoNotDisturbOnRounded
+      : AddCardRounded;
   const title = isError
     ? "No pudimos cargar tu financiamiento"
-    : "Aún no tienes un financiamiento asignado";
+    : isUnavailable
+      ? "Cuenta no disponible"
+      : "Aún no tienes un financiamiento asignado";
   const description = isError
     ? "No pudimos cargar la información de tu financiamiento. Inténtalo nuevamente."
-    : "Cuando tengas un financiamiento disponible, podrás consultar aquí sus montos, cortes y movimientos.";
+    : isUnavailable
+      ? "La cuenta no se encuentra habilitada en este momento. Puedes volver a consultar más tarde."
+      : "Cuando tengas un financiamiento disponible, podrás consultar aquí sus montos, cortes y movimientos.";
   const titleId = `credit-overview-${status}-title`;
   const descriptionId = `credit-overview-${status}-description`;
 
