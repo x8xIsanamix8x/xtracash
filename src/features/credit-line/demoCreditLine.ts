@@ -8,7 +8,7 @@ export type DemoCreditLineSnapshot = Readonly<{
 }>;
 
 export const demoCreditLineSnapshot = {
-  status: "ACTIVA",
+  status: "AL_DIA",
   totalAvailableLabel: "Bs. 12.500,00",
   usableAvailableLabel: "Bs. 12.500,00",
   usableAvailableMinorUnits: 1_250_000,

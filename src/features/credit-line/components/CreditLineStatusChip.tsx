@@ -17,11 +17,10 @@ type CreditLineStatusChipProps = Readonly<{
 }>;
 
 const statusIcons = {
-  ACTIVA: CheckCircleRounded,
-  MORA_NIVEL_1: ScheduleRounded,
-  CONGELADA_NIVEL_2: LockClockRounded,
-  BLOQUEADA_TERCER_CORTE: BlockRounded,
-  BLOQUEADA_RETIRO: BlockRounded,
+  AL_DIA: CheckCircleRounded,
+  CON_MORA: ScheduleRounded,
+  LIMITE_REDUCIDO: LockClockRounded,
+  BLOQUEADA: BlockRounded,
 } as const;
 
 export function CreditLineStatusChip({
