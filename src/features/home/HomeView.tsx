@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Box, Container, Snackbar, Stack } from "@mui/material";
 
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
 import { CreditLineStatusNotice } from "@/features/credit-line";
+import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 
 import { AppHeader } from "./components/AppHeader";
 import {
@@ -13,22 +15,86 @@ import {
 } from "./components/CreditOverviewState";
 import { CreditSummary } from "./components/CreditSummary";
 import { RecentActivity } from "./components/RecentActivity";
-import { financingScenarioMocks, homeMock } from "./mocks/home";
+import {
+  createFinancingSummary,
+  createRecentActivity,
+  getFirstName,
+} from "./presentation";
+import {
+  AccountSummaryServiceError,
+  getAccountSummary,
+} from "./services/accountSummary";
+import type { HomeAccountSummary } from "./types";
 
 export function HomeView() {
-  const financing =
-    financingScenarioMocks[homeMock.initialFinancingStatus];
+  const router = useRouter();
   const [notice, setNotice] = useState("");
   const [overviewStatus, setOverviewStatus] = useState<CreditOverviewStatus>(
-    homeMock.initialOverviewStatus,
+    "loading",
   );
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [summary, setSummary] = useState<HomeAccountSummary | null>(null);
+  const requestRef = useRef<{
+    controller: AbortController;
+    id: number;
+  } | null>(null);
+  const requestIdRef = useRef(0);
 
-  useEffect(() => () => {
-    if (retryTimerRef.current !== null) {
-      clearTimeout(retryTimerRef.current);
-    }
-  }, []);
+  const loadSummary = useCallback(() => {
+    requestRef.current?.controller.abort();
+
+    const controller = new AbortController();
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    requestRef.current = { controller, id: requestId };
+
+    void getAccountSummary(controller.signal)
+      .then((nextSummary) => {
+        if (requestRef.current?.id !== requestId) return;
+
+        setSummary(nextSummary);
+        setOverviewStatus(
+          nextSummary.accountStatus !== "ACTIVE"
+            ? "unavailable"
+            : nextSummary.product === null
+              ? "empty"
+              : "ready",
+        );
+      })
+      .catch((error: unknown) => {
+        if (requestRef.current?.id !== requestId) return;
+        if (
+          error instanceof AccountSummaryServiceError
+          && error.type === "aborted"
+        ) {
+          return;
+        }
+
+        setSummary(null);
+        if (
+          error instanceof AccountSummaryServiceError
+          && error.type === "unauthenticated"
+        ) {
+          router.replace(sessionExpiredUrl);
+          return;
+        }
+
+        setOverviewStatus("error");
+      })
+      .finally(() => {
+        if (requestRef.current?.id === requestId) {
+          requestRef.current = null;
+        }
+      });
+  }, [router]);
+
+  useEffect(() => {
+    void loadSummary();
+
+    return () => {
+      requestRef.current?.controller.abort();
+      requestRef.current = null;
+    };
+  }, [loadSummary]);
 
   const showReportPaymentNotice = () => {
     setNotice(
@@ -37,16 +103,16 @@ export function HomeView() {
   };
 
   const retryCreditOverview = () => {
-    if (retryTimerRef.current !== null) {
-      clearTimeout(retryTimerRef.current);
-    }
-
     setOverviewStatus("loading");
-    retryTimerRef.current = setTimeout(() => {
-      retryTimerRef.current = null;
-      setOverviewStatus("ready");
-    }, 600);
+    void loadSummary();
   };
+
+  const financing = summary?.product
+    ? createFinancingSummary(summary.product, summary.payments)
+    : null;
+  const recentActivity = summary
+    ? createRecentActivity(summary.movements)
+    : [];
 
   return (
     <Box
@@ -60,16 +126,17 @@ export function HomeView() {
       <Container maxWidth="md">
         <Stack spacing={3}>
           <AppHeader
-            firstName={homeMock.user.firstName}
+            firstName={summary ? getFirstName(summary.name) : null}
             onNotifications={() => setNotice(
               "Las notificaciones estarán disponibles en la siguiente etapa.",
             )}
           />
 
-          {overviewStatus === "ready" ? (
+          {overviewStatus === "ready" && financing ? (
             <>
               <CreditLineStatusNotice
                 onReportPayment={showReportPaymentNotice}
+                showReportPaymentAction={financing.hasPendingPayment}
                 status={financing.status}
               />
               <Box
@@ -87,13 +154,13 @@ export function HomeView() {
                   financing={financing}
                   onReportPayment={showReportPaymentNotice}
                 />
-                <RecentActivity items={homeMock.recentActivity} />
+                <RecentActivity items={recentActivity} />
               </Box>
             </>
           ) : (
             <CreditOverviewState
               onRetry={retryCreditOverview}
-              status={overviewStatus}
+              status={overviewStatus === "ready" ? "error" : overviewStatus}
             />
           )}
         </Stack>

@@ -21,22 +21,23 @@ import {
 type CreditLineStatusNoticeProps = Readonly<{
   status: CreditLineStatus;
   onReportPayment: () => void;
+  showReportPaymentAction: boolean;
 }>;
 
 const noticeIcons = {
-  MORA_NIVEL_1: ScheduleRounded,
-  CONGELADA_NIVEL_2: LockClockRounded,
-  BLOQUEADA_TERCER_CORTE: BlockRounded,
-  BLOQUEADA_RETIRO: BlockRounded,
+  CON_MORA: ScheduleRounded,
+  LIMITE_REDUCIDO: LockClockRounded,
+  BLOQUEADA: BlockRounded,
 } as const;
 
 export function CreditLineStatusNotice({
   status,
   onReportPayment,
+  showReportPaymentAction,
 }: CreditLineStatusNoticeProps) {
   const definition = creditLineStatusConfig[status];
 
-  if (status === "ACTIVA" || definition.notice === null) {
+  if (status === "AL_DIA" || definition.notice === null) {
     return null;
   }
 
@@ -103,18 +104,20 @@ export function CreditLineStatusNotice({
               </Typography>
             </Stack>
           </Stack>
-          <Button
-            onClick={onReportPayment}
-            sx={{
-              width: "auto",
-              alignSelf: { xs: "flex-end", sm: "center" },
-              flexShrink: 0,
-            }}
-            type="button"
-            variant="outlined"
-          >
-            {definition.notice.actionLabel}
-          </Button>
+          {showReportPaymentAction && (
+            <Button
+              onClick={onReportPayment}
+              sx={{
+                width: "auto",
+                alignSelf: { xs: "flex-end", sm: "center" },
+                flexShrink: 0,
+              }}
+              type="button"
+              variant="outlined"
+            >
+              {definition.notice.actionLabel}
+            </Button>
+          )}
         </Stack>
       </CardContent>
     </Card>

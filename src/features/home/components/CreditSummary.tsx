@@ -61,7 +61,6 @@ export function CreditSummary({
 }: CreditSummaryProps) {
   const [isAvailableVisible, setIsAvailableVisible] = useState(false);
   const canRequestMobilePayment = isCreditLineUsable(financing.status);
-  const hasFrozenAmount = financing.frozenAmount !== null;
   const availableLabel = canRequestMobilePayment
     ? "Disponible utilizable"
     : "Disponible total";
@@ -152,9 +151,7 @@ export function CreditSummary({
                 sx={{ color: "secondary.main", fontWeight: 700 }}
               >
                 {isAvailableVisible
-                  ? canRequestMobilePayment
-                    ? financing.usableAvailable
-                    : financing.totalAvailable
+                  ? financing.available
                   : "Bs. ••••••"}
               </Typography>
             </Box>
@@ -211,25 +208,6 @@ export function CreditSummary({
             <Metric label="Deuda actual" value={financing.currentDebt} />
           </Box>
 
-          {hasFrozenAmount && (
-            <Box
-              sx={(theme) => ({
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "1fr",
-                  sm: "repeat(2, minmax(0, 1fr))",
-                },
-                gap: 2,
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: alpha(theme.palette.warning.main, 0.08),
-              })}
-            >
-              <Metric label="Disponible total" value={financing.totalAvailable} />
-              <Metric label="Monto congelado" value={financing.frozenAmount} />
-            </Box>
-          )}
-
           <Box
             sx={{
               display: "grid",
@@ -250,10 +228,10 @@ export function CreditSummary({
                 href="/mobile-payment"
                 variant="contained"
               >
-                Solicitar Pago Móvil
+                Realizar Pago Móvil
               </Button>
             )}
-            {financing.status === "ACTIVA" && (
+            {financing.status === "AL_DIA" && financing.hasPendingPayment && (
               <Button
                 fullWidth
                 onClick={onReportPayment}
