@@ -50,6 +50,7 @@ type RecipientDetailsStepProps = Readonly<{
   errors: DetailsErrors;
   focusField: DetailsField | null;
   focusRequest: number;
+  isSubmitting: boolean;
   manualRecipient: ManualRecipientData;
   recipientMode: RecipientMode;
   selectedContact: DirectoryContact | null;
@@ -74,6 +75,7 @@ export function RecipientDetailsStep({
   errors,
   focusField,
   focusRequest,
+  isSubmitting,
   manualRecipient,
   recipientMode,
   selectedContact,
@@ -88,7 +90,7 @@ export function RecipientDetailsStep({
   const bankRef = useRef<HTMLInputElement>(null);
   const documentRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
-  const aliasRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export function RecipientDetailsStep({
       bankCode: bankRef,
       documentNumber: documentRef,
       phone: phoneRef,
-      alias: aliasRef,
+      name: nameRef,
       amount: amountRef,
     };
 
@@ -253,6 +255,7 @@ export function RecipientDetailsStep({
                 Destinatario nuevo
               </Typography>
               <Button
+                disabled={isSubmitting}
                 onClick={onChangeRecipient}
                 startIcon={<EditRounded />}
                 type="button"
@@ -263,6 +266,7 @@ export function RecipientDetailsStep({
             </Stack>
 
             <TextField
+              disabled={isSubmitting}
               error={Boolean(errors.bankCode)}
               fullWidth
               helperText={errors.bankCode}
@@ -293,21 +297,23 @@ export function RecipientDetailsStep({
 
             <Stack direction="row" spacing={1.5}>
               <TextField
-                label="Nacionalidad"
-                name="nationality"
+                disabled={isSubmitting}
+                label="Tipo de documento"
+                name="documentType"
                 onChange={(event) => onManualChange(
-                  "nationality",
+                  "documentType",
                   event.target.value,
                 )}
                 required
                 select
-                value={manualRecipient.nationality}
+                value={manualRecipient.documentType}
                 sx={{ width: 104, flexShrink: 0 }}
               >
                 <MenuItem value="V">V</MenuItem>
-                <MenuItem value="E">E</MenuItem>
+                <MenuItem value="J">J</MenuItem>
               </TextField>
               <TextField
+                disabled={isSubmitting}
                 error={Boolean(errors.documentNumber)}
                 fullWidth
                 helperText={errors.documentNumber}
@@ -316,13 +322,13 @@ export function RecipientDetailsStep({
                 name="documentNumber"
                 onChange={(event) => onManualChange(
                   "documentNumber",
-                  event.target.value.replace(/\D/g, "").slice(0, 8),
+                  event.target.value.replace(/\D/g, "").slice(0, 9),
                 )}
                 required
                 slotProps={{
                   htmlInput: {
                     inputMode: "numeric",
-                    maxLength: 8,
+                    maxLength: 9,
                     pattern: "[0-9]*",
                   },
                 }}
@@ -332,6 +338,7 @@ export function RecipientDetailsStep({
             </Stack>
 
             <TextField
+              disabled={isSubmitting}
               error={Boolean(errors.phone)}
               fullWidth
               helperText={errors.phone}
@@ -340,7 +347,7 @@ export function RecipientDetailsStep({
               name="phone"
               onChange={(event) => onManualChange(
                 "phone",
-                event.target.value,
+                event.target.value.replace(/\D/g, "").slice(0, 11),
               )}
               required
               slotProps={{
@@ -351,6 +358,22 @@ export function RecipientDetailsStep({
                 },
               }}
               value={manualRecipient.phone}
+            />
+
+            <TextField
+              disabled={isSubmitting}
+              error={Boolean(errors.name)}
+              fullWidth
+              helperText={errors.name}
+              inputRef={nameRef}
+              label="Nombre del destinatario"
+              name="name"
+              onChange={(event) => onManualChange(
+                "name",
+                event.target.value,
+              )}
+              required
+              value={manualRecipient.name}
             />
 
             <Box
@@ -364,6 +387,7 @@ export function RecipientDetailsStep({
                 control={
                   <Checkbox
                     checked={manualRecipient.saveToDirectory}
+                    disabled={isSubmitting}
                     onChange={(event) => onManualChange(
                       "saveToDirectory",
                       event.target.checked,
@@ -372,23 +396,6 @@ export function RecipientDetailsStep({
                 }
                 label="Guardar en mi directorio al completar el pago"
               />
-              {manualRecipient.saveToDirectory && (
-                <TextField
-                  error={Boolean(errors.alias)}
-                  fullWidth
-                  helperText={errors.alias}
-                  inputRef={aliasRef}
-                  label="Nombre o alias"
-                  name="alias"
-                  onChange={(event) => onManualChange(
-                    "alias",
-                    event.target.value,
-                  )}
-                  required
-                  value={manualRecipient.alias}
-                  sx={{ mt: 1 }}
-                />
-              )}
             </Box>
           </Stack>
         )}
@@ -433,7 +440,7 @@ export function RecipientDetailsStep({
                 </Stack>
                 <Typography color="text.secondary" variant="body2">
                   {selectedContact.phone} ·{" "}
-                  {selectedContact.nationality}-
+                  {selectedContact.documentType}-
                   {selectedContact.documentNumber}
                 </Typography>
               </Stack>
@@ -451,6 +458,7 @@ export function RecipientDetailsStep({
               Monto
             </Typography>
             <TextField
+              disabled={isSubmitting}
               error={Boolean(errors.amount)}
               fullWidth
               helperText={errors.amount}
@@ -481,8 +489,7 @@ export function RecipientDetailsStep({
               Disponible utilizable: {availableLabel}
             </Typography>
             <Typography color="text.secondary" variant="caption">
-              La validación del monto es preliminar y no representa una
-              validación bancaria real.
+              El monto y el disponible serán validados antes de confirmar.
             </Typography>
           </Stack>
         )}
@@ -490,12 +497,12 @@ export function RecipientDetailsStep({
 
       <Box sx={{ mt: "auto", pt: 3 }}>
         <Button
-          disabled={recipientMode === "choice"}
+          disabled={recipientMode === "choice" || isSubmitting}
           fullWidth
           type="submit"
           variant="contained"
         >
-          Revisar solicitud
+          {isSubmitting ? "Preparando solicitud…" : "Revisar solicitud"}
         </Button>
       </Box>
     </Box>

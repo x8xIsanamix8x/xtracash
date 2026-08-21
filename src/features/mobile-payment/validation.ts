@@ -81,22 +81,19 @@ export function validateDetails({
       fieldOrder.push("bankCode");
     }
 
-    if (!/^\d{6,8}$/.test(manualRecipient.documentNumber.trim())) {
-      errors.documentNumber = "Ingresa un documento de 6 a 8 dígitos.";
+    if (!/^\d{6,9}$/.test(manualRecipient.documentNumber.trim())) {
+      errors.documentNumber = "Ingresa un documento de 6 a 9 dígitos.";
       fieldOrder.push("documentNumber");
     }
 
-    if (!/^\d{11}$/.test(manualRecipient.phone.trim())) {
-      errors.phone = "Ingresa un teléfono de 11 dígitos.";
+    if (!/^04(12|14|16|22|24|26)\d{7}$/.test(manualRecipient.phone.trim())) {
+      errors.phone = "Ingresa un teléfono móvil venezolano válido.";
       fieldOrder.push("phone");
     }
 
-    if (
-      manualRecipient.saveToDirectory
-      && !manualRecipient.alias.trim()
-    ) {
-      errors.alias = "Ingresa un nombre o alias.";
-      fieldOrder.push("alias");
+    if (!manualRecipient.name.trim()) {
+      errors.name = "Ingresa el nombre del destinatario.";
+      fieldOrder.push("name");
     }
   }
 

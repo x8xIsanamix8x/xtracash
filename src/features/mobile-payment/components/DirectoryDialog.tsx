@@ -407,7 +407,7 @@ export function DirectoryDialog({
                         </Typography>
                         <Typography color="text.secondary" variant="body2">
                           {formatDocument(
-                            contact.nationality,
+                            contact.documentType,
                             contact.documentNumber,
                           )}
                         </Typography>

@@ -6,7 +6,7 @@ export type RecipientMode = "choice" | "manual" | "directory";
 
 export type DirectoryStatus = "loading" | "ready" | "error" | "empty";
 
-export type Nationality = "V" | "E";
+export type DocumentType = "V" | "J";
 
 export type Bank = Readonly<{
   code: string;
@@ -17,18 +17,18 @@ export type DirectoryContact = Readonly<{
   id: string;
   name: string;
   bankCode: string;
-  nationality: Nationality;
+  documentType: DocumentType;
   documentNumber: string;
   phone: string;
 }>;
 
 export type ManualRecipientData = Readonly<{
   bankCode: string;
-  nationality: Nationality;
+  documentType: DocumentType;
   documentNumber: string;
   phone: string;
   saveToDirectory: boolean;
-  alias: string;
+  name: string;
 }>;
 
 export type DetailsField =
@@ -36,19 +36,45 @@ export type DetailsField =
   | "bankCode"
   | "documentNumber"
   | "phone"
-  | "alias"
+  | "name"
   | "amount";
 
 export type DetailsErrors = Partial<Record<DetailsField, string>>;
 
 export type ResolvedRecipient = Readonly<{
+  id: string | null;
   name: string;
   bankCode: string;
-  nationality: Nationality;
+  documentType: DocumentType;
   documentNumber: string;
   phone: string;
   saveToDirectory: boolean;
-  alias: string;
+}>;
+
+export type InitiatedPayment = Readonly<{
+  operationId: string;
+  status: string;
+  channel: "MISMO_BANCO" | "OTRA_ENTIDAD";
+  amountBs: string;
+  feeBs: string;
+  feePercentage: string;
+  totalBs: string;
+  rateValue: string;
+  rateDate: string;
+  rateSource: string;
+  expiresAt: string;
+  availableBs: string;
+  recipient: ResolvedRecipient;
+}>;
+
+export type ConfirmedPayment = Readonly<{
+  operationId: string;
+  status: string;
+  bankReference: string | null;
+  amountBs: string;
+  totalBs: string;
+  resolvedAt: string | null;
+  message: string | null;
 }>;
 
 export type TransferResult = Readonly<{
@@ -57,20 +83,20 @@ export type TransferResult = Readonly<{
   beneficiaryName: string;
   bankCode: string;
   bankName: string;
-  nationality: Nationality;
+  documentType: DocumentType;
   documentNumber: string;
   phone: string;
-  transactionDate: string;
+  transactionDate: string | null;
   bankReference?: string;
   userMessage?: string;
 }>;
 
-export type TransferRequest = Readonly<{
+export type InitiatePaymentRequest = Readonly<{
   amountMinorUnits: number;
-  beneficiaryName: string;
-  bankCode: string;
-  bankName: string;
-  nationality: Nationality;
-  documentNumber: string;
-  phone: string;
+  recipient: ResolvedRecipient;
+}>;
+
+export type MobilePaymentOptions = Readonly<{
+  banks: readonly Bank[];
+  contacts: readonly DirectoryContact[];
 }>;
