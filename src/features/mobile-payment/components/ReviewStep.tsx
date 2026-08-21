@@ -23,8 +23,11 @@ type ReviewStepProps = Readonly<{
   amountLabel: string;
   availableLabel: string;
   bank: Bank;
+  feeLabel: string;
   isSubmitting: boolean;
+  rateLabel: string;
   recipient: ResolvedRecipient;
+  totalLabel: string;
   titleRef: Ref<HTMLHeadingElement>;
   onBack: () => void;
   onConfirm: () => void;
@@ -52,8 +55,11 @@ export function ReviewStep({
   amountLabel,
   availableLabel,
   bank,
+  feeLabel,
   isSubmitting,
+  rateLabel,
   recipient,
+  totalLabel,
   titleRef,
   onBack,
   onConfirm,
@@ -115,10 +121,7 @@ export function ReviewStep({
                   label="Teléfono"
                   value={recipient.phone}
                 />
-                <ReviewItem
-                  label="Nacionalidad"
-                  value={recipient.nationality}
-                />
+                <ReviewItem label="Tipo de documento" value={recipient.documentType} />
                 <ReviewItem
                   label="Número de documento"
                   value={recipient.documentNumber}
@@ -160,14 +163,17 @@ export function ReviewStep({
                 }}
               >
                 <ReviewItem label="Monto a enviar" value={amountLabel} />
+                <ReviewItem label="Comisión" value={feeLabel} />
+                <ReviewItem label="Total de la operación" value={totalLabel} />
                 <ReviewItem
                   label="Disponible actual"
                   value={availableLabel}
                 />
+                <ReviewItem label="Tasa aplicada" value={rateLabel} />
               </Box>
               {recipient.saveToDirectory && (
                 <Typography color="text.secondary" variant="body2">
-                  Se guardará en tu directorio como “{recipient.alias}”
+                  Se guardará en tu directorio como “{recipient.name}”
                   únicamente después de una operación exitosa.
                 </Typography>
               )}
@@ -190,7 +196,7 @@ export function ReviewStep({
           >
             <CircularProgress aria-hidden="true" size={22} />
             <Typography>
-              Procesando transferencia…
+              Confirmando transferencia…
             </Typography>
           </Stack>
         )}
@@ -219,7 +225,7 @@ export function ReviewStep({
           variant="contained"
         >
           {isSubmitting
-            ? "Procesando transferencia…"
+            ? "Confirmando transferencia…"
             : "Confirmar solicitud"}
         </Button>
       </Stack>

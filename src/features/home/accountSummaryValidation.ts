@@ -7,7 +7,20 @@ import type {
 } from "./types";
 
 const amountPattern = /^\d+(?:\.\d{1,2})?$/;
+const coreAmountPattern = /^(\d+)(?:\.(\d{1,4}))?$/;
 const calendarDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+const nextDecimalDigit: Readonly<Record<string, string>> = {
+  "0": "1",
+  "1": "2",
+  "2": "3",
+  "3": "4",
+  "4": "5",
+  "5": "6",
+  "6": "7",
+  "7": "8",
+  "8": "9",
+};
 
 const delinquencyStages = new Set([
   "AL_DIA",
@@ -30,6 +43,47 @@ function isAmount(value: unknown): value is string {
   return typeof value === "string" && amountPattern.test(value);
 }
 
+type AmountReader = (value: unknown) => string | null;
+
+function incrementDecimalDigits(value: string): string {
+  const digits = value.split("");
+
+  for (let index = digits.length - 1; index >= 0; index -= 1) {
+    if (digits[index] !== "9") {
+      digits[index] = nextDecimalDigit[digits[index]];
+      return digits.join("");
+    }
+
+    digits[index] = "0";
+  }
+
+  return `1${digits.join("")}`;
+}
+
+function readCoreAmount(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const match = coreAmountPattern.exec(value);
+  if (!match) return null;
+
+  const whole = match[1].replace(/^0+(?=\d)/, "");
+  const fraction = match[2] ?? "";
+  const cents = fraction.padEnd(2, "0").slice(0, 2);
+
+  if (fraction.length <= 2 || fraction[2] < "5") {
+    return `${whole}.${cents}`;
+  }
+
+  const roundedMinorUnits = incrementDecimalDigits(`${whole}${cents}`)
+    .padStart(3, "0");
+
+  return `${roundedMinorUnits.slice(0, -2)}.${roundedMinorUnits.slice(-2)}`;
+}
+
+function readDtoAmount(value: unknown): string | null {
+  return isAmount(value) ? value : null;
+}
+
 function isCalendarDate(value: unknown): value is string {
   if (typeof value !== "string") return false;
 
@@ -48,22 +102,31 @@ function isCalendarDate(value: unknown): value is string {
   );
 }
 
-function readAmountObject(value: unknown): string | null {
-  if (!isRecord(value) || !isAmount(value.bs)) return null;
-  return value.bs;
+function readAmountObject(
+  value: unknown,
+  readAmount: AmountReader,
+): string | null {
+  if (!isRecord(value)) return null;
+  return readAmount(value.bs);
 }
 
-function parseProduct(value: unknown): HomeAccountProduct | null {
+function parseProduct(
+  value: unknown,
+  readAmount: AmountReader,
+): HomeAccountProduct | null {
   if (!isRecord(value)) return null;
 
-  const limitBs = readAmountObject(value.limit);
-  const availableBs = readAmountObject(value.available);
+  const limitBs = readAmountObject(value.limit, readAmount);
+  const availableBs = readAmountObject(value.available, readAmount);
   if (limitBs === null || availableBs === null) return null;
 
   return { limitBs, availableBs };
 }
 
-function parsePayments(value: unknown): HomeAccountPayments | null {
+function parsePayments(
+  value: unknown,
+  readAmount: AmountReader,
+): HomeAccountPayments | null {
   if (!isRecord(value)) return null;
   if (typeof value.hasPendingPayment !== "boolean") return null;
   if (
@@ -72,18 +135,14 @@ function parsePayments(value: unknown): HomeAccountPayments | null {
   ) {
     return null;
   }
-  if (
-    value.currentDebt !== null
-    && readAmountObject(value.currentDebt) === null
-  ) {
-    return null;
-  }
-  if (
-    value.minimumPayment !== null
-    && readAmountObject(value.minimumPayment) === null
-  ) {
-    return null;
-  }
+  const currentDebtBs = value.currentDebt === null
+    ? null
+    : readAmountObject(value.currentDebt, readAmount);
+  const minimumPaymentBs = value.minimumPayment === null
+    ? null
+    : readAmountObject(value.minimumPayment, readAmount);
+  if (value.currentDebt !== null && currentDebtBs === null) return null;
+  if (value.minimumPayment !== null && minimumPaymentBs === null) return null;
   if (
     typeof value.delinquencyStage !== "string"
     || !delinquencyStages.has(value.delinquencyStage)
@@ -94,41 +153,58 @@ function parsePayments(value: unknown): HomeAccountPayments | null {
   return {
     hasPendingPayment: value.hasPendingPayment,
     nextCutoffDate: value.nextCutoffDate,
-    currentDebtBs: value.currentDebt === null
-      ? null
-      : readAmountObject(value.currentDebt),
-    minimumPaymentBs: value.minimumPayment === null
-      ? null
-      : readAmountObject(value.minimumPayment),
+    currentDebtBs,
+    minimumPaymentBs,
     delinquencyStage: value.delinquencyStage as HomeAccountPayments["delinquencyStage"],
   };
 }
 
-function parseMovement(value: unknown): HomeAccountMovement | null {
+function parseMovement(
+  value: unknown,
+  readAmount: AmountReader,
+  omitUnsupportedType: boolean,
+): HomeAccountMovement | "unsupported" | null {
   if (!isRecord(value)) return null;
+  const amountBs = readAmount(value.amountBs);
   if (
     typeof value.type !== "string"
-    || !movementTypes.has(value.type)
+    || !value.type.trim()
     || !isCalendarDate(value.date)
-    || !isAmount(value.amountBs)
+    || amountBs === null
   ) {
     return null;
+  }
+
+  if (!movementTypes.has(value.type)) {
+    return omitUnsupportedType ? "unsupported" : null;
   }
 
   return {
     type: value.type as CoreMovementType,
     date: value.date,
-    amountBs: value.amountBs,
+    amountBs,
   };
 }
 
-function parseMovements(value: unknown): readonly HomeAccountMovement[] | null {
+function parseMovements(
+  value: unknown,
+  readAmount: AmountReader,
+  omitUnsupportedTypes = false,
+): readonly HomeAccountMovement[] | null {
   if (!Array.isArray(value)) return null;
 
-  const movements = value.map(parseMovement);
-  if (movements.some((movement) => movement === null)) return null;
+  const movements: HomeAccountMovement[] = [];
+  for (const movement of value) {
+    const parsedMovement = parseMovement(
+      movement,
+      readAmount,
+      omitUnsupportedTypes,
+    );
+    if (parsedMovement === null) return null;
+    if (parsedMovement !== "unsupported") movements.push(parsedMovement);
+  }
 
-  return movements as readonly HomeAccountMovement[];
+  return movements;
 }
 
 export function parseCoreAccountSummary(value: unknown): HomeAccountSummary | null {
@@ -140,12 +216,12 @@ export function parseCoreAccountSummary(value: unknown): HomeAccountSummary | nu
   if (!Array.isArray(value.products)) return null;
 
   const product = value.products.length > 0
-    ? parseProduct(value.products[0])
+    ? parseProduct(value.products[0], readCoreAmount)
     : null;
   if (value.products.length > 0 && product === null) return null;
 
-  const payments = parsePayments(value.payments);
-  const movements = parseMovements(value.movements);
+  const payments = parsePayments(value.payments, readCoreAmount);
+  const movements = parseMovements(value.movements, readCoreAmount, true);
   if (payments === null || movements === null) return null;
 
   return {
@@ -169,7 +245,7 @@ export function parseHomeAccountSummary(value: unknown): HomeAccountSummary | nu
     available: {
       bs: isRecord(value.product) ? value.product.availableBs : null,
     },
-  });
+  }, readDtoAmount);
   if (value.product !== null && product === null) return null;
 
   if (!isRecord(value.payments)) return null;
@@ -183,8 +259,8 @@ export function parseHomeAccountSummary(value: unknown): HomeAccountSummary | nu
       ? null
       : { bs: value.payments.minimumPaymentBs },
     delinquencyStage: value.payments.delinquencyStage,
-  });
-  const movements = parseMovements(value.movements);
+  }, readDtoAmount);
+  const movements = parseMovements(value.movements, readDtoAmount);
   if (payments === null || movements === null) return null;
 
   return {

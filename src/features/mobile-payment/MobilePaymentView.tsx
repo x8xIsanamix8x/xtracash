@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -8,9 +9,11 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowBackRounded } from "@mui/icons-material";
+import { ArrowBackRounded, ErrorOutlineRounded } from "@mui/icons-material";
 import {
   Box,
+  Button,
+  CircularProgress,
   Container,
   IconButton,
   Paper,
@@ -20,10 +23,12 @@ import {
 } from "@mui/material";
 
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
+import { isCreditLineUsable } from "@/features/credit-line";
 import {
-  demoCreditLineSnapshot,
-  isCreditLineUsable,
-} from "@/features/credit-line";
+  AccountSummaryServiceError,
+  getAccountSummary,
+} from "@/features/home/services/accountSummary";
+import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
 import {
@@ -36,117 +41,243 @@ import { ReviewStep } from "./components/ReviewStep";
 import { TransferResultView } from "./components/TransferResultView";
 import {
   formatAmountOnBlur,
-  formatMinorUnits,
+  formatBsAmount,
   getBank,
+  parseAmountToMinorUnits,
 } from "./format";
 import {
-  destinationBanks,
-  directoryContacts,
-  mobilePaymentMock,
-} from "./mocks/mobilePayment";
+  confirmMobilePayment,
+  deleteDirectoryContact,
+  getMobilePaymentOptions,
+  initiateMobilePayment,
+  MobilePaymentServiceError,
+} from "./services/mobilePayment";
 import type {
+  Bank,
   DetailsErrors,
   DetailsField,
   DirectoryContact,
   DirectoryStatus,
+  InitiatedPayment,
   ManualRecipientData,
   MobilePaymentStep,
   RecipientMode,
   ResolvedRecipient,
   TransferResult,
+  TransferResultStatus,
 } from "./types";
-import { simulateMobilePayment } from "./simulation";
 import { validateDetails } from "./validation";
+
+type PaymentContextStatus = "loading" | "ready" | "error" | "unavailable";
 
 const initialManualRecipient: ManualRecipientData = {
   bankCode: "",
-  nationality: "V",
+  documentType: "V",
   documentNumber: "",
   phone: "",
   saveToDirectory: false,
-  alias: "",
+  name: "",
 };
+
+const successfulStatuses = new Set([
+  "CONFIRMADA",
+  "CONFIRMADO",
+  "EXITOSA",
+  "EXITOSO",
+]);
+const processingStatuses = new Set([
+  "INICIADA",
+  "CREADA",
+  "CREADO",
+  "PROCESANDO",
+  "EN_PROCESO",
+  "ACEPTADA",
+  "PENDIENTE",
+  "PENDIENTE_CONFIRMACION",
+]);
+const rejectedStatuses = new Set([
+  "RECHAZADA",
+  "RECHAZADO",
+  "FALLIDA",
+  "FALLIDO",
+]);
+
+function mapTransferStatus(value: string): TransferResultStatus | null {
+  const status = value.trim().toUpperCase();
+  if (successfulStatuses.has(status)) return "success";
+  if (processingStatuses.has(status)) return "processing";
+  if (rejectedStatuses.has(status)) return "rejected";
+  return null;
+}
+
+function serviceErrorMessage(error: MobilePaymentServiceError) {
+  if (error.type === "business") {
+    return "La operación no cumple las condiciones actuales de tu financiamiento.";
+  }
+  if (error.type === "conflict") {
+    return "La operación cambió de estado. Revisa los datos antes de continuar.";
+  }
+  if (error.type === "not_found") {
+    return "No encontramos la operación solicitada.";
+  }
+  if (error.type === "invalid") {
+    return "No pudimos validar la información recibida. Inténtalo nuevamente.";
+  }
+  return "No pudimos comunicarnos con el servicio. Inténtalo nuevamente.";
+}
 
 export function MobilePaymentView() {
   const router = useRouter();
+  const [contextStatus, setContextStatus] =
+    useState<PaymentContextStatus>("loading");
   const [step, setStep] = useState<MobilePaymentStep>("details");
-  const [recipientMode, setRecipientMode] =
-    useState<RecipientMode>("choice");
+  const [recipientMode, setRecipientMode] = useState<RecipientMode>("choice");
   const [manualRecipient, setManualRecipient] =
     useState<ManualRecipientData>(initialManualRecipient);
-  const [selectedContactId, setSelectedContactId] =
-    useState<string | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
-  const [amountMinorUnits, setAmountMinorUnits] =
-    useState<number | null>(null);
-  const [detailsErrors, setDetailsErrors] =
-    useState<DetailsErrors>({});
-  const [focusField, setFocusField] =
-    useState<DetailsField | null>(null);
+  const [availableMinorUnits, setAvailableMinorUnits] = useState(0);
+  const [availableLabel, setAvailableLabel] = useState("Bs. 0,00");
+  const [banks, setBanks] = useState<readonly Bank[]>([]);
+  const [detailsErrors, setDetailsErrors] = useState<DetailsErrors>({});
+  const [focusField, setFocusField] = useState<DetailsField | null>(null);
   const [focusRequest, setFocusRequest] = useState(0);
   const [lineError, setLineError] = useState("");
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
   const [directoryEntries, setDirectoryEntries] =
-    useState<readonly DirectoryContact[]>(() => [...directoryContacts]);
+    useState<readonly DirectoryContact[]>([]);
   const [directoryStatus, setDirectoryStatus] =
-    useState<DirectoryStatus>(mobilePaymentMock.initialDirectoryStatus);
-  const [contactToDeleteId, setContactToDeleteId] =
-    useState<string | null>(null);
+    useState<DirectoryStatus>("loading");
+  const [contactToDeleteId, setContactToDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
   const [isDeletingContact, setIsDeletingContact] = useState(false);
   const [suppressDeleteFocusRestore, setSuppressDeleteFocusRestore] =
     useState(false);
   const [directoryFocusRequest, setDirectoryFocusRequest] =
     useState<DirectoryFocusRequest | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [transferResult, setTransferResult] =
-    useState<TransferResult | null>(null);
+  const [isInitiating, setIsInitiating] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [initiatedPayment, setInitiatedPayment] =
+    useState<InitiatedPayment | null>(null);
+  const [transferResult, setTransferResult] = useState<TransferResult | null>(null);
   const [navigationNotice, setNavigationNotice] = useState("");
-  const directoryTimerRef = useRef<number | null>(null);
-  const directoryOperationRef = useRef(0);
-  const deleteTimerRef = useRef<number | null>(null);
-  const deleteOperationRef = useRef(0);
+  const contextRequestRef = useRef<AbortController | null>(null);
+  const paymentRequestRef = useRef<AbortController | null>(null);
+  const deleteRequestRef = useRef<AbortController | null>(null);
   const pendingDeleteFocusRef = useRef<DirectoryFocusDestination | null>(null);
   const focusRequestIdRef = useRef(0);
-  const transferAbortRef = useRef<AbortController | null>(null);
   const reviewTitleRef = useRef<HTMLHeadingElement>(null);
   const resultTitleRef = useRef<HTMLHeadingElement>(null);
 
   const selectedContact = useMemo(
-    () => directoryEntries.find(
-      (contact) => contact.id === selectedContactId,
-    ) ?? null,
+    () => directoryEntries.find((contact) => contact.id === selectedContactId) ?? null,
     [directoryEntries, selectedContactId],
   );
   const contactToDelete = useMemo(
-    () => directoryEntries.find(
-      (contact) => contact.id === contactToDeleteId,
-    ) ?? null,
+    () => directoryEntries.find((contact) => contact.id === contactToDeleteId) ?? null,
     [contactToDeleteId, directoryEntries],
   );
 
   const resolvedRecipient = useMemo<ResolvedRecipient | null>(() => {
     if (recipientMode === "directory" && selectedContact) {
       return {
+        id: selectedContact.id,
         name: selectedContact.name,
         bankCode: selectedContact.bankCode,
-        nationality: selectedContact.nationality,
+        documentType: selectedContact.documentType,
         documentNumber: selectedContact.documentNumber,
         phone: selectedContact.phone,
         saveToDirectory: false,
-        alias: "",
       };
     }
 
     if (recipientMode === "manual") {
       return {
-        name: manualRecipient.alias.trim() || mobilePaymentMock.manualRecipientName,
-        ...manualRecipient,
+        id: null,
+        name: manualRecipient.name.trim(),
+        bankCode: manualRecipient.bankCode,
+        documentType: manualRecipient.documentType,
+        documentNumber: manualRecipient.documentNumber,
+        phone: manualRecipient.phone,
+        saveToDirectory: manualRecipient.saveToDirectory,
       };
     }
 
     return null;
   }, [manualRecipient, recipientMode, selectedContact]);
+
+  const loadPaymentContext = useCallback(() => {
+    contextRequestRef.current?.abort();
+    const controller = new AbortController();
+    contextRequestRef.current = controller;
+
+    void (async () => {
+      try {
+        const summary = await getAccountSummary(controller.signal);
+        if (controller.signal.aborted) return;
+
+        if (
+          summary.accountStatus !== "ACTIVE"
+          || summary.product === null
+          || !isCreditLineUsable(summary.payments.delinquencyStage)
+        ) {
+          setContextStatus("unavailable");
+          return;
+        }
+
+        const nextAvailableMinorUnits = parseAmountToMinorUnits(
+          summary.product.availableBs,
+        );
+        if (nextAvailableMinorUnits === null) {
+          setContextStatus("error");
+          return;
+        }
+
+        const options = await getMobilePaymentOptions(controller.signal);
+        if (controller.signal.aborted) return;
+
+        setAvailableMinorUnits(nextAvailableMinorUnits);
+        setAvailableLabel(formatBsAmount(summary.product.availableBs));
+        setBanks(options.banks);
+        setDirectoryEntries(options.contacts);
+        setDirectoryStatus(options.contacts.length > 0 ? "ready" : "empty");
+        setContextStatus("ready");
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        if (
+          (error instanceof AccountSummaryServiceError
+            || error instanceof MobilePaymentServiceError)
+          && error.type === "unauthenticated"
+        ) {
+          router.replace(sessionExpiredUrl);
+          return;
+        }
+        if (
+          (error instanceof AccountSummaryServiceError
+            || error instanceof MobilePaymentServiceError)
+          && error.type === "aborted"
+        ) {
+          return;
+        }
+
+        setDirectoryStatus("error");
+        setContextStatus("error");
+      } finally {
+        if (contextRequestRef.current === controller) {
+          contextRequestRef.current = null;
+        }
+      }
+    })();
+  }, [router]);
+
+  useEffect(() => {
+    void loadPaymentContext();
+    return () => {
+      contextRequestRef.current?.abort();
+      paymentRequestRef.current?.abort();
+      deleteRequestRef.current?.abort();
+    };
+  }, [loadPaymentContext]);
 
   useEffect(() => {
     if (step === "review") {
@@ -156,28 +287,8 @@ export function MobilePaymentView() {
     }
   }, [step]);
 
-  useEffect(() => () => {
-    directoryOperationRef.current += 1;
-
-    if (directoryTimerRef.current !== null) {
-      window.clearTimeout(directoryTimerRef.current);
-    }
-
-    deleteOperationRef.current += 1;
-    if (deleteTimerRef.current !== null) {
-      window.clearTimeout(deleteTimerRef.current);
-    }
-
-    const transferRequest = transferAbortRef.current;
-    transferAbortRef.current = null;
-    transferRequest?.abort();
-  }, []);
-
   const clearDetailsError = (field: DetailsField) => {
-    setDetailsErrors((current) => ({
-      ...current,
-      [field]: undefined,
-    }));
+    setDetailsErrors((current) => ({ ...current, [field]: undefined }));
     setLineError("");
   };
 
@@ -186,32 +297,9 @@ export function MobilePaymentView() {
     clearDetailsError("recipient");
   };
 
-  const startDirectoryLoading = () => {
-    directoryOperationRef.current += 1;
-    const operation = directoryOperationRef.current;
-
-    if (directoryTimerRef.current !== null) {
-      window.clearTimeout(directoryTimerRef.current);
-    }
-
-    setDirectoryStatus("loading");
-    directoryTimerRef.current = window.setTimeout(() => {
-      if (directoryOperationRef.current !== operation) {
-        return;
-      }
-
-      directoryTimerRef.current = null;
-      setDirectoryStatus("ready");
-    }, mobilePaymentMock.directoryRetryDelay);
-  };
-
   const openDirectory = () => {
     setIsDirectoryOpen(true);
     clearDetailsError("recipient");
-
-    if (directoryStatus === "loading") {
-      startDirectoryLoading();
-    }
   };
 
   const selectDirectoryContact = (contactId: string) => {
@@ -225,69 +313,70 @@ export function MobilePaymentView() {
     contactId: string,
     focusDestination: DirectoryFocusDestination,
   ) => {
-    if (isDeletingContact) {
-      return;
-    }
-
+    if (isDeletingContact) return;
     pendingDeleteFocusRef.current = focusDestination;
     setDeleteError("");
     setContactToDeleteId(contactId);
   };
 
   const cancelDeleteContact = () => {
-    if (isDeletingContact) {
-      return;
-    }
-
+    if (isDeletingContact) return;
     pendingDeleteFocusRef.current = null;
     setDeleteError("");
     setContactToDeleteId(null);
   };
 
   const confirmDeleteContact = () => {
-    if (
-      contactToDelete === null
-      || isDeletingContact
-      || deleteTimerRef.current !== null
-    ) {
+    if (contactToDelete === null || isDeletingContact || deleteRequestRef.current) {
       return;
     }
 
+    const controller = new AbortController();
     const contactId = contactToDelete.id;
     const contactName = contactToDelete.name;
-    const operation = deleteOperationRef.current + 1;
-    deleteOperationRef.current = operation;
+    deleteRequestRef.current = controller;
     setDeleteError("");
     setIsDeletingContact(true);
 
-    deleteTimerRef.current = window.setTimeout(() => {
-      if (deleteOperationRef.current !== operation) {
-        return;
-      }
-
-      deleteTimerRef.current = null;
-      setIsDeletingContact(false);
-
-      if (mobilePaymentMock.directoryDeleteShouldFail) {
+    void deleteDirectoryContact(contactId, controller.signal)
+      .then(() => {
+        if (controller.signal.aborted) return;
+        setDirectoryEntries((current) => {
+          const nextContacts = current.filter((contact) => contact.id !== contactId);
+          if (nextContacts.length === 0) setDirectoryStatus("empty");
+          return nextContacts;
+        });
+        if (selectedContactId === contactId) {
+          setSelectedContactId(null);
+          setRecipientMode("choice");
+        }
+        setNavigationNotice(`Se eliminó a ${contactName} del directorio`);
+        setSuppressDeleteFocusRestore(true);
+        setContactToDeleteId(null);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (
+          error instanceof MobilePaymentServiceError
+          && error.type === "unauthenticated"
+        ) {
+          router.replace(sessionExpiredUrl);
+          return;
+        }
         setDeleteError(
           `No pudimos eliminar a ${contactName}. Inténtalo nuevamente o cancela para conservarlo en tu directorio.`,
         );
-        return;
-      }
-
-      setDirectoryEntries((current) => current.filter(
-        (contact) => contact.id !== contactId,
-      ));
-      setNavigationNotice(`Se eliminó a ${contactName} del directorio`);
-      setSuppressDeleteFocusRestore(true);
-      setDeleteError("");
-      setContactToDeleteId(null);
-    }, mobilePaymentMock.directoryDeleteDelay);
+      })
+      .finally(() => {
+        if (deleteRequestRef.current === controller) {
+          deleteRequestRef.current = null;
+          setIsDeletingContact(false);
+        }
+      });
   };
 
   const completeDeleteDialogExit = () => {
     const focusDestination = pendingDeleteFocusRef.current;
-
     if (focusDestination !== null && suppressDeleteFocusRestore) {
       focusRequestIdRef.current += 1;
       setDirectoryFocusRequest({
@@ -296,7 +385,6 @@ export function MobilePaymentView() {
       });
       pendingDeleteFocusRef.current = null;
     }
-
     setSuppressDeleteFocusRestore(false);
   };
 
@@ -307,10 +395,7 @@ export function MobilePaymentView() {
   };
 
   const closeDirectory = () => {
-    if (isDeletingContact) {
-      return;
-    }
-
+    if (isDeletingContact) return;
     cancelDeleteContact();
     setIsDirectoryOpen(false);
   };
@@ -319,6 +404,7 @@ export function MobilePaymentView() {
     setStep("details");
     setRecipientMode("choice");
     setSelectedContactId(null);
+    setInitiatedPayment(null);
     setTransferResult(null);
     setLineError("");
     setDetailsErrors({});
@@ -333,33 +419,23 @@ export function MobilePaymentView() {
       [field]: value,
     }) as ManualRecipientData);
 
-    if (field === "bankCode") {
-      clearDetailsError("bankCode");
-    } else if (field === "documentNumber") {
-      clearDetailsError("documentNumber");
-    } else if (field === "phone") {
-      clearDetailsError("phone");
-    } else if (field === "alias") {
-      clearDetailsError("alias");
-    } else if (field === "saveToDirectory" && value === false) {
-      clearDetailsError("alias");
-    }
+    if (field === "bankCode") clearDetailsError("bankCode");
+    if (field === "documentNumber") clearDetailsError("documentNumber");
+    if (field === "phone") clearDetailsError("phone");
+    if (field === "name") clearDetailsError("name");
   };
 
-  const updateAmount = (
-    value: string,
-    minorUnits: number | null,
-  ) => {
+  const updateAmount = (value: string) => {
     setAmount(value);
-    setAmountMinorUnits(minorUnits);
     clearDetailsError("amount");
   };
 
   const continueToReview = () => {
-    if (!isCreditLineUsable(demoCreditLineSnapshot.status)) {
-      setLineError(
-        "Tu financiamiento no permite solicitar Pago Móvil en este momento.",
-      );
+    if (
+      contextStatus !== "ready"
+      || isInitiating
+      || paymentRequestRef.current !== null
+    ) {
       return;
     }
 
@@ -368,10 +444,8 @@ export function MobilePaymentView() {
       manualRecipient,
       selectedContactId,
       amount,
-      availableMinorUnits:
-        demoCreditLineSnapshot.usableAvailableMinorUnits,
+      availableMinorUnits,
     });
-
     setDetailsErrors(validation.errors);
     setFocusField(validation.firstInvalidField);
     setFocusRequest((current) => current + 1);
@@ -385,103 +459,276 @@ export function MobilePaymentView() {
       return;
     }
 
-    setAmountMinorUnits(validation.amountMinorUnits);
+    const controller = new AbortController();
+    paymentRequestRef.current = controller;
+    setIsInitiating(true);
     setAmount(formatAmountOnBlur(amount));
-    setTransferResult(null);
-    setStep("review");
+
+    void initiateMobilePayment(
+      {
+        amountMinorUnits: validation.amountMinorUnits,
+        recipient: resolvedRecipient,
+      },
+      controller.signal,
+    )
+      .then((payment) => {
+        if (controller.signal.aborted) return;
+        setInitiatedPayment(payment);
+        setTransferResult(null);
+        setStep("review");
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (
+          error instanceof MobilePaymentServiceError
+          && error.type === "unauthenticated"
+        ) {
+          router.replace(sessionExpiredUrl);
+          return;
+        }
+        setLineError(
+          error instanceof MobilePaymentServiceError
+            ? serviceErrorMessage(error)
+            : "No pudimos preparar la solicitud. Inténtalo nuevamente.",
+        );
+      })
+      .finally(() => {
+        if (paymentRequestRef.current === controller) {
+          paymentRequestRef.current = null;
+          setIsInitiating(false);
+        }
+      });
   };
 
   const returnToDetails = () => {
-    if (isSubmitting) {
-      return;
-    }
-
+    if (isConfirming) return;
+    setInitiatedPayment(null);
     setStep("details");
   };
 
-  const reviewBank = resolvedRecipient
-    ? getBank(destinationBanks, resolvedRecipient.bankCode)
+  const reviewRecipient = initiatedPayment?.recipient ?? null;
+  const reviewBank = reviewRecipient
+    ? getBank(banks, reviewRecipient.bankCode)
     : undefined;
 
-  const submitTransfer = async () => {
+  const submitTransfer = () => {
     if (
-      isSubmitting
-      || transferAbortRef.current !== null
-      || resolvedRecipient === null
+      isConfirming
+      || paymentRequestRef.current !== null
+      || initiatedPayment === null
+      || reviewRecipient === null
       || reviewBank === undefined
-      || amountMinorUnits === null
     ) {
       return;
     }
 
-    const abortController = new AbortController();
-    transferAbortRef.current = abortController;
-    setIsSubmitting(true);
+    const controller = new AbortController();
+    paymentRequestRef.current = controller;
+    setIsConfirming(true);
+    setLineError("");
 
-    try {
-      const result = await simulateMobilePayment(
-        {
-          amountMinorUnits,
-          beneficiaryName: resolvedRecipient.name,
+    void confirmMobilePayment(initiatedPayment.operationId, controller.signal)
+      .then((confirmation) => {
+        if (controller.signal.aborted) return;
+        const status = mapTransferStatus(confirmation.status);
+        const confirmedAmountMinorUnits = parseAmountToMinorUnits(
+          confirmation.amountBs,
+        );
+        if (status === null || confirmedAmountMinorUnits === null) {
+          setNavigationNotice(
+            "La operación fue recibida, pero no pudimos interpretar su estado. Vuelve al inicio antes de intentar otro pago.",
+          );
+          return;
+        }
+
+        setTransferResult({
+          status,
+          amountMinorUnits: confirmedAmountMinorUnits,
+          beneficiaryName: reviewRecipient.name,
           bankCode: reviewBank.code,
           bankName: reviewBank.name,
-          nationality: resolvedRecipient.nationality,
-          documentNumber: resolvedRecipient.documentNumber,
-          phone: resolvedRecipient.phone,
-        },
-        abortController.signal,
-      );
-
-      if (abortController.signal.aborted) {
-        return;
-      }
-
-      setTransferResult(result);
-      setStep("result");
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
-        setNavigationNotice(
-          "No pudimos procesar la transferencia. Inténtalo nuevamente.",
-        );
-      }
-    } finally {
-      if (transferAbortRef.current === abortController) {
-        transferAbortRef.current = null;
-        setIsSubmitting(false);
-      }
-    }
+          documentType: reviewRecipient.documentType,
+          documentNumber: reviewRecipient.documentNumber,
+          phone: reviewRecipient.phone,
+          transactionDate: confirmation.resolvedAt,
+          ...(confirmation.bankReference
+            ? { bankReference: confirmation.bankReference }
+            : {}),
+          ...(confirmation.message ? { userMessage: confirmation.message } : {}),
+        });
+        setStep("result");
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (
+          error instanceof MobilePaymentServiceError
+          && error.type === "unauthenticated"
+        ) {
+          router.replace(sessionExpiredUrl);
+          return;
+        }
+        const message = error instanceof MobilePaymentServiceError
+          && (error.type === "network" || error.type === "server")
+          ? "No pudimos confirmar la transferencia. Puedes reintentar sin duplicarla."
+          : error instanceof MobilePaymentServiceError
+            ? serviceErrorMessage(error)
+            : "No pudimos confirmar la transferencia. Puedes reintentar sin duplicarla.";
+        setLineError(message);
+      })
+      .finally(() => {
+        if (paymentRequestRef.current === controller) {
+          paymentRequestRef.current = null;
+          setIsConfirming(false);
+        }
+      });
   };
 
   const resetTransaction = () => {
-    transferAbortRef.current?.abort();
-    transferAbortRef.current = null;
+    paymentRequestRef.current?.abort();
+    paymentRequestRef.current = null;
     setStep("details");
     setRecipientMode("choice");
     setManualRecipient(initialManualRecipient);
     setSelectedContactId(null);
     setAmount("");
-    setAmountMinorUnits(null);
     setDetailsErrors({});
     setFocusField(null);
     setLineError("");
-    setIsSubmitting(false);
+    setIsInitiating(false);
+    setIsConfirming(false);
+    setInitiatedPayment(null);
     setTransferResult(null);
+  };
+
+  const retryPaymentContext = () => {
+    setContextStatus("loading");
+    setDirectoryStatus("loading");
+    setLineError("");
+    loadPaymentContext();
   };
 
   const startNewPayment = () => {
     setNavigationNotice("");
     resetTransaction();
+    retryPaymentContext();
   };
 
   const reviewRejectedTransfer = () => {
     setTransferResult(null);
-    setStep("review");
+    setInitiatedPayment(null);
+    setStep("details");
   };
 
   const returnHome = () => {
     setNavigationNotice("");
     resetTransaction();
     router.replace("/home");
+  };
+
+  const renderPaymentContent = () => {
+    if (contextStatus === "loading") {
+      return (
+        <Stack
+          aria-live="polite"
+          role="status"
+          spacing={2}
+          sx={{ flex: 1, alignItems: "center", justifyContent: "center", textAlign: "center" }}
+        >
+          <CircularProgress aria-hidden="true" />
+          <Typography color="text.secondary">Cargando Pago Móvil…</Typography>
+        </Stack>
+      );
+    }
+
+    if (contextStatus === "error") {
+      return (
+        <Stack spacing={2} sx={{ flex: 1, alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+          <ErrorOutlineRounded color="error" sx={{ fontSize: 48 }} />
+          <Typography component="h1" variant="h6" sx={{ color: "secondary.main", fontWeight: 700 }}>
+            No pudimos cargar Pago Móvil
+          </Typography>
+          <Typography color="text.secondary">
+            Revisa tu conexión e inténtalo nuevamente.
+          </Typography>
+          <Button onClick={retryPaymentContext} type="button" variant="contained">
+            Reintentar
+          </Button>
+        </Stack>
+      );
+    }
+
+    if (contextStatus === "unavailable") {
+      return (
+        <Stack spacing={2} sx={{ flex: 1, alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+          <ErrorOutlineRounded color="warning" sx={{ fontSize: 48 }} />
+          <Typography component="h1" variant="h6" sx={{ color: "secondary.main", fontWeight: 700 }}>
+            Pago Móvil no está disponible
+          </Typography>
+          <Typography color="text.secondary">
+            Tu cuenta o financiamiento no permite realizar esta operación en este momento.
+          </Typography>
+          <Button component={Link} href="/home" type="button" variant="contained">
+            Volver al inicio
+          </Button>
+        </Stack>
+      );
+    }
+
+    if (step === "details") {
+      return (
+        <RecipientDetailsStep
+          amount={amount}
+          availableLabel={availableLabel}
+          banks={banks}
+          errors={detailsErrors}
+          focusField={focusField}
+          focusRequest={focusRequest}
+          isSubmitting={isInitiating}
+          manualRecipient={manualRecipient}
+          onAmountChange={updateAmount}
+          onChangeRecipient={changeRecipient}
+          onChooseManual={chooseManual}
+          onContinue={continueToReview}
+          onManualChange={updateManualRecipient}
+          onOpenDirectory={openDirectory}
+          recipientMode={recipientMode}
+          selectedContact={selectedContact}
+        />
+      );
+    }
+
+    if (step === "review" && initiatedPayment && reviewRecipient && reviewBank) {
+      return (
+        <ReviewStep
+          amountLabel={formatBsAmount(initiatedPayment.amountBs)}
+          availableLabel={formatBsAmount(initiatedPayment.availableBs)}
+          bank={reviewBank}
+          feeLabel={`${formatBsAmount(initiatedPayment.feeBs)} (${initiatedPayment.feePercentage}%)`}
+          isSubmitting={isConfirming}
+          onBack={returnToDetails}
+          onConfirm={submitTransfer}
+          rateLabel={`Bs. ${initiatedPayment.rateValue.replace(".", ",")} · ${initiatedPayment.rateSource}`}
+          recipient={reviewRecipient}
+          titleRef={reviewTitleRef}
+          totalLabel={formatBsAmount(initiatedPayment.totalBs)}
+        />
+      );
+    }
+
+    if (step === "result" && transferResult) {
+      return (
+        <TransferResultView
+          onBackHome={returnHome}
+          onNewPayment={startNewPayment}
+          onNotice={setNavigationNotice}
+          onReview={reviewRejectedTransfer}
+          result={transferResult}
+          titleRef={resultTitleRef}
+        />
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -498,34 +745,13 @@ export function MobilePaymentView() {
     >
       <Container
         maxWidth="md"
-        sx={{
-          width: "100%",
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-        }}
+        sx={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}
       >
-        <Stack
-          component="header"
-          direction="row"
-          spacing={1}
-          sx={{ minHeight: 48, alignItems: "center" }}
-        >
-          <IconButton
-            aria-label="Volver al inicio"
-            color="primary"
-            component={Link}
-            href="/home"
-          >
+        <Stack component="header" direction="row" spacing={1} sx={{ minHeight: 48, alignItems: "center" }}>
+          <IconButton aria-label="Volver al inicio" color="primary" component={Link} href="/home">
             <ArrowBackRounded />
           </IconButton>
-          <Typography
-            sx={{
-              color: themeTokens.color.brandLogo,
-              fontWeight: 800,
-              letterSpacing: "-0.03em",
-            }}
-          >
+          <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800, letterSpacing: "-0.03em" }}>
             Impúlsate Móvil
           </Typography>
         </Stack>
@@ -547,70 +773,16 @@ export function MobilePaymentView() {
           }}
         >
           {lineError && (
-            <Typography
-              color="error"
-              role="alert"
-              sx={{ mb: 2 }}
-            >
+            <Typography color="error" role="alert" sx={{ mb: 2 }}>
               {lineError}
             </Typography>
           )}
-
-          {step === "details" ? (
-            <RecipientDetailsStep
-              amount={amount}
-              availableLabel={
-                demoCreditLineSnapshot.usableAvailableLabel
-              }
-              banks={destinationBanks}
-              errors={detailsErrors}
-              focusField={focusField}
-              focusRequest={focusRequest}
-              manualRecipient={manualRecipient}
-              onAmountChange={updateAmount}
-              onChangeRecipient={changeRecipient}
-              onChooseManual={chooseManual}
-              onContinue={continueToReview}
-              onManualChange={updateManualRecipient}
-              onOpenDirectory={openDirectory}
-              recipientMode={recipientMode}
-              selectedContact={selectedContact}
-            />
-          ) : step === "review" ? (
-            resolvedRecipient
-            && reviewBank
-            && amountMinorUnits !== null
-            && (
-              <ReviewStep
-                amountLabel={formatMinorUnits(amountMinorUnits)}
-                availableLabel={
-                  demoCreditLineSnapshot.usableAvailableLabel
-                }
-                bank={reviewBank}
-                isSubmitting={isSubmitting}
-                onBack={returnToDetails}
-                onConfirm={submitTransfer}
-                recipient={resolvedRecipient}
-                titleRef={reviewTitleRef}
-              />
-            )
-          ) : (
-            transferResult && (
-              <TransferResultView
-                onBackHome={returnHome}
-                onNewPayment={startNewPayment}
-                onNotice={setNavigationNotice}
-                onReview={reviewRejectedTransfer}
-                result={transferResult}
-                titleRef={resultTitleRef}
-              />
-            )
-          )}
+          {renderPaymentContent()}
         </Paper>
       </Container>
 
       <DirectoryDialog
-        banks={destinationBanks}
+        banks={banks}
         contacts={directoryEntries}
         contactToDelete={contactToDelete}
         deleteError={deleteError}
@@ -622,7 +794,7 @@ export function MobilePaymentView() {
         onDeleteDialogExited={completeDeleteDialogExit}
         onFocusHandled={completeDirectoryFocus}
         onRequestDelete={requestDeleteContact}
-        onRetry={startDirectoryLoading}
+        onRetry={retryPaymentContext}
         onSelect={selectDirectoryContact}
         open={isDirectoryOpen}
         status={directoryStatus}
@@ -637,16 +809,14 @@ export function MobilePaymentView() {
       />
       <Snackbar
         autoHideDuration={2800}
-        message={
+        message={(
           <Box component="span" aria-live="polite" role="status">
             {navigationNotice}
           </Box>
-        }
+        )}
         onClose={() => setNavigationNotice("")}
         open={Boolean(navigationNotice)}
-        sx={{
-          bottom: "calc(72px + env(safe-area-inset-bottom)) !important",
-        }}
+        sx={{ bottom: "calc(72px + env(safe-area-inset-bottom)) !important" }}
       />
     </Box>
   );
