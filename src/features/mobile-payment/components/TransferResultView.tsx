@@ -65,7 +65,9 @@ export function TransferResultView({
   }, []);
 
   const transactionDateLabel = useMemo(
-    () => formatTransactionDate(result.transactionDate),
+    () => result.transactionDate
+      ? formatTransactionDate(result.transactionDate)
+      : null,
     [result.transactionDate],
   );
 
@@ -314,12 +316,13 @@ export function TransferResultView({
                   />
                   <ResultItem
                     label="Cédula"
-                    value={formatDocument(result.nationality, result.documentNumber)}
+                    value={formatDocument(result.documentType, result.documentNumber)}
                   />
                   <ResultItem label="Teléfono" value={result.phone} />
                 </>
               )}
-              <Box sx={{ minWidth: 0, display: "grid", gap: 0.25 }}>
+              {transactionDateLabel && (
+                <Box sx={{ minWidth: 0, display: "grid", gap: 0.25 }}>
                 <Typography color="text.secondary" variant="body2">
                   Fecha y hora
                 </Typography>
@@ -340,7 +343,8 @@ export function TransferResultView({
                     · {transactionDateLabel.time}
                   </Box>
                 </Typography>
-              </Box>
+                </Box>
+              )}
             </Box>
           </Stack>
 
