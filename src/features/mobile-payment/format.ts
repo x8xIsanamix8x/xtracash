@@ -1,4 +1,4 @@
-import type { Bank, Nationality } from "./types";
+import type { Bank, DocumentType } from "./types";
 
 export function getBank(
   banks: readonly Bank[],
@@ -17,6 +17,11 @@ export function formatMinorUnits(minorUnits: number) {
   const groupedWholeUnits = groupWholeUnits(String(wholeUnits));
 
   return `Bs. ${groupedWholeUnits},${decimals}`;
+}
+
+export function formatBsAmount(amount: string) {
+  const minorUnits = parseAmountToMinorUnits(amount);
+  return minorUnits === null ? "Bs. 0,00" : formatMinorUnits(minorUnits);
 }
 
 function groupWholeUnits(wholeUnits: string) {
@@ -142,17 +147,17 @@ export function formatPhone(phone: string) {
 }
 
 export function maskDocument(
-  nationality: Nationality,
+  documentType: DocumentType,
   documentNumber: string,
 ) {
-  return `${nationality}-••.•••.${documentNumber.slice(-3)}`;
+  return `${documentType}-••.•••.${documentNumber.slice(-3)}`;
 }
 
 export function formatDocument(
-  nationality: Nationality,
+  documentType: DocumentType,
   documentNumber: string,
 ) {
-  return `${nationality}-${groupWholeUnits(documentNumber)}`;
+  return `${documentType}-${groupWholeUnits(documentNumber)}`;
 }
 
 export function formatTransactionDate(transactionDate: string) {
