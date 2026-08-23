@@ -6,6 +6,7 @@ import { Box, Container, Snackbar, Stack } from "@mui/material";
 
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
 import { CreditLineStatusNotice } from "@/features/credit-line";
+import { PaymentReportFlow } from "@/features/payment-report";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 
 import { AppHeader } from "./components/AppHeader";
@@ -33,6 +34,7 @@ export function HomeView() {
     "loading",
   );
   const [summary, setSummary] = useState<HomeAccountSummary | null>(null);
+  const [isPaymentReportOpen, setIsPaymentReportOpen] = useState(false);
   const requestRef = useRef<{
     controller: AbortController;
     id: number;
@@ -96,11 +98,7 @@ export function HomeView() {
     };
   }, [loadSummary]);
 
-  const showReportPaymentNotice = () => {
-    setNotice(
-      "El reporte de pagos estará disponible en la siguiente etapa.",
-    );
-  };
+  const openPaymentReport = () => setIsPaymentReportOpen(true);
 
   const retryCreditOverview = () => {
     setOverviewStatus("loading");
@@ -135,7 +133,7 @@ export function HomeView() {
           {overviewStatus === "ready" && financing ? (
             <>
               <CreditLineStatusNotice
-                onReportPayment={showReportPaymentNotice}
+                onReportPayment={openPaymentReport}
                 showReportPaymentAction={financing.hasPendingPayment}
                 status={financing.status}
               />
@@ -152,7 +150,7 @@ export function HomeView() {
               >
                 <CreditSummary
                   financing={financing}
-                  onReportPayment={showReportPaymentNotice}
+                  onReportPayment={openPaymentReport}
                 />
                 <RecentActivity items={recentActivity} />
               </Box>
@@ -171,6 +169,12 @@ export function HomeView() {
         onUnavailable={(label) => setNotice(
           `${label} estará disponible en la siguiente etapa.`,
         )}
+      />
+      <PaymentReportFlow
+        currentDebtBs={summary?.payments.currentDebtBs ?? null}
+        minimumPaymentBs={summary?.payments.minimumPaymentBs ?? null}
+        onClose={() => setIsPaymentReportOpen(false)}
+        open={isPaymentReportOpen}
       />
       <Snackbar
         autoHideDuration={2800}
