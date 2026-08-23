@@ -22,6 +22,34 @@ export type SourceBank = Readonly<{
   name: string;
 }>;
 
+export type PaymentReportDestination = Readonly<{
+  bankName: string;
+  bankCode: string;
+  rif: string;
+  receiverPhone: string;
+}>;
+
+export type PaymentReportData = Readonly<{
+  destination: PaymentReportDestination;
+  debt: Readonly<{
+    currentBs: string;
+    minimumBs: string;
+  }>;
+  sourceBanks: readonly SourceBank[];
+}>;
+
+export type CreatePaymentReportRequest = Readonly<{
+  amountBs: string;
+  originBankCode: string;
+  senderPhone: string;
+  paymentDate: string;
+  bankReference: string;
+}>;
+
+export type PaymentReportResult = Readonly<{
+  amountBs: string;
+}>;
+
 export type PaymentDetailKey = "bank" | "rif" | "phone" | "amount";
 
 export type PaymentDetail = Readonly<{
@@ -33,5 +61,7 @@ export type PaymentDetail = Readonly<{
 
 export type PaymentReportFormErrors = Readonly<{
   originBank?: string;
+  senderPhone?: string;
+  paymentDate?: string;
   reference?: string;
 }>;

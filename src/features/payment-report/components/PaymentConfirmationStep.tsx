@@ -4,10 +4,12 @@ import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material
 import { alpha } from "@mui/material/styles";
 
 import { createPaymentDetails } from "../presentation";
+import type { PaymentReportDestination } from "../types";
 import { PaymentReportScreenLayout } from "./PaymentReportScreenLayout";
 
 type PaymentConfirmationStepProps = Readonly<{
   amountBs: string;
+  destination: PaymentReportDestination;
   titleRef: Ref<HTMLHeadingElement>;
   onConfirm: () => void;
   onMistake: () => void;
@@ -15,11 +17,12 @@ type PaymentConfirmationStepProps = Readonly<{
 
 export function PaymentConfirmationStep({
   amountBs,
+  destination,
   titleRef,
   onConfirm,
   onMistake,
 }: PaymentConfirmationStepProps) {
-  const details = createPaymentDetails(amountBs);
+  const details = createPaymentDetails(destination, amountBs);
 
   return (
     <PaymentReportScreenLayout

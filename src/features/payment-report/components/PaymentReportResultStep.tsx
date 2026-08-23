@@ -4,16 +4,17 @@ import { Box, Button, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
 import { formatPaymentAmount } from "../presentation";
+import type { PaymentReportResult } from "../types";
 import { PaymentReportScreenLayout } from "./PaymentReportScreenLayout";
 
 type PaymentReportResultStepProps = Readonly<{
-  amountBs: string;
+  result: PaymentReportResult;
   titleRef: Ref<HTMLHeadingElement>;
   onBackHome: () => void;
 }>;
 
 export function PaymentReportResultStep({
-  amountBs,
+  result,
   titleRef,
   onBackHome,
 }: PaymentReportResultStepProps) {
@@ -74,7 +75,7 @@ export function PaymentReportResultStep({
             sx={{ color: "secondary.main", fontWeight: 800 }}
             variant="h4"
           >
-            {formatPaymentAmount(amountBs)}
+            {formatPaymentAmount(result.amountBs)}
           </Typography>
         </Box>
       </Stack>
