@@ -99,6 +99,10 @@ export function HomeView() {
   }, [loadSummary]);
 
   const openPaymentReport = () => setIsPaymentReportOpen(true);
+  const closePaymentReport = useCallback(
+    () => setIsPaymentReportOpen(false),
+    [],
+  );
 
   const retryCreditOverview = () => {
     setOverviewStatus("loading");
@@ -171,9 +175,7 @@ export function HomeView() {
         )}
       />
       <PaymentReportFlow
-        currentDebtBs={summary?.payments.currentDebtBs ?? null}
-        minimumPaymentBs={summary?.payments.minimumPaymentBs ?? null}
-        onClose={() => setIsPaymentReportOpen(false)}
+        onClose={closePaymentReport}
         open={isPaymentReportOpen}
       />
       <Snackbar

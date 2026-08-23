@@ -18,13 +18,14 @@ import {
 import { alpha } from "@mui/material/styles";
 
 import { createCopyAllText, createPaymentDetails } from "../presentation";
-import type { PaymentDetailKey } from "../types";
+import type { PaymentDetailKey, PaymentReportDestination } from "../types";
 import { PaymentReportStepLayout } from "./PaymentReportStepLayout";
 
 type CopyTarget = PaymentDetailKey | "all";
 
 type PaymentInstructionsStepProps = Readonly<{
   amountBs: string;
+  destination: PaymentReportDestination;
   titleRef: Ref<HTMLHeadingElement>;
   onNotice: (message: string) => void;
   onNext: () => void;
@@ -32,11 +33,15 @@ type PaymentInstructionsStepProps = Readonly<{
 
 export function PaymentInstructionsStep({
   amountBs,
+  destination,
   titleRef,
   onNotice,
   onNext,
 }: PaymentInstructionsStepProps) {
-  const details = useMemo(() => createPaymentDetails(amountBs), [amountBs]);
+  const details = useMemo(
+    () => createPaymentDetails(destination, amountBs),
+    [amountBs, destination],
+  );
   const [copiedTarget, setCopiedTarget] = useState<CopyTarget | null>(null);
   const [copyError, setCopyError] = useState("");
   const copyTimerRef = useRef<number | null>(null);
