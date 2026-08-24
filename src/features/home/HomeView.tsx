@@ -168,12 +168,7 @@ export function HomeView() {
         </Stack>
       </Container>
 
-      <AppBottomNavigation
-        activeItem="home"
-        onUnavailable={(label) => setNotice(
-          `${label} estará disponible en la siguiente etapa.`,
-        )}
-      />
+      <AppBottomNavigation activeItem="home" />
       <PaymentReportFlow
         onClose={closePaymentReport}
         open={isPaymentReportOpen}

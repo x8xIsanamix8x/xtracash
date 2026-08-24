@@ -177,10 +177,7 @@ export function ProfileView() {
         </Stack>
       </Container>
 
-      <AppBottomNavigation
-        activeItem="profile"
-        onUnavailable={(label) => setNotice(`${label} estará disponible en la siguiente etapa.`)}
-      />
+      <AppBottomNavigation activeItem="profile" />
       <Snackbar
         autoHideDuration={2800}
         message={

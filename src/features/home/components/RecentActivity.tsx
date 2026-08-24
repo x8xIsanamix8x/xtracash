@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   CancelOutlined,
   CheckCircleOutlineRounded,
@@ -7,6 +8,7 @@ import {
 import {
   Avatar,
   Box,
+  Button,
   Card,
   CardContent,
   List,
@@ -38,13 +40,27 @@ export function RecentActivity({ items }: RecentActivityProps) {
       sx={{ borderRadius: { xs: "16px", md: 3 } }}
     >
       <CardContent sx={{ p: { xs: 2, md: 3 }, "&:last-child": { pb: { xs: 2, md: 3 } } }}>
-        <Stack spacing={0.5}>
-          <Typography component="h2" variant="h6" sx={{ color: "secondary.main", fontWeight: 700 }}>
-            Movimientos recientes
-          </Typography>
-          <Typography color="text.secondary" variant="body2">
-            Últimos movimientos de tu crédito
-          </Typography>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{ alignItems: "flex-start", justifyContent: "space-between" }}
+        >
+          <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+            <Typography component="h2" variant="h6" sx={{ color: "secondary.main", fontWeight: 700 }}>
+              Movimientos recientes
+            </Typography>
+            <Typography color="text.secondary" variant="body2">
+              Últimos movimientos de tu crédito
+            </Typography>
+          </Stack>
+          <Button
+            component={Link}
+            href="/movements"
+            size="small"
+            sx={{ flexShrink: 0, minWidth: 44 }}
+          >
+            Ver todos
+          </Button>
         </Stack>
         {items.length === 0 ? (
           <Stack
