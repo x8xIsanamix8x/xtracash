@@ -9,6 +9,7 @@ export type PaymentReportStep =
   | "contact"
   | "form"
   | "submitting"
+  | "pending"
   | "result";
 
 export type PaymentAmountOption = Readonly<{
