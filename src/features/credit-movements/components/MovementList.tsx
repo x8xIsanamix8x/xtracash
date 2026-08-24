@@ -171,7 +171,7 @@ export function MovementList({ groups, isFiltered }: MovementListProps) {
                               </Avatar>
                             </ListItemAvatar>
                             <ListItemText
-                              primary={item.counterparty}
+                              primary={item.displayTitle}
                               secondary={(
                                 <Stack
                                   component="span"
@@ -183,7 +183,7 @@ export function MovementList({ groups, isFiltered }: MovementListProps) {
                                     component="span"
                                     variant="body2"
                                   >
-                                    {item.typeLabel}
+                                    {item.description}
                                   </Typography>
                                   <Box component="span">
                                     <Chip

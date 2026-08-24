@@ -43,7 +43,8 @@ export type CreditMovementQuery = Readonly<{
 }>;
 
 export type CreditMovementItem = CreditMovement & Readonly<{
-  typeLabel: string;
+  displayTitle: string;
+  description: string;
   statusLabel: string;
   amount: string;
   displayDate: string;

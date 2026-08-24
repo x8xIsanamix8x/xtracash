@@ -35,9 +35,21 @@ const caracasTimeFormatter = new Intl.DateTimeFormat("es-VE", {
   hour12: true,
 });
 
-const typeLabels: Record<CreditMovementType, string> = {
-  CREDITO: "Pago móvil realizado",
-  REPORTE_PAGO: "Pago reportado",
+const typePresentation: Record<
+  CreditMovementType,
+  Readonly<{
+    description: string;
+    title: (movement: CreditMovement) => string;
+  }>
+> = {
+  CREDITO: {
+    description: "Pago móvil realizado",
+    title: (movement) => movement.counterparty,
+  },
+  REPORTE_PAGO: {
+    description: "Pago a tu crédito",
+    title: () => "Reporte de pago",
+  },
 };
 
 const statusLabels: Record<CreditMovementStatus, string> = {
@@ -140,9 +152,12 @@ export function getMovementFilterLabel(
 }
 
 function presentMovement(movement: CreditMovement): CreditMovementItem {
+  const presentation = typePresentation[movement.type];
+
   return {
     ...movement,
-    typeLabel: typeLabels[movement.type],
+    displayTitle: presentation.title(movement),
+    description: presentation.description,
     statusLabel: statusLabels[movement.status],
     amount: formatBolivars(movement.amountBs),
     displayDate: formatMovementDate(movement.occurredAt),
