@@ -12,6 +12,7 @@ import {
 } from "@/features/auth/session/server/sessionCookies";
 
 import { CorePaymentReportError } from "./corePaymentReport";
+import { getPaymentReportFailureResponse } from "./paymentReportFailure";
 
 type AuthenticatedOperation<T> = (
   accessToken: string,
@@ -33,14 +34,8 @@ function upstreamErrorResponse() {
 }
 
 function coreFailureResponse(error: CorePaymentReportError) {
-  if (error.type === "configuration") return serviceUnavailableResponse();
-  if (error.type === "not_configured") {
-    return authJson({ error: "payment_data_unconfigured" }, 404);
-  }
-  if (error.type === "http" && error.status === 409) {
-    return authJson({ error: "payment_report_conflict" }, 409);
-  }
-  return upstreamErrorResponse();
+  const failure = getPaymentReportFailureResponse(error);
+  return authJson(failure.body, failure.status);
 }
 
 async function withRotatedSession(

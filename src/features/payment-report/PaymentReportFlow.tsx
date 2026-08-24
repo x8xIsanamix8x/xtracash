@@ -33,8 +33,10 @@ import { PaymentReportDataState } from "./components/PaymentReportDataState";
 import { PaymentInstructionsStep } from "./components/PaymentInstructionsStep";
 import { PaymentMethodStep } from "./components/PaymentMethodStep";
 import { PaymentReportFormStep } from "./components/PaymentReportFormStep";
+import { PaymentReportPendingStep } from "./components/PaymentReportPendingStep";
 import { PaymentReportResultStep } from "./components/PaymentReportResultStep";
 import { PaymentReportSubmittingStep } from "./components/PaymentReportSubmittingStep";
+import { getSubmissionFailureStep } from "./pendingPaymentReport";
 import { createPaymentAmountOptions } from "./presentation";
 import {
   createPaymentReport,
@@ -328,6 +330,16 @@ export function PaymentReportFlow({
           return;
         }
 
+        const errorType = error instanceof PaymentReportServiceError
+          ? error.type
+          : "server";
+        const failureStep = getSubmissionFailureStep(errorType);
+        if (failureStep === "pending") {
+          setSubmissionError("");
+          setStep(failureStep);
+          return;
+        }
+
         setSubmissionError(
           error instanceof PaymentReportServiceError
           && error.type === "conflict"
@@ -337,7 +349,7 @@ export function PaymentReportFlow({
               ? "Revisa los datos e inténtalo nuevamente."
               : "No pudimos enviar el reporte. Inténtalo nuevamente.",
         );
-        setStep("form");
+        setStep(failureStep);
       })
       .finally(() => {
         if (submissionControllerRef.current === controller) {
@@ -436,6 +448,15 @@ export function PaymentReportFlow({
 
     if (step === "submitting") {
       return <PaymentReportSubmittingStep titleRef={titleRef} />;
+    }
+
+    if (step === "pending") {
+      return (
+        <PaymentReportPendingStep
+          onBackHome={closeFlow}
+          titleRef={titleRef}
+        />
+      );
     }
 
     if (step === "result") {

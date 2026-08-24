@@ -7,6 +7,10 @@ import type {
 const amountPattern = /^(0|[1-9]\d*)\.\d{2}$/;
 const bankCodePattern = /^\d{4}$/;
 
+export type PaymentReportBffConflict =
+  | "payment_report_conflict"
+  | "payment_report_pending";
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -85,4 +89,15 @@ export function parsePaymentReportResult(
   }
 
   return { amountBs: value.amountBs };
+}
+
+export function parsePaymentReportBffConflict(
+  value: unknown,
+): PaymentReportBffConflict | null {
+  if (!isRecord(value)) return null;
+
+  return value.error === "payment_report_pending"
+    || value.error === "payment_report_conflict"
+    ? value.error
+    : null;
 }

@@ -1,4 +1,5 @@
 import {
+  parsePaymentReportBffConflict,
   parsePaymentReportData,
   parsePaymentReportResult,
 } from "../contractValidation";
@@ -13,6 +14,7 @@ export type PaymentReportServiceErrorType =
   | "conflict"
   | "invalid"
   | "network"
+  | "pending"
   | "server"
   | "unauthenticated"
   | "unconfigured";
@@ -58,7 +60,15 @@ async function request(
     throw new PaymentReportServiceError("invalid");
   }
   if (response.status === 409) {
-    throw new PaymentReportServiceError("conflict");
+    let conflict = null;
+    try {
+      conflict = parsePaymentReportBffConflict(await response.json());
+    } catch {
+      // A malformed error response remains a safe, generic conflict.
+    }
+    throw new PaymentReportServiceError(
+      conflict === "payment_report_pending" ? "pending" : "conflict",
+    );
   }
   if (!response.ok) throw new PaymentReportServiceError("server");
 
