@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:payment-report": "node --no-warnings --experimental-strip-types --test tests/payment-report/*.test.mjs"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",

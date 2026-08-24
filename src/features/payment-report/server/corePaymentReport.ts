@@ -12,6 +12,11 @@ import type {
   PaymentReportResult,
   SourceBank,
 } from "../types";
+import {
+  normalizeCoreMoney,
+  parseCorePaymentReportResponse,
+} from "./corePaymentReportResponse";
+import type { CorePaymentReportConflict } from "./corePaymentReportResponse";
 import { toCoreAmountNumber } from "./requestValidation";
 
 export type CorePaymentReportErrorType =
@@ -24,12 +29,18 @@ export type CorePaymentReportErrorType =
 export class CorePaymentReportError extends Error {
   readonly type: CorePaymentReportErrorType;
   readonly status: number | null;
+  readonly conflict: CorePaymentReportConflict | null;
 
-  constructor(type: CorePaymentReportErrorType, status: number | null = null) {
+  constructor(
+    type: CorePaymentReportErrorType,
+    status: number | null = null,
+    conflict: CorePaymentReportConflict | null = null,
+  ) {
     super(type);
     this.name = "CorePaymentReportError";
     this.type = type;
     this.status = status;
+    this.conflict = conflict;
   }
 }
 
@@ -39,19 +50,6 @@ type CoreRequestOptions = Readonly<{
   method?: "GET" | "POST";
   signal: AbortSignal;
 }>;
-
-const coreMoneyPattern = /^(\d+)(?:\.(\d{1,4}))?$/;
-const nextDecimalDigit: Readonly<Record<string, string>> = {
-  "0": "1",
-  "1": "2",
-  "2": "3",
-  "3": "4",
-  "4": "5",
-  "5": "6",
-  "6": "7",
-  "7": "8",
-  "8": "9",
-};
 
 function getCoreEndpoint(pathname: string): string {
   const configuration = getServerCoreApiBaseUrl();
@@ -87,38 +85,6 @@ async function readJson(response: Response): Promise<unknown> {
   } catch {
     throw new CorePaymentReportError("protocol");
   }
-}
-
-function incrementDecimalDigits(value: string): string {
-  const digits = value.split("");
-
-  for (let index = digits.length - 1; index >= 0; index -= 1) {
-    if (digits[index] !== "9") {
-      digits[index] = nextDecimalDigit[digits[index]];
-      return digits.join("");
-    }
-    digits[index] = "0";
-  }
-
-  return `1${digits.join("")}`;
-}
-
-function normalizeCoreMoney(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const match = coreMoneyPattern.exec(value);
-  if (!match) return null;
-
-  const whole = match[1].replace(/^0+(?=\d)/, "");
-  const fraction = match[2] ?? "";
-  const cents = fraction.padEnd(2, "0").slice(0, 2);
-
-  if (fraction.length <= 2 || fraction[2] < "5") {
-    return `${whole}.${cents}`;
-  }
-
-  const roundedMinorUnits = incrementDecimalDigits(`${whole}${cents}`)
-    .padStart(3, "0");
-  return `${roundedMinorUnits.slice(0, -2)}.${roundedMinorUnits.slice(-2)}`;
 }
 
 function readMoney(value: unknown): string | null {
@@ -174,12 +140,6 @@ function parseBanks(value: unknown): readonly SourceBank[] | null {
     : banks as readonly SourceBank[];
 }
 
-function parseReportResult(value: unknown): PaymentReportResult | null {
-  if (!isRecord(value)) return null;
-  const amountBs = readMoney(value.monto);
-  return amountBs === null ? null : { amountBs };
-}
-
 export async function getPaymentReportDataFromCore(
   accessToken: string,
   signal: AbortSignal,
@@ -232,10 +192,13 @@ export async function createPaymentReportInCore(
     signal,
   });
 
-  if (response.status !== 200) {
-    throw new CorePaymentReportError("http", response.status);
+  const result = await parseCorePaymentReportResponse(response);
+  if (result.ok) return result.value;
+  if (result.type === "conflict") {
+    throw new CorePaymentReportError("http", 409, result.conflict);
   }
-  const result = parseReportResult(await readJson(response));
-  if (result === null) throw new CorePaymentReportError("protocol");
-  return result;
+  if (result.type === "http") {
+    throw new CorePaymentReportError("http", result.status);
+  }
+  throw new CorePaymentReportError("protocol");
 }
