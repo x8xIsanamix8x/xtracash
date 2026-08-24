@@ -12,3 +12,14 @@ export function validateRecoveryIdentifier(identifier: string) {
 
   return emailPattern.test(value) ? "" : "Ingresa un correo electrónico válido.";
 }
+
+export function parseRecoveryRequest(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+
+  const identifier = (value as Record<string, unknown>).identifier;
+  if (typeof identifier !== "string" || validateRecoveryIdentifier(identifier)) {
+    return null;
+  }
+
+  return { identifier: normalizeRecoveryIdentifier(identifier) } as const;
+}
