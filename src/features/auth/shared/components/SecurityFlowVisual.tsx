@@ -1,38 +1,15 @@
-import {
-  CheckCircleRounded,
-  PasswordRounded,
-  VerifiedUserRounded,
-} from "@mui/icons-material";
+import type { SvgIconComponent } from "@mui/icons-material";
 import { Box } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
 import { themeTokens } from "@/theme/tokens";
 
-export type ChangePasswordVisualKey = "verification" | "new-password" | "success";
-
-const visuals = {
-  verification: {
-    icon: VerifiedUserRounded,
-    message: "Confirma tu identidad antes de continuar.",
-  },
-  "new-password": {
-    icon: PasswordRounded,
-    message: "Crea una contraseña segura para tu cuenta.",
-  },
-  success: {
-    icon: CheckCircleRounded,
-    message: "Tu proceso se completó correctamente.",
-  },
-} as const;
-
-type ChangePasswordVisualProps = Readonly<{
-  visualKey: ChangePasswordVisualKey;
+type SecurityFlowVisualProps = Readonly<{
+  icon: SvgIconComponent;
+  message: string;
 }>;
 
-export function ChangePasswordVisual({ visualKey }: ChangePasswordVisualProps) {
-  const content = visuals[visualKey];
-  const VisualIcon = content.icon;
-
+export function SecurityFlowVisual({ icon: VisualIcon, message }: SecurityFlowVisualProps) {
   return (
     <Box
       aria-hidden="true"
@@ -44,25 +21,25 @@ export function ChangePasswordVisual({ visualKey }: ChangePasswordVisualProps) {
         overflow: "hidden",
         pointerEvents: "none",
         color: "secondary.main",
-        background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.primary.main, 0.1)} 70%, ${alpha(themeTokens.color.accent, 0.1)} 100%)`,
+        background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.primary.main, 0.09)} 62%, ${alpha(themeTokens.color.accent, 0.1)} 100%)`,
       })}
     >
       <Box
         sx={(theme) => ({
           position: "absolute",
-          top: visualKey === "verification" ? "-34%" : "38%",
-          left: visualKey === "verification" ? "58%" : "-18%",
           width: { xs: 150, sm: 210, lg: "82%" },
           aspectRatio: "1",
           borderRadius: "50%",
           bgcolor: alpha(theme.palette.primary.main, 0.12),
+          top: "-36%",
+          left: "58%",
         })}
       />
       <Box
         sx={(theme) => ({
           position: "absolute",
-          right: { xs: "8%", lg: "-20%" },
-          bottom: { xs: "-62%", lg: "-16%" },
+          right: { xs: "8%", lg: "-22%" },
+          bottom: { xs: "-64%", lg: "-16%" },
           width: { xs: 130, sm: 170, lg: "76%" },
           aspectRatio: "1",
           border: "1px solid",
@@ -70,20 +47,31 @@ export function ChangePasswordVisual({ visualKey }: ChangePasswordVisualProps) {
           borderRadius: "50%",
         })}
       />
-      <VisualIcon
-        sx={{
+      <Box
+        sx={(theme) => ({
           position: "absolute",
-          zIndex: 1,
-          top: "50%",
-          left: { xs: "42%", lg: "50%" },
-          width: { xs: 72, sm: 96, lg: 136 },
-          height: { xs: 72, sm: 96, lg: 136 },
-          transform: "translate(-50%, -50%)",
-        }}
+          top: "58%",
+          right: "-8%",
+          left: "-8%",
+          height: 2,
+          borderRadius: 999,
+          bgcolor: alpha(theme.palette.primary.main, 0.16),
+          transform: "rotate(-7deg)",
+        })}
       />
+      <Box sx={{ position: "absolute", zIndex: 1, inset: 0, display: "grid", placeItems: "center" }}>
+        <VisualIcon
+          sx={{
+            display: "block",
+            width: { xs: 72, sm: 96, lg: 136 },
+            height: { xs: 72, sm: 96, lg: 136 },
+          }}
+        />
+      </Box>
       <Box
         sx={{
           position: "absolute",
+          zIndex: 1,
           top: "18%",
           right: "14%",
           width: { xs: 12, lg: 18 },
@@ -102,10 +90,11 @@ export function ChangePasswordVisual({ visualKey }: ChangePasswordVisualProps) {
           display: { xs: "none", lg: "block" },
           color: "secondary.main",
           fontWeight: 700,
+          lineHeight: 1.45,
           textAlign: "center",
         }}
       >
-        {content.message}
+        {message}
       </Box>
     </Box>
   );
