@@ -26,10 +26,10 @@ export async function POST(request: NextRequest) {
     return authJson({ requested: true });
   } catch (error) {
     if (error instanceof CoreRecoveryError) {
-      if (error.type === "http" && error.status === 401) {
-        return authJson({ error: "unauthenticated" }, 401);
-      }
-      if (error.type === "configuration" || error.type === "network") {
+      if (
+        error.type === "configuration"
+        || error.type === "network"
+      ) {
         return authJson({ error: "service_unavailable" }, 503);
       }
     }
