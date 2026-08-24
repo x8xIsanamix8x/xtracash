@@ -801,12 +801,7 @@ export function MobilePaymentView() {
         suppressDeleteFocusRestore={suppressDeleteFocusRestore}
       />
 
-      <AppBottomNavigation
-        activeItem="mobile-payment"
-        onUnavailable={(label) => setNavigationNotice(
-          `${label} estará disponible en la siguiente etapa.`,
-        )}
-      />
+      <AppBottomNavigation activeItem="mobile-payment" />
       <Snackbar
         autoHideDuration={2800}
         message={(
