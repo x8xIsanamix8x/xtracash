@@ -1,9 +1,7 @@
-import { getCoreApiBaseUrl } from "@/config/coreApi";
-
 import type { RecoveryRequest } from "../types";
 import { normalizeRecoveryIdentifier } from "../validation";
 
-export type RecoveryServiceErrorType = "aborted" | "configuration" | "http" | "network";
+export type RecoveryServiceErrorType = "aborted" | "http" | "network" | "unauthenticated";
 
 export class RecoveryServiceError extends Error {
   readonly type: RecoveryServiceErrorType;
@@ -23,18 +21,13 @@ export async function requestPasswordRecovery(
   request: RecoveryRequest,
   signal: AbortSignal,
 ): Promise<void> {
-  const configuration = getCoreApiBaseUrl();
-
-  if (!configuration.ok) {
-    throw new RecoveryServiceError(configuration.error.type);
-  }
-
   let response: Response;
 
   try {
-    response = await fetch(`${configuration.baseUrl}/api/recuperacion`, {
+    response = await fetch("/api/auth/recovery", {
       method: "POST",
       cache: "no-store",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
       signal,
@@ -45,6 +38,10 @@ export async function requestPasswordRecovery(
     }
 
     throw new RecoveryServiceError("network");
+  }
+
+  if (response.status === 401) {
+    throw new RecoveryServiceError("unauthenticated");
   }
 
   if (!response.ok) {

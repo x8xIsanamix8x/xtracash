@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:payment-report": "node --no-warnings --experimental-strip-types --test tests/payment-report/*.test.mjs"
+    "test:payment-report": "node --no-warnings --experimental-strip-types --test tests/payment-report/*.test.mjs",
+    "test:auth": "node --no-warnings --experimental-strip-types --test tests/auth/*.test.mjs",
+    "test:profile": "node --no-warnings --experimental-strip-types --test tests/profile/*.test.mjs"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
