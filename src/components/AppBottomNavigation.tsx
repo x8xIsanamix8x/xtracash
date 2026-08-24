@@ -1,22 +1,24 @@
 import Link from "next/link";
 import {
-  AssignmentOutlined,
+  HistoryRounded,
   HomeRounded,
   PaymentsOutlined,
   PersonOutlineRounded,
 } from "@mui/icons-material";
 import { BottomNavigation, BottomNavigationAction, Paper } from "@mui/material";
 
-export type AppDestination = "home" | "mobile-payment" | "profile";
+export type AppDestination =
+  | "home"
+  | "movements"
+  | "mobile-payment"
+  | "profile";
 
 type AppBottomNavigationProps = Readonly<{
   activeItem: AppDestination;
-  onUnavailable: (label: string) => void;
 }>;
 
 export function AppBottomNavigation({
   activeItem,
-  onUnavailable,
 }: AppBottomNavigationProps) {
   return (
     <Paper
@@ -45,10 +47,12 @@ export function AppBottomNavigation({
           value="home"
         />
         <BottomNavigationAction
-          icon={<AssignmentOutlined />}
-          label="Solicitudes"
-          onClick={() => onUnavailable("Solicitudes")}
-          value="requests"
+          aria-current={activeItem === "movements" ? "page" : undefined}
+          component={Link}
+          href="/movements"
+          icon={<HistoryRounded />}
+          label="Movimientos"
+          value="movements"
         />
         <BottomNavigationAction
           aria-current={activeItem === "mobile-payment" ? "page" : undefined}
