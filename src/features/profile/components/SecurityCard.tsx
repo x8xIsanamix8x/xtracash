@@ -29,7 +29,7 @@ export function SecurityCard() {
             <Stack spacing={0.5}>
               <Typography sx={{ fontWeight: 700 }}>Contraseña</Typography>
               <Typography color="text.secondary" variant="body2">
-                Actualiza tu contraseña después de validar tu identidad.
+                Recibe un enlace seguro para cambiar tu contraseña.
               </Typography>
             </Stack>
           </Stack>
