@@ -2,10 +2,15 @@
 
 import type { FormEvent, Ref } from "react";
 import { useEffect, useRef } from "react";
-import { Button, MenuItem, Stack, TextField } from "@mui/material";
+import {
+  Button,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 
-import { temporarySourceBanks } from "../data/paymentReport";
-import type { PaymentReportFormErrors } from "../types";
+import type { PaymentReportFormErrors, SourceBank } from "../types";
 import { PaymentReportStepLayout } from "./PaymentReportStepLayout";
 
 type PaymentReportFormStepProps = Readonly<{
@@ -13,10 +18,17 @@ type PaymentReportFormStepProps = Readonly<{
   focusRequest: number;
   isValid: boolean;
   originBank: string;
+  paymentDate: string;
   reference: string;
+  senderPhone: string;
+  sourceBanks: readonly SourceBank[];
+  submissionError: string;
   titleRef: Ref<HTMLHeadingElement>;
+  today: string;
   onOriginBankChange: (value: string) => void;
+  onPaymentDateChange: (value: string) => void;
   onReferenceChange: (value: string) => void;
+  onSenderPhoneChange: (value: string) => void;
   onSubmit: () => void;
 }>;
 
@@ -25,18 +37,31 @@ export function PaymentReportFormStep({
   focusRequest,
   isValid,
   originBank,
+  paymentDate,
   reference,
+  senderPhone,
+  sourceBanks,
+  submissionError,
   titleRef,
+  today,
   onOriginBankChange,
+  onPaymentDateChange,
   onReferenceChange,
+  onSenderPhoneChange,
   onSubmit,
 }: PaymentReportFormStepProps) {
   const bankRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const dateRef = useRef<HTMLInputElement>(null);
   const referenceRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (errors.originBank) {
       bankRef.current?.focus();
+    } else if (errors.senderPhone) {
+      phoneRef.current?.focus();
+    } else if (errors.paymentDate) {
+      dateRef.current?.focus();
     } else if (errors.reference) {
       referenceRef.current?.focus();
     }
@@ -59,7 +84,7 @@ export function PaymentReportFormStep({
             Reportar pago
           </Button>
         )}
-        description="Indica desde qué banco pagaste y los últimos cuatro dígitos de la referencia."
+        description="Ingresa los datos del pago que realizaste."
         title="Reporta tu pago"
         titleId="payment-report-form-title"
         titleRef={titleRef}
@@ -84,12 +109,50 @@ export function PaymentReportFormStep({
             <MenuItem disabled value="">
               Selecciona un banco
             </MenuItem>
-            {temporarySourceBanks.map((bank) => (
+            {sourceBanks.map((bank) => (
               <MenuItem key={bank.code} value={bank.code}>
                 {bank.code} · {bank.name}
               </MenuItem>
             ))}
           </TextField>
+
+          <TextField
+            autoComplete="tel"
+            error={Boolean(errors.senderPhone)}
+            fullWidth
+            helperText={errors.senderPhone ?? "Ingresa los once dígitos del número emisor."}
+            inputRef={phoneRef}
+            label="Número del teléfono emisor"
+            name="senderPhone"
+            onChange={(event) => onSenderPhoneChange(event.target.value)}
+            required
+            slotProps={{
+              htmlInput: {
+                inputMode: "numeric",
+                maxLength: 11,
+                pattern: "[0-9]*",
+              },
+            }}
+            type="tel"
+            value={senderPhone}
+          />
+
+          <TextField
+            error={Boolean(errors.paymentDate)}
+            fullWidth
+            helperText={errors.paymentDate}
+            inputRef={dateRef}
+            label="Fecha del pago"
+            name="paymentDate"
+            onChange={(event) => onPaymentDateChange(event.target.value)}
+            required
+            slotProps={{
+              htmlInput: { max: today },
+              inputLabel: { shrink: true },
+            }}
+            type="date"
+            value={paymentDate}
+          />
 
           <TextField
             error={Boolean(errors.reference)}
@@ -111,6 +174,12 @@ export function PaymentReportFormStep({
             type="text"
             value={reference}
           />
+
+          {submissionError && (
+            <Typography color="error" role="alert" variant="body2">
+              {submissionError}
+            </Typography>
+          )}
         </Stack>
       </PaymentReportStepLayout>
     </form>

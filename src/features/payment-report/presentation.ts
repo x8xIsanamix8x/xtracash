@@ -1,7 +1,7 @@
-import { impulsaPaymentDestination } from "./data/paymentReport";
 import type {
   PaymentAmountOption,
   PaymentDetail,
+  PaymentReportDestination,
 } from "./types";
 
 const amountPattern = /^(\d+)(?:\.(\d{1,2}))?$/;
@@ -43,25 +43,28 @@ export function createPaymentAmountOptions(
   ];
 }
 
-export function createPaymentDetails(amountBs: string): readonly PaymentDetail[] {
+export function createPaymentDetails(
+  destination: PaymentReportDestination,
+  amountBs: string,
+): readonly PaymentDetail[] {
   return [
     {
       key: "bank",
       label: "Banco destino",
-      displayValue: impulsaPaymentDestination.bank.displayValue,
-      copyValue: impulsaPaymentDestination.bank.code,
+      displayValue: `${destination.bankName} — ${destination.bankCode}`,
+      copyValue: destination.bankCode,
     },
     {
       key: "rif",
       label: "RIF",
-      displayValue: impulsaPaymentDestination.rif.displayValue,
-      copyValue: impulsaPaymentDestination.rif.copyValue,
+      displayValue: destination.rif,
+      copyValue: destination.rif.replace(/[^a-z0-9]/gi, ""),
     },
     {
       key: "phone",
       label: "Teléfono",
-      displayValue: impulsaPaymentDestination.phone.displayValue,
-      copyValue: impulsaPaymentDestination.phone.copyValue,
+      displayValue: destination.receiverPhone,
+      copyValue: destination.receiverPhone.replace(/\D/g, ""),
     },
     {
       key: "amount",
