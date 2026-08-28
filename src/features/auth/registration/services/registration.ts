@@ -1,6 +1,8 @@
 import { getCoreApiBaseUrl } from "@/config/coreApi";
 
-import type { RegistrationData, RegistrationRequest } from "../types";
+import type { RegistrationRequest } from "../types";
+
+export { createRegistrationRequest } from "../registrationRequest";
 
 export type RegistrationServiceErrorType = "aborted" | "configuration" | "http" | "network";
 
@@ -12,24 +14,6 @@ export class RegistrationServiceError extends Error {
     this.name = "RegistrationServiceError";
     this.type = type;
   }
-}
-
-const normalizeName = (value: string) => value.trim().replace(/\s+/g, " ");
-
-export function createRegistrationRequest(
-  data: RegistrationData,
-  termsAccepted: true,
-): RegistrationRequest {
-  return {
-    documentType: data.nationality,
-    documentNumber: data.documentNumber.trim(),
-    name: normalizeName(data.firstName),
-    lastName: normalizeName(data.lastName),
-    phone: data.phone.trim(),
-    email: data.email.trim().toLowerCase(),
-    password: data.password,
-    termsAccepted,
-  };
 }
 
 export async function registerUser(
