@@ -1,13 +1,13 @@
 import { InfoOutlined } from "@mui/icons-material";
 import { Alert, MenuItem, Stack, TextField, Typography } from "@mui/material";
 
-import type {
-  Nationality,
-  RegistrationData,
-  RegistrationErrors,
-  RegistrationInputRefs,
-} from "../types";
+import type { RegistrationData, RegistrationErrors, RegistrationInputRefs } from "../types";
 import { DOCUMENT_MAX_LENGTH, keepAsciiDigits } from "../validation";
+
+const nationalityLabels = {
+  V: "Venezolano",
+  E: "Extranjero",
+} as const;
 
 type IdentificationStepProps = Readonly<{
   data: RegistrationData;
