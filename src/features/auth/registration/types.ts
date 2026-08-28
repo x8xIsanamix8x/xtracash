@@ -1,7 +1,7 @@
 export type Nationality = "V" | "E";
 
 export type RegistrationData = Readonly<{
-  nationality: Nationality;
+  nationality: Nationality | "";
   documentNumber: string;
   firstName: string;
   lastName: string;

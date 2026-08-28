@@ -1,5 +1,5 @@
 import { InfoOutlined } from "@mui/icons-material";
-import { Alert, MenuItem, Stack, TextField } from "@mui/material";
+import { Alert, MenuItem, Stack, TextField, Typography } from "@mui/material";
 
 import type {
   Nationality,
@@ -27,15 +27,34 @@ export function IdentificationStep({
   return (
     <Stack spacing={2}>
       <TextField
+        error={Boolean(errors.nationality)}
         fullWidth
+        helperText={errors.nationality}
+        inputRef={inputRefs.nationality}
         label="Nacionalidad"
         name="nationality"
-        onChange={(event) => onChange("nationality", event.target.value as Nationality)}
+        onChange={(event) => onChange("nationality", event.target.value)}
+        required
         select
+        slotProps={{
+          formHelperText: errors.nationality ? { role: "alert" } : undefined,
+          inputLabel: { shrink: true },
+          select: {
+            displayEmpty: true,
+            renderValue: (value) =>
+              value === "V" || value === "E"
+                ? nationalityLabels[value]
+                : (
+                    <Typography color="text.secondary" component="span">
+                      Selecciona una opción
+                    </Typography>
+                  ),
+          },
+        }}
         value={data.nationality}
       >
-        <MenuItem value="V">V</MenuItem>
-        <MenuItem value="E">E</MenuItem>
+        <MenuItem value="V">Venezolano</MenuItem>
+        <MenuItem value="E">Extranjero</MenuItem>
       </TextField>
       <TextField
         autoComplete="off"
@@ -59,13 +78,16 @@ export function IdentificationStep({
         }}
         value={data.documentNumber}
       />
+      <Typography color="text.secondary" id="registration-name-guidance" variant="body2">
+        Escríbelos como aparecen en tu documento de identidad.
+      </Typography>
       <TextField
         autoComplete="given-name"
         error={Boolean(errors.firstName)}
         fullWidth
         helperText={errors.firstName}
         inputRef={inputRefs.firstName}
-        label="Nombre"
+        label="Nombres"
         name="firstName"
         onBlur={() => onFieldBlur("firstName")}
         onChange={(event) => onChange("firstName", event.target.value)}
@@ -82,7 +104,7 @@ export function IdentificationStep({
         fullWidth
         helperText={errors.lastName}
         inputRef={inputRefs.lastName}
-        label="Apellido"
+        label="Apellidos"
         name="lastName"
         onBlur={() => onFieldBlur("lastName")}
         onChange={(event) => onChange("lastName", event.target.value)}
