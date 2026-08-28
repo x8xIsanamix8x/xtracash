@@ -38,10 +38,16 @@ import type {
   RegistrationFlowState,
   RegistrationInputRefs,
 } from "./types";
-import { validateContact, validateIdentification } from "./validation";
+import {
+  isContactStepValid,
+  isIdentificationStepValid,
+  validateContact,
+  validateIdentification,
+  validateRegistrationField,
+} from "./validation";
 
 const initialData: RegistrationData = {
-  nationality: "V",
+  nationality: "",
   documentNumber: "",
   firstName: "",
   lastName: "",
@@ -73,7 +79,12 @@ const stepContent: readonly Readonly<{
   },
 ];
 
-const identificationFields: RegistrationField[] = ["documentNumber", "firstName", "lastName"];
+const identificationFields: RegistrationField[] = [
+  "nationality",
+  "documentNumber",
+  "firstName",
+  "lastName",
+];
 const contactFields: RegistrationField[] = ["phone", "email", "password", "passwordConfirmation"];
 const allFields: RegistrationField[] = [...identificationFields, ...contactFields];
 
@@ -107,6 +118,7 @@ export function RegistrationView() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const nationalityRef = useRef<HTMLInputElement>(null);
   const documentRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
@@ -119,6 +131,7 @@ export function RegistrationView() {
   const isMountedRef = useRef(true);
 
   const inputRefs: RegistrationInputRefs = {
+    nationality: nationalityRef,
     documentNumber: documentRef,
     firstName: firstNameRef,
     lastName: lastNameRef,
@@ -131,10 +144,12 @@ export function RegistrationView() {
   const isSubmitting = flowState.name === "submitting";
   const step = getStepIndex(flowState);
   const currentContent = stepContent[step];
+  const canContinueCurrentStep =
+    step === 0 ? isIdentificationStepValid(data) : isContactStepValid(data);
 
   useEffect(() => {
     if (flowState.name !== "submitting") {
-      titleRef.current?.focus();
+      titleRef.current?.focus({ preventScroll: true });
     }
   }, [flowState.name]);
 
@@ -166,6 +181,15 @@ export function RegistrationView() {
   const focusFirstError = (nextErrors: RegistrationErrors, fields: RegistrationField[]) => {
     const firstInvalid = fields.find((field) => nextErrors[field]);
     if (firstInvalid) inputRefs[firstInvalid]?.current?.focus();
+  };
+
+  const validateFieldOnBlur = (field: RegistrationField) => {
+    if (isSubmitting) return;
+
+    setErrors((current) => ({
+      ...current,
+      [field]: validateRegistrationField(field, data),
+    }));
   };
 
   const submitStep = (event: FormEvent<HTMLFormElement>) => {
@@ -374,6 +398,7 @@ export function RegistrationView() {
                     errors={errors}
                     inputRefs={inputRefs}
                     onChange={updateField}
+                    onFieldBlur={validateFieldOnBlur}
                   />
                 )}
                 {flowState.name === "contactSecurity" && (
@@ -382,6 +407,7 @@ export function RegistrationView() {
                     errors={errors}
                     inputRefs={inputRefs}
                     onChange={updateField}
+                    onFieldBlur={validateFieldOnBlur}
                   />
                 )}
                 {(flowState.name === "review" || flowState.name === "submitting") && (
@@ -413,7 +439,11 @@ export function RegistrationView() {
                     </Button>
                   )}
                   <Button
-                    disabled={isSubmitting || (step === 2 && !termsAccepted)}
+                    disabled={
+                      isSubmitting ||
+                      (step < 2 && !canContinueCurrentStep) ||
+                      (step === 2 && !termsAccepted)
+                    }
                     fullWidth
                     loading={isSubmitting}
                     type="submit"
