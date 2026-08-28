@@ -1,7 +1,6 @@
 import type { RegistrationData, RegistrationErrors } from "./types";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const namePattern = /^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u;
 
 type PasswordRule = Readonly<{
   label: string;
@@ -24,18 +23,20 @@ export const passwordRules: readonly PasswordRule[] = [
 export function validateIdentification(data: RegistrationData): RegistrationErrors {
   const errors: RegistrationErrors = {};
   const normalizedDocument = data.documentNumber.trim();
-  const normalizedFirstName = data.firstName.trim().replace(/\s+/g, " ");
-  const normalizedLastName = data.lastName.trim().replace(/\s+/g, " ");
+
+  if (data.nationality !== "V" && data.nationality !== "E") {
+    errors.nationality = "Selecciona tu nacionalidad";
+  }
 
   if (!/^\d{6,8}$/.test(normalizedDocument)) {
     errors.documentNumber = "Ingresa una cédula de 6 a 8 dígitos.";
   }
 
-  if (!namePattern.test(normalizedFirstName)) {
-    errors.firstName = "Ingresa únicamente letras y espacios.";
+  if (!data.firstName.trim()) {
+    errors.firstName = "Ingresa tus nombres";
   }
-  if (!namePattern.test(normalizedLastName)) {
-    errors.lastName = "Ingresa únicamente letras y espacios.";
+  if (!data.lastName.trim()) {
+    errors.lastName = "Ingresa tus apellidos";
   }
 
   return errors;
