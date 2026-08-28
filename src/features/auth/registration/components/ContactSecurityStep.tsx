@@ -24,18 +24,26 @@ import {
 import { themeTokens } from "@/theme/tokens";
 
 import type { RegistrationData, RegistrationErrors, RegistrationInputRefs } from "../types";
-import { passwordRules } from "../validation";
+import { doPasswordsMatch, passwordRules } from "../validation";
 
 type ContactSecurityStepProps = Readonly<{
   data: RegistrationData;
   errors: RegistrationErrors;
   inputRefs: RegistrationInputRefs;
   onChange: (field: keyof RegistrationData, value: string) => void;
+  onConfirmationBlur: () => void;
 }>;
 
-export function ContactSecurityStep({ data, errors, inputRefs, onChange }: ContactSecurityStepProps) {
+export function ContactSecurityStep({
+  data,
+  errors,
+  inputRefs,
+  onChange,
+  onConfirmationBlur,
+}: ContactSecurityStepProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const passwordsMatch = doPasswordsMatch(data.password, data.passwordConfirmation);
   const keepFocus = (event: MouseEvent<HTMLButtonElement>) => event.preventDefault();
 
   return (
@@ -91,6 +99,12 @@ export function ContactSecurityStep({ data, errors, inputRefs, onChange }: Conta
           onChange={(event) => onChange("password", event.target.value)}
           required
           slotProps={{
+            formHelperText: errors.password ? { id: "password-error", role: "alert" } : undefined,
+            htmlInput: {
+              "aria-describedby": errors.password
+                ? "password-error password-requirements"
+                : "password-requirements",
+            },
             input: {
               endAdornment: (
                 <InputAdornment position="end">
@@ -100,7 +114,7 @@ export function ContactSecurityStep({ data, errors, inputRefs, onChange }: Conta
                     onClick={() => setShowPassword((current) => !current)}
                     onMouseDown={keepFocus}
                     type="button"
-                    sx={{ color: themeTokens.color.brandLogo }}
+                    sx={{ minWidth: 44, minHeight: 44, color: themeTokens.color.brandLogo }}
                   >
                     {showPassword ? <VisibilityOffRounded /> : <VisibilityRounded />}
                   </IconButton>
@@ -111,7 +125,49 @@ export function ContactSecurityStep({ data, errors, inputRefs, onChange }: Conta
           type={showPassword ? "text" : "password"}
           value={data.password}
         />
+        <TextField
+          autoComplete="new-password"
+          error={Boolean(errors.passwordConfirmation)}
+          fullWidth
+          helperText={errors.passwordConfirmation}
+          inputRef={inputRefs.passwordConfirmation}
+          label="Confirmar contraseña"
+          name="passwordConfirmation"
+          onBlur={onConfirmationBlur}
+          onChange={(event) => onChange("passwordConfirmation", event.target.value)}
+          required
+          slotProps={{
+            formHelperText: errors.passwordConfirmation
+              ? { id: "password-confirmation-error", role: "alert" }
+              : undefined,
+            htmlInput: {
+              "aria-describedby": errors.passwordConfirmation
+                ? "password-confirmation-error password-requirements"
+                : "password-requirements",
+            },
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label={showConfirmation ? "Ocultar confirmación" : "Mostrar confirmación"}
+                    aria-pressed={showConfirmation}
+                    onClick={() => setShowConfirmation((current) => !current)}
+                    onMouseDown={keepFocus}
+                    type="button"
+                    sx={{ minWidth: 44, minHeight: 44, color: themeTokens.color.brandLogo }}
+                  >
+                    {showConfirmation ? <VisibilityOffRounded /> : <VisibilityRounded />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
+          type={showConfirmation ? "text" : "password"}
+          value={data.passwordConfirmation}
+        />
         <Box
+          aria-live="polite"
+          id="password-requirements"
           sx={{
             p: 2,
             borderRadius: 2,
@@ -125,50 +181,40 @@ export function ContactSecurityStep({ data, errors, inputRefs, onChange }: Conta
             {passwordRules.map((rule) => {
               const isMet = rule.test(data.password);
               return (
-                <ListItem disableGutters key={rule.label} sx={{ py: 0 }}>
+                <ListItem
+                  aria-label={`${rule.label}: ${isMet ? "cumplido" : "por cumplir"}`}
+                  disableGutters
+                  key={rule.label}
+                  sx={{ py: 0 }}
+                >
                   <ListItemIcon sx={{ minWidth: 32, color: isMet ? "success.main" : "text.secondary" }}>
                     {isMet ? <CheckCircleRounded fontSize="small" /> : <RadioButtonUncheckedRounded fontSize="small" />}
                   </ListItemIcon>
                   <ListItemText
-                    primary={`${rule.label}: ${isMet ? "cumplida" : "pendiente"}`}
+                    primary={rule.label}
                     secondary={rule.helpText}
                   />
                 </ListItem>
               );
             })}
+            <ListItem
+              aria-label={`Las contraseñas coinciden: ${passwordsMatch ? "cumplido" : "por cumplir"}`}
+              disableGutters
+              sx={{ py: 0 }}
+            >
+              <ListItemIcon
+                sx={{ minWidth: 32, color: passwordsMatch ? "success.main" : "text.secondary" }}
+              >
+                {passwordsMatch ? (
+                  <CheckCircleRounded fontSize="small" />
+                ) : (
+                  <RadioButtonUncheckedRounded fontSize="small" />
+                )}
+              </ListItemIcon>
+              <ListItemText primary="Las contraseñas coinciden" />
+            </ListItem>
           </List>
         </Box>
-        <TextField
-          autoComplete="new-password"
-          error={Boolean(errors.passwordConfirmation)}
-          fullWidth
-          helperText={errors.passwordConfirmation}
-          inputRef={inputRefs.passwordConfirmation}
-          label="Confirmar contraseña"
-          name="passwordConfirmation"
-          onChange={(event) => onChange("passwordConfirmation", event.target.value)}
-          required
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label={showConfirmation ? "Ocultar confirmación" : "Mostrar confirmación"}
-                    aria-pressed={showConfirmation}
-                    onClick={() => setShowConfirmation((current) => !current)}
-                    onMouseDown={keepFocus}
-                    type="button"
-                    sx={{ color: themeTokens.color.brandLogo }}
-                  >
-                    {showConfirmation ? <VisibilityOffRounded /> : <VisibilityRounded />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            },
-          }}
-          type={showConfirmation ? "text" : "password"}
-          value={data.passwordConfirmation}
-        />
       </Stack>
     </Stack>
   );
