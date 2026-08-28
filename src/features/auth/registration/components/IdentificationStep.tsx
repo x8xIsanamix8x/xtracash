@@ -1,21 +1,29 @@
 import { InfoOutlined } from "@mui/icons-material";
 import { Alert, MenuItem, Stack, TextField, Typography } from "@mui/material";
 
-import type { RegistrationData, RegistrationErrors, RegistrationInputRefs } from "../types";
-
-const nationalityLabels = {
-  V: "Venezolano",
-  E: "Extranjero",
-} as const;
+import type {
+  Nationality,
+  RegistrationData,
+  RegistrationErrors,
+  RegistrationInputRefs,
+} from "../types";
+import { DOCUMENT_MAX_LENGTH, keepAsciiDigits } from "../validation";
 
 type IdentificationStepProps = Readonly<{
   data: RegistrationData;
   errors: RegistrationErrors;
   inputRefs: RegistrationInputRefs;
   onChange: (field: keyof RegistrationData, value: string) => void;
+  onFieldBlur: (field: keyof RegistrationData) => void;
 }>;
 
-export function IdentificationStep({ data, errors, inputRefs, onChange }: IdentificationStepProps) {
+export function IdentificationStep({
+  data,
+  errors,
+  inputRefs,
+  onChange,
+  onFieldBlur,
+}: IdentificationStepProps) {
   return (
     <Stack spacing={2}>
       <TextField
@@ -56,11 +64,17 @@ export function IdentificationStep({ data, errors, inputRefs, onChange }: Identi
         inputRef={inputRefs.documentNumber}
         label="Número de cédula"
         name="documentNumber"
-        onChange={(event) => onChange("documentNumber", event.target.value)}
+        onBlur={() => onFieldBlur("documentNumber")}
+        onChange={(event) =>
+          onChange(
+            "documentNumber",
+            keepAsciiDigits(event.target.value, DOCUMENT_MAX_LENGTH),
+          )
+        }
         required
         slotProps={{
           formHelperText: errors.documentNumber ? { role: "alert" } : undefined,
-          htmlInput: { inputMode: "numeric", maxLength: 8 },
+          htmlInput: { inputMode: "numeric", maxLength: DOCUMENT_MAX_LENGTH },
         }}
         value={data.documentNumber}
       />
@@ -75,16 +89,12 @@ export function IdentificationStep({ data, errors, inputRefs, onChange }: Identi
         inputRef={inputRefs.firstName}
         label="Nombres"
         name="firstName"
+        onBlur={() => onFieldBlur("firstName")}
         onChange={(event) => onChange("firstName", event.target.value)}
         required
         slotProps={{
           formHelperText: errors.firstName ? { role: "alert" } : undefined,
-          htmlInput: {
-            "aria-describedby": errors.firstName ? undefined : "registration-name-guidance",
-            autoCapitalize: "words",
-            inputMode: "text",
-            spellCheck: false,
-          },
+          htmlInput: { autoCapitalize: "words", inputMode: "text", spellCheck: false },
         }}
         value={data.firstName}
       />
@@ -96,16 +106,12 @@ export function IdentificationStep({ data, errors, inputRefs, onChange }: Identi
         inputRef={inputRefs.lastName}
         label="Apellidos"
         name="lastName"
+        onBlur={() => onFieldBlur("lastName")}
         onChange={(event) => onChange("lastName", event.target.value)}
         required
         slotProps={{
           formHelperText: errors.lastName ? { role: "alert" } : undefined,
-          htmlInput: {
-            "aria-describedby": errors.lastName ? undefined : "registration-name-guidance",
-            autoCapitalize: "words",
-            inputMode: "text",
-            spellCheck: false,
-          },
+          htmlInput: { autoCapitalize: "words", inputMode: "text", spellCheck: false },
         }}
         value={data.lastName}
       />

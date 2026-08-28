@@ -39,10 +39,11 @@ import type {
   RegistrationInputRefs,
 } from "./types";
 import {
-  getPasswordConfirmationError,
   isContactStepValid,
+  isIdentificationStepValid,
   validateContact,
   validateIdentification,
+  validateRegistrationField,
 } from "./validation";
 
 const initialData: RegistrationData = {
@@ -143,7 +144,8 @@ export function RegistrationView() {
   const isSubmitting = flowState.name === "submitting";
   const step = getStepIndex(flowState);
   const currentContent = stepContent[step];
-  const canContinueContactStep = isContactStepValid(data);
+  const canContinueCurrentStep =
+    step === 0 ? isIdentificationStepValid(data) : isContactStepValid(data);
 
   useEffect(() => {
     if (flowState.name !== "submitting") {
@@ -181,15 +183,12 @@ export function RegistrationView() {
     if (firstInvalid) inputRefs[firstInvalid]?.current?.focus();
   };
 
-  const validatePasswordConfirmationOnBlur = () => {
+  const validateFieldOnBlur = (field: RegistrationField) => {
     if (isSubmitting) return;
 
     setErrors((current) => ({
       ...current,
-      passwordConfirmation: getPasswordConfirmationError(
-        data.password,
-        data.passwordConfirmation,
-      ),
+      [field]: validateRegistrationField(field, data),
     }));
   };
 
@@ -399,6 +398,7 @@ export function RegistrationView() {
                     errors={errors}
                     inputRefs={inputRefs}
                     onChange={updateField}
+                    onFieldBlur={validateFieldOnBlur}
                   />
                 )}
                 {flowState.name === "contactSecurity" && (
@@ -407,7 +407,7 @@ export function RegistrationView() {
                     errors={errors}
                     inputRefs={inputRefs}
                     onChange={updateField}
-                    onConfirmationBlur={validatePasswordConfirmationOnBlur}
+                    onFieldBlur={validateFieldOnBlur}
                   />
                 )}
                 {(flowState.name === "review" || flowState.name === "submitting") && (
@@ -441,7 +441,7 @@ export function RegistrationView() {
                   <Button
                     disabled={
                       isSubmitting ||
-                      (step === 1 && !canContinueContactStep) ||
+                      (step < 2 && !canContinueCurrentStep) ||
                       (step === 2 && !termsAccepted)
                     }
                     fullWidth

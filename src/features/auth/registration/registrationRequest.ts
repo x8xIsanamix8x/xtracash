@@ -1,24 +1,14 @@
-import type { Nationality, RegistrationData, RegistrationRequest } from "./types";
-
-export const normalizeRegistrationName = (value: string) => value.trim();
-
-function isNationality(value: RegistrationData["nationality"]): value is Nationality {
-  return value === "V" || value === "E";
-}
+import type { RegistrationData, RegistrationRequest } from "./types";
 
 export function createRegistrationRequest(
   data: RegistrationData,
   termsAccepted: true,
 ): RegistrationRequest {
-  if (!isNationality(data.nationality)) {
-    throw new Error("invalid-registration-nationality");
-  }
-
   return {
     documentType: data.nationality,
     documentNumber: data.documentNumber.trim(),
-    name: normalizeRegistrationName(data.firstName),
-    lastName: normalizeRegistrationName(data.lastName),
+    name: data.firstName.trim(),
+    lastName: data.lastName.trim(),
     phone: data.phone.trim(),
     email: data.email.trim().toLowerCase(),
     password: data.password,

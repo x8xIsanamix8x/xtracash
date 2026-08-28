@@ -24,14 +24,14 @@ import {
 import { themeTokens } from "@/theme/tokens";
 
 import type { RegistrationData, RegistrationErrors, RegistrationInputRefs } from "../types";
-import { doPasswordsMatch, passwordRules } from "../validation";
+import { keepAsciiDigits, passwordRules, PHONE_LENGTH } from "../validation";
 
 type ContactSecurityStepProps = Readonly<{
   data: RegistrationData;
   errors: RegistrationErrors;
   inputRefs: RegistrationInputRefs;
   onChange: (field: keyof RegistrationData, value: string) => void;
-  onConfirmationBlur: () => void;
+  onFieldBlur: (field: keyof RegistrationData) => void;
 }>;
 
 export function ContactSecurityStep({
@@ -39,7 +39,7 @@ export function ContactSecurityStep({
   errors,
   inputRefs,
   onChange,
-  onConfirmationBlur,
+  onFieldBlur,
 }: ContactSecurityStepProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -60,9 +60,15 @@ export function ContactSecurityStep({
           inputRef={inputRefs.phone}
           label="Teléfono"
           name="phone"
-          onChange={(event) => onChange("phone", event.target.value)}
+          onBlur={() => onFieldBlur("phone")}
+          onChange={(event) =>
+            onChange("phone", keepAsciiDigits(event.target.value, PHONE_LENGTH))
+          }
           required
-          slotProps={{ htmlInput: { inputMode: "tel", maxLength: 11 } }}
+          slotProps={{
+            formHelperText: errors.phone ? { role: "alert" } : undefined,
+            htmlInput: { inputMode: "numeric", maxLength: PHONE_LENGTH },
+          }}
           type="tel"
           value={data.phone}
         />
@@ -74,9 +80,13 @@ export function ContactSecurityStep({
           inputRef={inputRefs.email}
           label="Correo electrónico"
           name="email"
+          onBlur={() => onFieldBlur("email")}
           onChange={(event) => onChange("email", event.target.value)}
           required
-          slotProps={{ htmlInput: { inputMode: "email" } }}
+          slotProps={{
+            formHelperText: errors.email ? { role: "alert" } : undefined,
+            htmlInput: { inputMode: "email" },
+          }}
           type="email"
           value={data.email}
         />
