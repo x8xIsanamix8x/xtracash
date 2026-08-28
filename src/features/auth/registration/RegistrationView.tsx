@@ -38,7 +38,12 @@ import type {
   RegistrationFlowState,
   RegistrationInputRefs,
 } from "./types";
-import { validateContact, validateIdentification } from "./validation";
+import {
+  getPasswordConfirmationError,
+  isContactStepValid,
+  validateContact,
+  validateIdentification,
+} from "./validation";
 
 const initialData: RegistrationData = {
   nationality: "",
@@ -138,6 +143,7 @@ export function RegistrationView() {
   const isSubmitting = flowState.name === "submitting";
   const step = getStepIndex(flowState);
   const currentContent = stepContent[step];
+  const canContinueContactStep = isContactStepValid(data);
 
   useEffect(() => {
     if (flowState.name !== "submitting") {
@@ -173,6 +179,18 @@ export function RegistrationView() {
   const focusFirstError = (nextErrors: RegistrationErrors, fields: RegistrationField[]) => {
     const firstInvalid = fields.find((field) => nextErrors[field]);
     if (firstInvalid) inputRefs[firstInvalid]?.current?.focus();
+  };
+
+  const validatePasswordConfirmationOnBlur = () => {
+    if (isSubmitting) return;
+
+    setErrors((current) => ({
+      ...current,
+      passwordConfirmation: getPasswordConfirmationError(
+        data.password,
+        data.passwordConfirmation,
+      ),
+    }));
   };
 
   const submitStep = (event: FormEvent<HTMLFormElement>) => {
@@ -389,6 +407,7 @@ export function RegistrationView() {
                     errors={errors}
                     inputRefs={inputRefs}
                     onChange={updateField}
+                    onConfirmationBlur={validatePasswordConfirmationOnBlur}
                   />
                 )}
                 {(flowState.name === "review" || flowState.name === "submitting") && (
@@ -420,7 +439,11 @@ export function RegistrationView() {
                     </Button>
                   )}
                   <Button
-                    disabled={isSubmitting || (step === 2 && !termsAccepted)}
+                    disabled={
+                      isSubmitting ||
+                      (step === 1 && !canContinueContactStep) ||
+                      (step === 2 && !termsAccepted)
+                    }
                     fullWidth
                     loading={isSubmitting}
                     type="submit"

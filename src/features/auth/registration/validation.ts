@@ -20,6 +20,19 @@ export const passwordRules: readonly PasswordRule[] = [
   },
 ];
 
+export function doPasswordsMatch(password: string, confirmation: string): boolean {
+  return confirmation.length > 0 && confirmation === password;
+}
+
+export function getPasswordConfirmationError(
+  password: string,
+  confirmation: string,
+): string | undefined {
+  if (!confirmation) return "Confirma tu contraseña.";
+  if (!doPasswordsMatch(password, confirmation)) return "Las contraseñas no coinciden.";
+  return undefined;
+}
+
 export function validateIdentification(data: RegistrationData): RegistrationErrors {
   const errors: RegistrationErrors = {};
   const normalizedDocument = data.documentNumber.trim();
@@ -58,11 +71,17 @@ export function validateContact(data: RegistrationData): RegistrationErrors {
     errors.password = "La contraseña debe cumplir las cinco reglas indicadas.";
   }
 
-  if (!data.passwordConfirmation) {
-    errors.passwordConfirmation = "Confirma tu contraseña.";
-  } else if (data.passwordConfirmation !== data.password) {
-    errors.passwordConfirmation = "Las contraseñas no coinciden.";
+  const passwordConfirmationError = getPasswordConfirmationError(
+    data.password,
+    data.passwordConfirmation,
+  );
+  if (passwordConfirmationError) {
+    errors.passwordConfirmation = passwordConfirmationError;
   }
 
   return errors;
+}
+
+export function isContactStepValid(data: RegistrationData): boolean {
+  return Object.keys(validateContact(data)).length === 0;
 }
