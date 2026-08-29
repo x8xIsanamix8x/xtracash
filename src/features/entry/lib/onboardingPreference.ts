@@ -15,11 +15,3 @@ export function markOnboardingCompleted() {
     // The flow remains usable for the current session when storage is unavailable.
   }
 }
-
-export function clearOnboardingPreference() {
-  try {
-    window.localStorage.removeItem(ONBOARDING_COMPLETED_KEY);
-  } catch {
-    // The in-memory state still allows the onboarding to be repeated.
-  }
-}

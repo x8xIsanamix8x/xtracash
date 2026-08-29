@@ -11,9 +11,12 @@ import {
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 
 import { RecoveryStepVisual } from "../recovery/components/RecoveryStepVisual";
-import { maskRecoveryEmail } from "../recovery/presentation";
 import {
-  createRecoveryRequest,
+  maskRecoveryEmail,
+  PROFILE_RECOVERY_SUCCESS_MESSAGE,
+} from "../recovery/presentation";
+import {
+  createAuthenticatedRecoveryRequest,
   requestPasswordRecovery,
   RecoveryServiceError,
 } from "../recovery/services/recovery";
@@ -94,7 +97,7 @@ export function ChangePasswordView() {
     setRequestError("");
 
     try {
-      await requestPasswordRecovery(createRecoveryRequest(email), controller.signal);
+      await requestPasswordRecovery(createAuthenticatedRecoveryRequest(), controller.signal);
       if (!isMountedRef.current || recoveryRequestRef.current !== controller) return;
 
       setEmail("");
@@ -128,7 +131,7 @@ export function ChangePasswordView() {
       >
         <SecurityFlowSuccess
           actionLabel="Volver al perfil"
-          message="Te enviamos las instrucciones para cambiar tu contraseña."
+          message={PROFILE_RECOVERY_SUCCESS_MESSAGE}
           onAction={() => router.replace("/profile")}
           title="Revisa tu correo"
           titleRef={titleRef}

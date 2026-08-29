@@ -3,24 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CloseRounded } from "@mui/icons-material";
+import { CloseRounded, EmailOutlined } from "@mui/icons-material";
 import {
   Alert,
   AlertTitle,
   Box,
   Button,
   Dialog,
-  DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
+  Fade,
   IconButton,
   Snackbar,
   Stack,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 
 import { SignInSheet } from "@/features/auth";
+import { PUBLIC_RECOVERY_SUCCESS_MESSAGE } from "@/features/auth/recovery/presentation";
 import type {
   AccessNavigationRequest,
   AccessNotification,
@@ -29,11 +31,11 @@ import { themeTokens } from "@/theme/tokens";
 
 import { AccessVisual } from "./AccessVisual";
 import { BubbleField } from "./BubbleField";
+import { TEMPORARY_SUPPORT_EMAIL } from "../data/supportContact";
 
 type AccessViewProps = Readonly<{
   accessRequest: AccessNavigationRequest | null;
   onAccessRequestConsumed: () => void;
-  onRepeatOnboarding: () => void;
 }>;
 
 const accessNotificationContent: Readonly<
@@ -48,8 +50,7 @@ const accessNotificationContent: Readonly<
   recoveryRequested: {
     closeLabel: "Cerrar aviso de recuperación",
     title: "Revisa tu correo",
-    message:
-      "Recibirás un enlace único para restablecer tu contraseña. Podrás utilizarlo una sola vez y vencerá en 12 horas. Si no aparece en tu bandeja de entrada, revisa la carpeta de correo no deseado.",
+    message: PUBLIC_RECOVERY_SUCCESS_MESSAGE,
   },
   sessionExpired: {
     closeLabel: "Cerrar aviso de sesión expirada",
@@ -61,14 +62,16 @@ const accessNotificationContent: Readonly<
 export function AccessView({
   accessRequest,
   onAccessRequestConsumed,
-  onRepeatOnboarding,
 }: AccessViewProps) {
   const router = useRouter();
+  const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [visibleAccessNotification, setVisibleAccessNotification] =
     useState<AccessNotification | null>(null);
+  const [isAccessNotificationOpen, setIsAccessNotificationOpen] = useState(false);
   const accessNotificationHandledRef = useRef(false);
+  const helpTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!accessRequest || accessNotificationHandledRef.current) return;
@@ -76,17 +79,13 @@ export function AccessView({
     accessNotificationHandledRef.current = true;
     setIsSignInOpen(true);
     setVisibleAccessNotification(accessRequest.notification);
+    setIsAccessNotificationOpen(Boolean(accessRequest.notification));
     onAccessRequestConsumed();
   }, [accessRequest, onAccessRequestConsumed]);
 
   const notificationContent = visibleAccessNotification
     ? accessNotificationContent[visibleAccessNotification]
     : null;
-
-  const repeatOnboarding = () => {
-    setIsHelpOpen(false);
-    onRepeatOnboarding();
-  };
 
   const openSignIn = () => {
     setIsSignInOpen(true);
@@ -98,6 +97,10 @@ export function AccessView({
 
   const completeSignIn = () => {
     router.replace("/home");
+  };
+
+  const closeAccessNotification = () => {
+    setIsAccessNotificationOpen(false);
   };
 
   return (
@@ -167,6 +170,7 @@ export function AccessView({
           <Button
             color="inherit"
             onClick={() => setIsHelpOpen(true)}
+            ref={helpTriggerRef}
             variant="text"
             sx={{ "&:focus-visible": { outlineColor: "common.white" } }}
           >
@@ -267,21 +271,95 @@ export function AccessView({
         maxWidth="xs"
         onClose={() => setIsHelpOpen(false)}
         open={isHelpOpen}
+        slotProps={{
+          paper: {
+            sx: {
+              position: "relative",
+              m: 2,
+              width: "calc(100% - 32px)",
+              maxHeight: "calc(100dvh - 32px)",
+              borderRadius: 3,
+              overflow: "hidden",
+            },
+          },
+          transition: {
+            onExited: () => helpTriggerRef.current?.focus({ preventScroll: true }),
+          },
+        }}
+        transitionDuration={prefersReducedMotion ? 0 : undefined}
       >
-        <DialogTitle id="help-dialog-title">Ayuda</DialogTitle>
-        <DialogContent>
-          <DialogContentText id="help-dialog-description">
-            Puedes volver a consultar la introducción cuando lo necesites.
-          </DialogContentText>
+        <IconButton
+          aria-label="Cerrar ayuda"
+          onClick={() => setIsHelpOpen(false)}
+          sx={{
+            position: "absolute",
+            zIndex: 1,
+            top: 8,
+            right: 8,
+            minWidth: 44,
+            minHeight: 44,
+            color: "secondary.main",
+            border: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            "&:hover": { bgcolor: "action.hover" },
+          }}
+          type="button"
+        >
+          <CloseRounded />
+        </IconButton>
+
+        <DialogTitle component="div" sx={{ px: 3, pt: 4.5, pb: 1 }}>
+          <Stack spacing={1.25} sx={{ alignItems: "center", textAlign: "center" }}>
+            <Box
+              sx={(theme) => ({
+                width: 64,
+                height: 64,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: "50%",
+                color: themeTokens.color.accent,
+                bgcolor: alpha(themeTokens.color.accent, 0.12),
+                border: `1px solid ${alpha(themeTokens.color.accent, 0.2)}`,
+                boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.06)}`,
+              })}
+            >
+              <EmailOutlined aria-hidden="true" sx={{ width: 32, height: 32 }} />
+            </Box>
+            <Typography
+              component="h2"
+              id="help-dialog-title"
+              variant="h5"
+              sx={{ color: "secondary.main", fontWeight: 700 }}
+            >
+              Contacta con soporte
+            </Typography>
+          </Stack>
+        </DialogTitle>
+
+        <DialogContent
+          sx={{
+            px: { xs: 3, sm: 4 },
+            pb: "calc(24px + env(safe-area-inset-bottom))",
+            textAlign: "center",
+          }}
+        >
+          <Stack spacing={1.5} sx={{ alignItems: "center" }}>
+            <Typography color="text.secondary" id="help-dialog-description">
+              Si necesitas ayuda, escríbenos a:
+            </Typography>
+            <Typography
+              sx={{
+                maxWidth: "100%",
+                color: "text.primary",
+                fontWeight: 700,
+                overflowWrap: "anywhere",
+              }}
+            >
+              {TEMPORARY_SUPPORT_EMAIL}
+            </Typography>
+          </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button color="secondary" onClick={() => setIsHelpOpen(false)}>
-            Cerrar
-          </Button>
-          <Button onClick={repeatOnboarding} variant="contained">
-            Repetir onboarding
-          </Button>
-        </DialogActions>
       </Dialog>
       <SignInSheet
         notification={(
@@ -289,9 +367,15 @@ export function AccessView({
             anchorOrigin={{ horizontal: "center", vertical: "top" }}
             autoHideDuration={9000}
             onClose={(_event, reason) => {
-              if (reason !== "clickaway") setVisibleAccessNotification(null);
+              if (reason !== "clickaway") closeAccessNotification();
             }}
-            open={Boolean(visibleAccessNotification)}
+            open={isAccessNotificationOpen}
+            slotProps={{
+              transition: {
+                onExited: () => setVisibleAccessNotification(null),
+              },
+            }}
+            slots={{ transition: Fade }}
             sx={{
               position: "static",
               inset: "auto",
@@ -302,13 +386,14 @@ export function AccessView({
               flexShrink: 0,
               transform: "none !important",
             }}
+            transitionDuration={prefersReducedMotion ? 0 : { enter: 220, exit: 420 }}
           >
             <Alert
               action={
                 <IconButton
                   aria-label={notificationContent?.closeLabel}
                   color="inherit"
-                  onClick={() => setVisibleAccessNotification(null)}
+                  onClick={closeAccessNotification}
                   size="small"
                 >
                   <CloseRounded fontSize="small" />

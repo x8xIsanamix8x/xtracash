@@ -1,4 +1,8 @@
-import type { RecoveryRequest } from "../types";
+import type {
+  AuthenticatedRecoveryRequest,
+  RecoveryApiRequest,
+  RecoveryRequest,
+} from "../types";
 import { normalizeRecoveryIdentifier } from "../validation";
 
 export type RecoveryServiceErrorType = "aborted" | "http" | "network" | "unauthenticated";
@@ -17,8 +21,12 @@ export function createRecoveryRequest(identifier: string): RecoveryRequest {
   return { identifier: normalizeRecoveryIdentifier(identifier) };
 }
 
+export function createAuthenticatedRecoveryRequest(): AuthenticatedRecoveryRequest {
+  return { source: "profile" };
+}
+
 export async function requestPasswordRecovery(
-  request: RecoveryRequest,
+  request: RecoveryApiRequest,
   signal: AbortSignal,
 ): Promise<void> {
   let response: Response;
