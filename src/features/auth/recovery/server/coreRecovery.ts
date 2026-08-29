@@ -2,7 +2,6 @@ import "server-only";
 
 import { getServerCoreApiBaseUrl } from "@/config/serverCoreApi";
 
-import { isRetryableRecoveryConnectionError } from "../network";
 import type { RecoveryRequest } from "../types";
 import {
   createCoreRecoveryEndpoint,
@@ -47,23 +46,13 @@ export async function requestPasswordRecoveryFromCore(
     body: JSON.stringify(request),
     signal,
   };
-  let response: Response | null = null;
+  let response: Response;
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      response = await fetch(endpoint, requestInit);
-      break;
-    } catch (error) {
-      const canRetry = attempt === 0
-        && !signal.aborted
-        && isRetryableRecoveryConnectionError(error);
-      if (canRetry) continue;
-
-      throw new CoreRecoveryError("network");
-    }
+  try {
+    response = await fetch(endpoint, requestInit);
+  } catch {
+    throw new CoreRecoveryError("network");
   }
-
-  if (response === null) throw new CoreRecoveryError("network");
 
   if (!isSuccessfulRecoveryStatus(response.status)) {
     throw new CoreRecoveryError("http", response.status);

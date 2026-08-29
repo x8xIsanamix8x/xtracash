@@ -5,3 +5,9 @@ export type RecoveryData = Readonly<{
 export type RecoveryRequest = Readonly<{
   identifier: string;
 }>;
+
+export type AuthenticatedRecoveryRequest = Readonly<{
+  source: "profile";
+}>;
+
+export type RecoveryApiRequest = RecoveryRequest | AuthenticatedRecoveryRequest;

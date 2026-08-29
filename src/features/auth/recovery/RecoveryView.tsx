@@ -13,7 +13,6 @@ import {
 import { recoveryRequestedUrl } from "@/lib/accessNotificationNavigation";
 
 import { SecurityFlowShell } from "../shared/components/SecurityFlowShell";
-import { SecurityFlowSuccess } from "../shared/components/SecurityFlowSuccess";
 import { RecoveryRequestStep } from "./components/RecoveryRequestStep";
 import { RecoveryStepVisual } from "./components/RecoveryStepVisual";
 import {
@@ -57,7 +56,6 @@ export function RecoveryView() {
   const [fieldError, setFieldError] = useState("");
   const [requestError, setRequestError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
   const [cooldownSecondsRemaining, setCooldownSecondsRemaining] = useState<number | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const identifierRef = useRef<HTMLInputElement>(null);
@@ -112,10 +110,6 @@ export function RecoveryView() {
     };
   }, []);
 
-  useEffect(() => {
-    if (isComplete) titleRef.current?.focus({ preventScroll: true });
-  }, [isComplete]);
-
   const isCooldownChecking = cooldownSecondsRemaining === null;
   const isCooldownActive = (cooldownSecondsRemaining ?? 0) > 0;
 
@@ -157,7 +151,7 @@ export function RecoveryView() {
       setData(initialData);
       setFieldError("");
       setRequestError("");
-      setIsComplete(true);
+      router.replace(recoveryRequestedUrl);
     } catch (error) {
       if (!isMountedRef.current) return;
 
@@ -174,25 +168,6 @@ export function RecoveryView() {
       if (isMountedRef.current) setIsSubmitting(false);
     }
   };
-
-  if (isComplete) {
-    return (
-      <SecurityFlowShell
-        backHref="/"
-        backLabel="Volver a la pantalla de acceso"
-        contentCentered
-        visual={<RecoveryStepVisual success />}
-      >
-        <SecurityFlowSuccess
-          actionLabel="Volver al acceso"
-          message="Te enviamos las instrucciones para restablecer tu contraseña. Revisa también la carpeta de correo no deseado."
-          onAction={() => router.replace(recoveryRequestedUrl)}
-          title="Revisa tu correo"
-          titleRef={titleRef}
-        />
-      </SecurityFlowShell>
-    );
-  }
 
   return (
     <SecurityFlowShell
