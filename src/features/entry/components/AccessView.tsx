@@ -14,13 +14,16 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Fade,
   IconButton,
   Snackbar,
   Stack,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 
 import { SignInSheet } from "@/features/auth";
+import { PUBLIC_RECOVERY_SUCCESS_MESSAGE } from "@/features/auth/recovery/presentation";
 import type {
   AccessNavigationRequest,
   AccessNotification,
@@ -48,8 +51,7 @@ const accessNotificationContent: Readonly<
   recoveryRequested: {
     closeLabel: "Cerrar aviso de recuperación",
     title: "Revisa tu correo",
-    message:
-      "Recibirás un enlace único para restablecer tu contraseña. Podrás utilizarlo una sola vez y vencerá en 12 horas. Si no aparece en tu bandeja de entrada, revisa la carpeta de correo no deseado.",
+    message: PUBLIC_RECOVERY_SUCCESS_MESSAGE,
   },
   sessionExpired: {
     closeLabel: "Cerrar aviso de sesión expirada",
@@ -64,10 +66,12 @@ export function AccessView({
   onRepeatOnboarding,
 }: AccessViewProps) {
   const router = useRouter();
+  const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [visibleAccessNotification, setVisibleAccessNotification] =
     useState<AccessNotification | null>(null);
+  const [isAccessNotificationOpen, setIsAccessNotificationOpen] = useState(false);
   const accessNotificationHandledRef = useRef(false);
 
   useEffect(() => {
@@ -76,6 +80,7 @@ export function AccessView({
     accessNotificationHandledRef.current = true;
     setIsSignInOpen(true);
     setVisibleAccessNotification(accessRequest.notification);
+    setIsAccessNotificationOpen(Boolean(accessRequest.notification));
     onAccessRequestConsumed();
   }, [accessRequest, onAccessRequestConsumed]);
 
@@ -98,6 +103,10 @@ export function AccessView({
 
   const completeSignIn = () => {
     router.replace("/home");
+  };
+
+  const closeAccessNotification = () => {
+    setIsAccessNotificationOpen(false);
   };
 
   return (
@@ -289,9 +298,15 @@ export function AccessView({
             anchorOrigin={{ horizontal: "center", vertical: "top" }}
             autoHideDuration={9000}
             onClose={(_event, reason) => {
-              if (reason !== "clickaway") setVisibleAccessNotification(null);
+              if (reason !== "clickaway") closeAccessNotification();
             }}
-            open={Boolean(visibleAccessNotification)}
+            open={isAccessNotificationOpen}
+            slotProps={{
+              transition: {
+                onExited: () => setVisibleAccessNotification(null),
+              },
+            }}
+            slots={{ transition: Fade }}
             sx={{
               position: "static",
               inset: "auto",
@@ -302,13 +317,14 @@ export function AccessView({
               flexShrink: 0,
               transform: "none !important",
             }}
+            transitionDuration={prefersReducedMotion ? 0 : { enter: 220, exit: 420 }}
           >
             <Alert
               action={
                 <IconButton
                   aria-label={notificationContent?.closeLabel}
                   color="inherit"
-                  onClick={() => setVisibleAccessNotification(null)}
+                  onClick={closeAccessNotification}
                   size="small"
                 >
                   <CloseRounded fontSize="small" />
