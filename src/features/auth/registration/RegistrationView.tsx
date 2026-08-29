@@ -37,10 +37,14 @@ import type {
   RegistrationField,
   RegistrationFlowState,
   RegistrationInputRefs,
+  RegistrationUiField,
 } from "./types";
 import {
+  composeNationalPhone,
+  emptyRegistrationPhone,
   isContactStepValid,
   isIdentificationStepValid,
+  type RegistrationPhoneParts,
   validateContact,
   validateIdentification,
   validateRegistrationField,
@@ -85,8 +89,14 @@ const identificationFields: RegistrationField[] = [
   "firstName",
   "lastName",
 ];
-const contactFields: RegistrationField[] = ["phone", "email", "password", "passwordConfirmation"];
-const allFields: RegistrationField[] = [...identificationFields, ...contactFields];
+const contactFields: RegistrationUiField[] = [
+  "phoneOperatorCode",
+  "phoneLocalNumber",
+  "email",
+  "password",
+  "passwordConfirmation",
+];
+const allFields: RegistrationUiField[] = [...identificationFields, ...contactFields];
 
 function getRegistrationErrorMessage(error: unknown): string {
   if (!(error instanceof RegistrationServiceError)) {
@@ -114,6 +124,7 @@ export function RegistrationView() {
   const router = useRouter();
   const [flowState, setFlowState] = useState<RegistrationFlowState>({ name: "identification" });
   const [data, setData] = useState<RegistrationData>(initialData);
+  const [phoneParts, setPhoneParts] = useState<RegistrationPhoneParts>(emptyRegistrationPhone);
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
@@ -122,7 +133,8 @@ export function RegistrationView() {
   const documentRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
-  const phoneRef = useRef<HTMLInputElement>(null);
+  const phoneOperatorCodeRef = useRef<HTMLInputElement>(null);
+  const phoneLocalNumberRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmationRef = useRef<HTMLInputElement>(null);
@@ -135,7 +147,8 @@ export function RegistrationView() {
     documentNumber: documentRef,
     firstName: firstNameRef,
     lastName: lastNameRef,
-    phone: phoneRef,
+    phoneOperatorCode: phoneOperatorCodeRef,
+    phoneLocalNumber: phoneLocalNumberRef,
     email: emailRef,
     password: passwordRef,
     passwordConfirmation: confirmationRef,
@@ -145,7 +158,7 @@ export function RegistrationView() {
   const step = getStepIndex(flowState);
   const currentContent = stepContent[step];
   const canContinueCurrentStep =
-    step === 0 ? isIdentificationStepValid(data) : isContactStepValid(data);
+    step === 0 ? isIdentificationStepValid(data) : isContactStepValid(data, phoneParts);
 
   useEffect(() => {
     if (flowState.name !== "submitting") {
@@ -162,7 +175,7 @@ export function RegistrationView() {
     };
   }, []);
 
-  const updateField = (field: RegistrationField, value: string) => {
+  const updateField = (field: keyof RegistrationData, value: string) => {
     if (isSubmitting) return;
 
     setData((current) => ({ ...current, [field]: value }));
@@ -178,17 +191,40 @@ export function RegistrationView() {
     }
   };
 
-  const focusFirstError = (nextErrors: RegistrationErrors, fields: RegistrationField[]) => {
+  const updatePhoneParts = (nextPhoneParts: RegistrationPhoneParts) => {
+    if (isSubmitting) return;
+
+    setPhoneParts(nextPhoneParts);
+    setData((current) => ({
+      ...current,
+      phone: composeNationalPhone(nextPhoneParts),
+    }));
+    setErrors((current) => ({
+      ...current,
+      phone: undefined,
+      phoneOperatorCode:
+        nextPhoneParts.operatorCode === phoneParts.operatorCode
+          ? current.phoneOperatorCode
+          : undefined,
+      phoneLocalNumber:
+        nextPhoneParts.localNumber === phoneParts.localNumber
+          ? current.phoneLocalNumber
+          : undefined,
+    }));
+    setSubmissionError("");
+  };
+
+  const focusFirstError = (nextErrors: RegistrationErrors, fields: RegistrationUiField[]) => {
     const firstInvalid = fields.find((field) => nextErrors[field]);
     if (firstInvalid) inputRefs[firstInvalid]?.current?.focus();
   };
 
-  const validateFieldOnBlur = (field: RegistrationField) => {
+  const validateFieldOnBlur = (field: RegistrationUiField) => {
     if (isSubmitting) return;
 
     setErrors((current) => ({
       ...current,
-      [field]: validateRegistrationField(field, data),
+      [field]: validateRegistrationField(field, data, phoneParts),
     }));
   };
 
@@ -210,7 +246,7 @@ export function RegistrationView() {
     }
 
     if (flowState.name === "contactSecurity") {
-      const nextErrors = validateContact(data);
+      const nextErrors = validateContact(data, phoneParts);
       setErrors(nextErrors);
 
       if (Object.keys(nextErrors).length > 0) {
@@ -243,7 +279,7 @@ export function RegistrationView() {
 
     const nextErrors = {
       ...validateIdentification(data),
-      ...validateContact(data),
+      ...validateContact(data, phoneParts),
     };
     setErrors(nextErrors);
     setSubmissionError("");
@@ -270,6 +306,7 @@ export function RegistrationView() {
       if (!isMountedRef.current) return;
 
       setData(initialData);
+      setPhoneParts(emptyRegistrationPhone);
       setErrors({});
       setTermsAccepted(false);
       setSubmissionError("");
@@ -408,6 +445,8 @@ export function RegistrationView() {
                     inputRefs={inputRefs}
                     onChange={updateField}
                     onFieldBlur={validateFieldOnBlur}
+                    onPhonePartsChange={updatePhoneParts}
+                    phoneParts={phoneParts}
                   />
                 )}
                 {(flowState.name === "review" || flowState.name === "submitting") && (
