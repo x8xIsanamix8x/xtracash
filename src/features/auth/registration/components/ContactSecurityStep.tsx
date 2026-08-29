@@ -10,12 +10,15 @@ import {
 import {
   Box,
   Divider,
+  FormControl,
+  FormLabel,
   IconButton,
   InputAdornment,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
+  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -23,12 +26,20 @@ import {
 
 import { themeTokens } from "@/theme/tokens";
 
-import type { RegistrationData, RegistrationErrors, RegistrationInputRefs } from "../types";
+import type {
+  RegistrationData,
+  RegistrationErrors,
+  RegistrationInputRefs,
+  RegistrationUiField,
+} from "../types";
 import {
+  applyPhoneNumberInput,
   doPasswordsMatch,
-  keepAsciiDigits,
+  isMobileOperatorCode,
+  MOBILE_OPERATOR_CODES,
   passwordRules,
   PHONE_LENGTH,
+  type RegistrationPhoneParts,
 } from "../validation";
 
 type ContactSecurityStepProps = Readonly<{
@@ -36,7 +47,9 @@ type ContactSecurityStepProps = Readonly<{
   errors: RegistrationErrors;
   inputRefs: RegistrationInputRefs;
   onChange: (field: keyof RegistrationData, value: string) => void;
-  onFieldBlur: (field: keyof RegistrationData) => void;
+  onFieldBlur: (field: RegistrationUiField) => void;
+  onPhonePartsChange: (parts: RegistrationPhoneParts) => void;
+  phoneParts: RegistrationPhoneParts;
 }>;
 
 export function ContactSecurityStep({
@@ -45,6 +58,8 @@ export function ContactSecurityStep({
   inputRefs,
   onChange,
   onFieldBlur,
+  onPhonePartsChange,
+  phoneParts,
 }: ContactSecurityStepProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -57,26 +72,77 @@ export function ContactSecurityStep({
         <Typography component="h2" variant="subtitle1" sx={{ color: "secondary.main", fontWeight: 700 }}>
           Datos de contacto
         </Typography>
-        <TextField
-          autoComplete="tel"
-          error={Boolean(errors.phone)}
-          fullWidth
-          helperText={errors.phone}
-          inputRef={inputRefs.phone}
-          label="Teléfono"
-          name="phone"
-          onBlur={() => onFieldBlur("phone")}
-          onChange={(event) =>
-            onChange("phone", keepAsciiDigits(event.target.value, PHONE_LENGTH))
-          }
-          required
-          slotProps={{
-            formHelperText: errors.phone ? { role: "alert" } : undefined,
-            htmlInput: { inputMode: "numeric", maxLength: PHONE_LENGTH },
-          }}
-          type="tel"
-          value={data.phone}
-        />
+        <FormControl component="fieldset" fullWidth>
+          <FormLabel component="legend">Número de teléfono</FormLabel>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 1,
+              minWidth: 0,
+              mt: 1,
+            }}
+          >
+            <TextField
+              error={Boolean(errors.phoneOperatorCode)}
+              helperText={errors.phoneOperatorCode}
+              inputRef={inputRefs.phoneOperatorCode}
+              label="Código"
+              name="phoneOperatorCode"
+              onBlur={() => onFieldBlur("phoneOperatorCode")}
+              onChange={(event) => {
+                const operatorCode = event.target.value;
+                if (operatorCode === "" || isMobileOperatorCode(operatorCode)) {
+                  onPhonePartsChange({ ...phoneParts, operatorCode });
+                }
+              }}
+              required
+              select
+              slotProps={{
+                formHelperText: errors.phoneOperatorCode ? { role: "alert" } : undefined,
+                inputLabel: { shrink: true },
+                select: {
+                  displayEmpty: true,
+                  renderValue: (value) =>
+                    typeof value === "string" && value ? value : "Selecciona",
+                },
+              }}
+              sx={{ flex: { xs: "0 0 112px", sm: "0 0 128px" }, minWidth: 0 }}
+              value={phoneParts.operatorCode}
+            >
+              <MenuItem disabled value="">
+                Selecciona
+              </MenuItem>
+              {MOBILE_OPERATOR_CODES.map((code) => (
+                <MenuItem key={code} value={code}>
+                  {code}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              autoComplete="tel-national"
+              error={Boolean(errors.phoneLocalNumber)}
+              fullWidth
+              helperText={errors.phoneLocalNumber}
+              inputRef={inputRefs.phoneLocalNumber}
+              label="Número"
+              name="phoneLocalNumber"
+              onBlur={() => onFieldBlur("phoneLocalNumber")}
+              onChange={(event) =>
+                onPhonePartsChange(applyPhoneNumberInput(event.target.value, phoneParts))
+              }
+              placeholder="1234567"
+              required
+              slotProps={{
+                formHelperText: errors.phoneLocalNumber ? { role: "alert" } : undefined,
+                htmlInput: { inputMode: "numeric", maxLength: PHONE_LENGTH },
+              }}
+              sx={{ flex: "1 1 auto", minWidth: 0 }}
+              type="tel"
+              value={phoneParts.localNumber}
+            />
+          </Box>
+        </FormControl>
         <TextField
           autoComplete="email"
           error={Boolean(errors.email)}

@@ -29,8 +29,9 @@ export type RegistrationFlowState =
   | Readonly<{ name: "submitting" }>;
 
 export type RegistrationField = keyof RegistrationData;
-export type RegistrationErrors = Partial<Record<RegistrationField, string>>;
+export type RegistrationUiField = RegistrationField | "phoneOperatorCode" | "phoneLocalNumber";
+export type RegistrationErrors = Partial<Record<RegistrationUiField, string>>;
 
 export type RegistrationInputRefs = Readonly<
-  Partial<Record<RegistrationField, React.RefObject<HTMLInputElement | null>>>
+  Partial<Record<RegistrationUiField, React.RefObject<HTMLInputElement | null>>>
 >;
