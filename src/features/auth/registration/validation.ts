@@ -27,6 +27,19 @@ export const passwordRules: readonly PasswordRule[] = [
   },
 ];
 
+export function doPasswordsMatch(password: string, confirmation: string): boolean {
+  return confirmation.length > 0 && confirmation === password;
+}
+
+export function getPasswordConfirmationError(
+  password: string,
+  confirmation: string,
+): string | undefined {
+  if (!confirmation) return "Confirma tu contraseña.";
+  if (!doPasswordsMatch(password, confirmation)) return "Las contraseñas no coinciden.";
+  return undefined;
+}
+
 export function keepAsciiDigits(value: string, maxLength: number): string {
   return value.replace(/[^0-9]/g, "").slice(0, maxLength);
 }
@@ -78,9 +91,14 @@ export function validateRegistrationField(
   field: RegistrationField,
   data: RegistrationData,
 ): string | undefined {
+  if (field === "nationality") {
+    return data.nationality === "V" || data.nationality === "E"
+      ? undefined
+      : "Selecciona tu nacionalidad";
+  }
   if (field === "documentNumber") return validateDocumentNumber(data.documentNumber);
-  if (field === "firstName") return validatePersonName(data.firstName, "Ingresa tus nombres.");
-  if (field === "lastName") return validatePersonName(data.lastName, "Ingresa tus apellidos.");
+  if (field === "firstName") return validatePersonName(data.firstName, "Ingresa tus nombres");
+  if (field === "lastName") return validatePersonName(data.lastName, "Ingresa tus apellidos");
   if (field === "phone") return validatePhone(data.phone);
   if (field === "email") return validateEmail(data.email);
   if (field === "password") {
@@ -89,8 +107,7 @@ export function validateRegistrationField(
       : "La contraseña debe cumplir las cinco reglas indicadas.";
   }
   if (field === "passwordConfirmation") {
-    if (!data.passwordConfirmation) return "Confirma tu contraseña.";
-    if (data.passwordConfirmation !== data.password) return "Las contraseñas no coinciden.";
+    return getPasswordConfirmationError(data.password, data.passwordConfirmation);
   }
   return undefined;
 }
@@ -108,7 +125,7 @@ function collectErrors(
   return errors;
 }
 
-const identificationFields = ["documentNumber", "firstName", "lastName"] as const;
+const identificationFields = ["nationality", "documentNumber", "firstName", "lastName"] as const;
 const contactFields = ["phone", "email", "password", "passwordConfirmation"] as const;
 
 export function validateIdentification(data: RegistrationData): RegistrationErrors {
