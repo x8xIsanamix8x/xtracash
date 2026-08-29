@@ -24,7 +24,12 @@ import {
 import { themeTokens } from "@/theme/tokens";
 
 import type { RegistrationData, RegistrationErrors, RegistrationInputRefs } from "../types";
-import { keepAsciiDigits, passwordRules, PHONE_LENGTH } from "../validation";
+import {
+  doPasswordsMatch,
+  keepAsciiDigits,
+  passwordRules,
+  PHONE_LENGTH,
+} from "../validation";
 
 type ContactSecurityStepProps = Readonly<{
   data: RegistrationData;
@@ -143,7 +148,7 @@ export function ContactSecurityStep({
           inputRef={inputRefs.passwordConfirmation}
           label="Confirmar contraseña"
           name="passwordConfirmation"
-          onBlur={onConfirmationBlur}
+          onBlur={() => onFieldBlur("passwordConfirmation")}
           onChange={(event) => onChange("passwordConfirmation", event.target.value)}
           required
           slotProps={{
