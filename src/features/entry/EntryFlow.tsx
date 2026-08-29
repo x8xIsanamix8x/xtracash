@@ -14,7 +14,6 @@ import { OnboardingView } from "./components/OnboardingView";
 import { AccessView } from "./components/AccessView";
 import { onboardingSteps } from "./data/onboardingSteps";
 import {
-  clearOnboardingPreference,
   hasCompletedOnboarding,
   markOnboardingCompleted,
 } from "./lib/onboardingPreference";
@@ -58,12 +57,6 @@ export function EntryFlow() {
     }
 
     setStepIndex((current) => current + 1);
-  };
-
-  const repeatOnboarding = () => {
-    clearOnboardingPreference();
-    setStepIndex(0);
-    setScreen("onboarding");
   };
 
   if (screen === "checking") {
@@ -118,7 +111,6 @@ export function EntryFlow() {
     <AccessView
       accessRequest={accessRequest}
       onAccessRequestConsumed={() => setAccessRequest(null)}
-      onRepeatOnboarding={repeatOnboarding}
     />
   );
 }

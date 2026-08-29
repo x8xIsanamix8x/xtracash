@@ -1,5 +1,7 @@
 import { TextField } from "@mui/material";
 
+import { RECOVERY_IDENTIFIER_MAX_LENGTH } from "../validation";
+
 type RecoveryRequestStepProps = Readonly<{
   disabled: boolean;
   error: string;
@@ -27,9 +29,14 @@ export function RecoveryRequestStep({
       name="identifier"
       onChange={(event) => onChange(event.target.value)}
       required
+      spellCheck={false}
       slotProps={{
         formHelperText: { role: "alert" },
-        htmlInput: { inputMode: "email" },
+        htmlInput: {
+          autoCapitalize: "none",
+          inputMode: "email",
+          maxLength: RECOVERY_IDENTIFIER_MAX_LENGTH,
+        },
       }}
       type="email"
       value={identifier}
