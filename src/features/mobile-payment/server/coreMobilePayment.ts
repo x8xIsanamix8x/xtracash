@@ -16,6 +16,10 @@ import type {
   MobilePaymentOptions,
   ResolvedRecipient,
 } from "../types";
+import {
+  parseCoreConfirmedPayment,
+  readCoreMoney,
+} from "./coreConfirmedPaymentValidation";
 
 export type CoreMobilePaymentErrorType =
   | "configuration"
@@ -41,19 +45,6 @@ type CoreRequestOptions = Readonly<{
   method?: "GET" | "POST" | "DELETE";
   signal: AbortSignal;
 }>;
-
-const coreMoneyPattern = /^(\d+)(?:\.(\d{1,4}))?$/;
-const nextDecimalDigit: Readonly<Record<string, string>> = {
-  "0": "1",
-  "1": "2",
-  "2": "3",
-  "3": "4",
-  "4": "5",
-  "5": "6",
-  "6": "7",
-  "7": "8",
-  "8": "9",
-};
 
 function getCoreEndpoint(pathname: string): string {
   const configuration = getServerCoreApiBaseUrl();
@@ -95,44 +86,6 @@ async function readJson(response: Response): Promise<unknown> {
   } catch {
     throw new CoreMobilePaymentError("protocol");
   }
-}
-
-function incrementDecimalDigits(value: string): string {
-  const digits = value.split("");
-
-  for (let index = digits.length - 1; index >= 0; index -= 1) {
-    if (digits[index] !== "9") {
-      digits[index] = nextDecimalDigit[digits[index]];
-      return digits.join("");
-    }
-
-    digits[index] = "0";
-  }
-
-  return `1${digits.join("")}`;
-}
-
-function normalizeCoreMoney(value: string): string | null {
-  const match = coreMoneyPattern.exec(value);
-  if (!match) return null;
-
-  const whole = match[1].replace(/^0+(?=\d)/, "");
-  const fraction = match[2] ?? "";
-  const cents = fraction.padEnd(2, "0").slice(0, 2);
-
-  if (fraction.length <= 2 || fraction[2] < "5") {
-    return `${whole}.${cents}`;
-  }
-
-  const roundedMinorUnits = incrementDecimalDigits(`${whole}${cents}`)
-    .padStart(3, "0");
-
-  return `${roundedMinorUnits.slice(0, -2)}.${roundedMinorUnits.slice(-2)}`;
-}
-
-function readMoney(value: unknown): string | null {
-  if (!isRecord(value) || typeof value.bs !== "string") return null;
-  return normalizeCoreMoney(value.bs);
 }
 
 function parseBanks(value: unknown): readonly Bank[] | null {
@@ -225,10 +178,10 @@ function parseInitiatedResponse(
     return null;
   }
 
-  const amountBs = readMoney(value.monto);
-  const feeBs = readMoney(value.comision);
-  const totalBs = readMoney(value.total);
-  const availableBs = readMoney(value.data.disponible);
+  const amountBs = readCoreMoney(value.monto);
+  const feeBs = readCoreMoney(value.comision);
+  const totalBs = readCoreMoney(value.total);
+  const availableBs = readCoreMoney(value.data.disponible);
   const recipient = parseCoreRecipient(value.data.beneficiario, requestRecipient);
 
   if (
@@ -264,41 +217,6 @@ function parseInitiatedResponse(
     expiresAt: value.expiraEn,
     availableBs,
     recipient,
-  };
-}
-
-function parseConfirmedResponse(value: unknown): ConfirmedPayment | null {
-  if (!isRecord(value)) return null;
-
-  const amountBs = readMoney(value.monto);
-  const totalBs = readMoney(value.total);
-  const bankReference = value.referenciaBancaria ?? null;
-  const resolvedAt = value.resueltaEn ?? null;
-  const message = value.mensaje ?? null;
-
-  if (
-    !isUuid(value.operacionId)
-    || !isNonEmptyString(value.estado)
-    || amountBs === null
-    || totalBs === null
-    || (bankReference !== null && !isNonEmptyString(bankReference))
-    || (
-      resolvedAt !== null
-      && (!isNonEmptyString(resolvedAt) || Number.isNaN(Date.parse(resolvedAt)))
-    )
-    || (message !== null && typeof message !== "string")
-  ) {
-    return null;
-  }
-
-  return {
-    operationId: value.operacionId,
-    status: value.estado.trim(),
-    bankReference: bankReference === null ? null : bankReference.trim(),
-    amountBs,
-    totalBs,
-    resolvedAt,
-    message: message === null ? null : message.trim(),
   };
 }
 
@@ -364,7 +282,7 @@ export async function confirmMobilePaymentWithCore(
     `/api/pagos-salientes/${encodeURIComponent(operationId)}/confirmacion`,
     { accessToken, method: "POST", signal },
   );
-  const result = parseConfirmedResponse(await readJson(response));
+  const result = parseCoreConfirmedPayment(await readJson(response));
   if (result === null) throw new CoreMobilePaymentError("protocol");
   return result;
 }

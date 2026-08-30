@@ -16,13 +16,11 @@ import {
   CircularProgress,
   Container,
   IconButton,
-  Paper,
   Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
 
-import { AppBottomNavigation } from "@/components/AppBottomNavigation";
 import { isCreditLineUsable } from "@/features/credit-line";
 import {
   AccountSummaryServiceError,
@@ -42,6 +40,7 @@ import { TransferResultView } from "./components/TransferResultView";
 import {
   formatAmountOnBlur,
   formatBsAmount,
+  formatRateLabel,
   getBank,
   parseAmountToMinorUnits,
 } from "./format";
@@ -144,6 +143,8 @@ export function MobilePaymentView() {
   const [focusRequest, setFocusRequest] = useState(0);
   const [lineError, setLineError] = useState("");
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
+  const [suppressDirectoryFocusRestore, setSuppressDirectoryFocusRestore] =
+    useState(false);
   const [directoryEntries, setDirectoryEntries] =
     useState<readonly DirectoryContact[]>([]);
   const [directoryStatus, setDirectoryStatus] =
@@ -167,6 +168,7 @@ export function MobilePaymentView() {
   const pendingDeleteFocusRef = useRef<DirectoryFocusDestination | null>(null);
   const focusRequestIdRef = useRef(0);
   const reviewTitleRef = useRef<HTMLHeadingElement>(null);
+  const detailsTitleRef = useRef<HTMLHeadingElement>(null);
   const resultTitleRef = useRef<HTMLHeadingElement>(null);
 
   const selectedContact = useMemo(
@@ -280,12 +282,20 @@ export function MobilePaymentView() {
   }, [loadPaymentContext]);
 
   useEffect(() => {
-    if (step === "review") {
-      reviewTitleRef.current?.focus();
-    } else if (step === "result") {
-      resultTitleRef.current?.focus({ preventScroll: true });
-    }
-  }, [step]);
+    if (contextStatus !== "ready") return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      if (step === "details") {
+        detailsTitleRef.current?.focus({ preventScroll: true });
+      } else if (step === "review") {
+        reviewTitleRef.current?.focus({ preventScroll: true });
+      } else if (step === "result") {
+        resultTitleRef.current?.focus({ preventScroll: true });
+      }
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [contextStatus, recipientMode, step]);
 
   const clearDetailsError = (field: DetailsField) => {
     setDetailsErrors((current) => ({ ...current, [field]: undefined }));
@@ -303,6 +313,7 @@ export function MobilePaymentView() {
   };
 
   const selectDirectoryContact = (contactId: string) => {
+    setSuppressDirectoryFocusRestore(true);
     setSelectedContactId(contactId);
     setRecipientMode("directory");
     setIsDirectoryOpen(false);
@@ -397,7 +408,17 @@ export function MobilePaymentView() {
   const closeDirectory = () => {
     if (isDeletingContact) return;
     cancelDeleteContact();
+    setSuppressDirectoryFocusRestore(false);
     setIsDirectoryOpen(false);
+  };
+
+  const completeDirectoryExit = () => {
+    if (!suppressDirectoryFocusRestore) return;
+
+    window.requestAnimationFrame(() => {
+      detailsTitleRef.current?.focus({ preventScroll: true });
+      setSuppressDirectoryFocusRestore(false);
+    });
   };
 
   const changeRecipient = () => {
@@ -625,6 +646,28 @@ export function MobilePaymentView() {
     router.replace("/home");
   };
 
+  const navigateBack = () => {
+    if (isInitiating || isConfirming) return;
+
+    if (step === "review") {
+      returnToDetails();
+      return;
+    }
+
+    if (step === "details" && recipientMode !== "choice") {
+      changeRecipient();
+      return;
+    }
+
+    returnHome();
+  };
+
+  const backLabel = step === "review"
+    ? "Volver a los datos del pago"
+    : step === "details" && recipientMode !== "choice"
+      ? "Volver a elegir destinatario"
+      : "Volver al inicio";
+
   const renderPaymentContent = () => {
     if (contextStatus === "loading") {
       return (
@@ -693,6 +736,7 @@ export function MobilePaymentView() {
           onOpenDirectory={openDirectory}
           recipientMode={recipientMode}
           selectedContact={selectedContact}
+          titleRef={detailsTitleRef}
         />
       );
     }
@@ -707,7 +751,10 @@ export function MobilePaymentView() {
           isSubmitting={isConfirming}
           onBack={returnToDetails}
           onConfirm={submitTransfer}
-          rateLabel={`Bs. ${initiatedPayment.rateValue.replace(".", ",")} · ${initiatedPayment.rateSource}`}
+          rateLabel={formatRateLabel(
+            initiatedPayment.rateValue,
+            initiatedPayment.rateSource,
+          )}
           recipient={reviewRecipient}
           titleRef={reviewTitleRef}
           totalLabel={formatBsAmount(initiatedPayment.totalBs)}
@@ -740,15 +787,27 @@ export function MobilePaymentView() {
         flexDirection: "column",
         bgcolor: "background.default",
         pt: "calc(16px + env(safe-area-inset-top))",
-        pb: "calc(104px + env(safe-area-inset-bottom))",
+        pb: "calc(16px + env(safe-area-inset-bottom))",
       }}
     >
       <Container
         maxWidth="md"
         sx={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}
       >
-        <Stack component="header" direction="row" spacing={1} sx={{ minHeight: 48, alignItems: "center" }}>
-          <IconButton aria-label="Volver al inicio" color="primary" component={Link} href="/home">
+        <Stack
+          component="header"
+          direction="row"
+          spacing={1}
+          sx={{ minHeight: 48, alignItems: "center" }}
+        >
+          <IconButton
+            aria-label={backLabel}
+            color="primary"
+            disabled={isInitiating || isConfirming}
+            onClick={navigateBack}
+            sx={{ minWidth: 44, minHeight: 44 }}
+            type="button"
+          >
             <ArrowBackRounded />
           </IconButton>
           <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800, letterSpacing: "-0.03em" }}>
@@ -756,20 +815,23 @@ export function MobilePaymentView() {
           </Typography>
         </Stack>
 
-        <Paper
-          variant="outlined"
+        <Box
+          component="section"
+          aria-labelledby={step === "result"
+            ? "mobile-payment-result-title"
+            : step === "review"
+              ? "mobile-payment-review-title"
+              : "mobile-payment-details-title"}
           sx={{
             width: "100%",
             maxWidth: 720,
-            minHeight: step === "result" ? 0 : { xs: 520, sm: 600 },
-            flex: step === "result" ? "0 0 auto" : "1 0 auto",
+            minHeight: 0,
+            flex: 1,
             display: "flex",
             flexDirection: "column",
             mx: "auto",
-            mt: 2,
-            p: step === "result" ? 0 : { xs: 2, sm: 3.5 },
-            overflow: "hidden",
-            boxShadow: "none",
+            mt: { xs: 1, sm: 2 },
+            p: step === "result" ? 0 : { xs: 1, sm: 2.5 },
           }}
         >
           {lineError && (
@@ -778,7 +840,7 @@ export function MobilePaymentView() {
             </Typography>
           )}
           {renderPaymentContent()}
-        </Paper>
+        </Box>
       </Container>
 
       <DirectoryDialog
@@ -792,16 +854,17 @@ export function MobilePaymentView() {
         onClose={closeDirectory}
         onConfirmDelete={confirmDeleteContact}
         onDeleteDialogExited={completeDeleteDialogExit}
+        onExited={completeDirectoryExit}
         onFocusHandled={completeDirectoryFocus}
         onRequestDelete={requestDeleteContact}
         onRetry={retryPaymentContext}
         onSelect={selectDirectoryContact}
         open={isDirectoryOpen}
         status={directoryStatus}
+        suppressFocusRestore={suppressDirectoryFocusRestore}
         suppressDeleteFocusRestore={suppressDeleteFocusRestore}
       />
 
-      <AppBottomNavigation activeItem="mobile-payment" />
       <Snackbar
         autoHideDuration={2800}
         message={(
@@ -811,7 +874,7 @@ export function MobilePaymentView() {
         )}
         onClose={() => setNavigationNotice("")}
         open={Boolean(navigationNotice)}
-        sx={{ bottom: "calc(72px + env(safe-area-inset-bottom)) !important" }}
+        sx={{ bottom: "calc(16px + env(safe-area-inset-bottom)) !important" }}
       />
     </Box>
   );
