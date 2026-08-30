@@ -13,6 +13,7 @@ import {
 } from "@/features/auth";
 import { signOut } from "@/features/auth/session/services/session";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
+import { PwaInstallCard } from "@/features/pwa/PwaInstallCard";
 import { themeTokens } from "@/theme/tokens";
 
 import { PersonalInformation } from "./components/PersonalInformation";
@@ -235,7 +236,10 @@ export function ProfileView() {
                 <SecurityCard />
               </Box>
               <Box sx={{ gridArea: "session", minWidth: 0 }}>
-                <SessionCard onSignOut={openSignOut} />
+                <Stack spacing={3}>
+                  <PwaInstallCard />
+                  <SessionCard onSignOut={openSignOut} />
+                </Stack>
               </Box>
             </Box>
           ) : (
