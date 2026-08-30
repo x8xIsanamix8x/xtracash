@@ -1,11 +1,25 @@
-import type { PaymentReportResult } from "../types";
+import type { PaymentSupportParseError } from "./paymentSupportValidation";
 
 export type CorePaymentReportConflict =
   | "payment_report_pending"
   | "payment_report_conflict";
 
+export type CorePaymentReportBadRequest =
+  | "payment_report_invalid"
+  | "payment_report_no_debt";
+
+export type CorePaymentReportSuccess = Readonly<{
+  amountBs: string;
+  responseIncludesSupport: boolean;
+}>;
+
 export type ParsedCorePaymentReportResponse =
-  | Readonly<{ ok: true; value: PaymentReportResult }>
+  | Readonly<{ ok: true; value: CorePaymentReportSuccess }>
+  | Readonly<{
+      ok: false;
+      type: "bad_request";
+      reason: CorePaymentReportBadRequest;
+    }>
   | Readonly<{
       ok: false;
       type: "conflict";
@@ -29,6 +43,24 @@ const nextDecimalDigit: Readonly<Record<string, string>> = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+type CorePaymentSupportPresence =
+  | Readonly<{ ok: true; present: boolean }>
+  | Readonly<{ error: PaymentSupportParseError; ok: false }>;
+
+function parseCorePaymentSupportPresence(
+  value: unknown,
+): CorePaymentSupportPresence {
+  if (value === undefined || value === null) {
+    return { ok: true, present: false };
+  }
+
+  // Core owns this response payload. The BFF only records whether an object
+  // is present and deliberately does not consume or return its contents.
+  return isRecord(value)
+    ? { ok: true, present: true }
+    : { ok: false, error: "invalid" };
 }
 
 function incrementDecimalDigits(value: string): string {
@@ -63,11 +95,26 @@ export function normalizeCoreMoney(value: unknown): string | null {
   return `${roundedMinorUnits.slice(0, -2)}.${roundedMinorUnits.slice(-2)}`;
 }
 
-function parsePaymentReportResult(value: unknown): PaymentReportResult | null {
+function parseCorePaymentReportSuccess(
+  value: unknown,
+): CorePaymentReportSuccess | null {
   if (!isRecord(value) || !isRecord(value.monto)) return null;
 
   const amountBs = normalizeCoreMoney(value.monto.bs);
-  return amountBs === null ? null : { amountBs };
+  if (amountBs === null) return null;
+
+  const support = parseCorePaymentSupportPresence(value.soporte);
+  if (!support.ok) return null;
+
+  return { amountBs, responseIncludesSupport: support.present };
+}
+
+function classifyCorePaymentReportBadRequest(
+  value: unknown,
+): CorePaymentReportBadRequest {
+  return isRecord(value) && value.codigo === "SIN_DEUDA"
+    ? "payment_report_no_debt"
+    : "payment_report_invalid";
 }
 
 async function readJson(response: Response): Promise<unknown | null> {
@@ -106,11 +153,19 @@ export async function parseCorePaymentReportResponse(
     };
   }
 
+  if (response.status === 400) {
+    return {
+      ok: false,
+      type: "bad_request",
+      reason: classifyCorePaymentReportBadRequest(await readJson(response)),
+    };
+  }
+
   if (response.status !== 200 && response.status !== 201) {
     return { ok: false, type: "http", status: response.status };
   }
 
-  const result = parsePaymentReportResult(await readJson(response));
+  const result = parseCorePaymentReportSuccess(await readJson(response));
   return result === null
     ? { ok: false, type: "protocol" }
     : { ok: true, value: result };

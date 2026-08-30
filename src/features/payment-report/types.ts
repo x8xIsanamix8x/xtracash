@@ -45,10 +45,17 @@ export type CreatePaymentReportRequest = Readonly<{
   senderPhone: string;
   paymentDate: string;
   bankReference: string;
+  support?: PaymentReportSupport;
+}>;
+
+export type PaymentReportSupport = Readonly<{
+  fileName: string;
+  contentBase64: string;
 }>;
 
 export type PaymentReportResult = Readonly<{
   amountBs: string;
+  supportAttached: boolean;
 }>;
 
 export type PaymentDetailKey = "bank" | "rif" | "phone" | "amount";
@@ -65,4 +72,5 @@ export type PaymentReportFormErrors = Readonly<{
   senderPhone?: string;
   paymentDate?: string;
   reference?: string;
+  support?: string;
 }>;

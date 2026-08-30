@@ -34,7 +34,12 @@ function upstreamErrorResponse() {
 }
 
 function coreFailureResponse(error: CorePaymentReportError) {
-  const failure = getPaymentReportFailureResponse(error);
+  const failure = getPaymentReportFailureResponse({
+    type: error.type,
+    status: error.status,
+    conflict: error.conflict,
+    badRequest: error.badRequest,
+  });
   return authJson(failure.body, failure.status);
 }
 
