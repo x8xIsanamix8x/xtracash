@@ -37,12 +37,17 @@ import { PaymentReportPendingStep } from "./components/PaymentReportPendingStep"
 import { PaymentReportResultStep } from "./components/PaymentReportResultStep";
 import { PaymentReportSubmittingStep } from "./components/PaymentReportSubmittingStep";
 import { getSubmissionFailureStep } from "./pendingPaymentReport";
+import {
+  getPaymentSupportErrorMessage,
+  validatePaymentSupportFileMetadata,
+} from "./paymentSupport";
 import { createPaymentAmountOptions } from "./presentation";
 import {
   createPaymentReport,
   getPaymentReportData,
   PaymentReportServiceError,
 } from "./services/paymentReport";
+import { encodePaymentSupportFile } from "./services/paymentSupport";
 import type {
   PaymentAmountOption,
   PaymentReportData,
@@ -95,6 +100,7 @@ export function PaymentReportFlow({
   const [senderPhone, setSenderPhone] = useState("");
   const [paymentDate, setPaymentDate] = useState("");
   const [reference, setReference] = useState("");
+  const [supportFile, setSupportFile] = useState<File | null>(null);
   const [formErrors, setFormErrors] = useState<PaymentReportFormErrors>({});
   const [focusRequest, setFocusRequest] = useState(0);
   const [submissionError, setSubmissionError] = useState("");
@@ -206,6 +212,7 @@ export function PaymentReportFlow({
     setSenderPhone("");
     setPaymentDate("");
     setReference("");
+    setSupportFile(null);
     setFormErrors({});
     setFocusRequest(0);
     setSubmissionError("");
@@ -273,6 +280,30 @@ export function PaymentReportFlow({
     setSubmissionError("");
   };
 
+  const selectSupportFile = (file: File) => {
+    const validationError = validatePaymentSupportFileMetadata(file);
+    setSubmissionError("");
+
+    if (validationError) {
+      setSupportFile(null);
+      setFormErrors((current) => ({
+        ...current,
+        support: getPaymentSupportErrorMessage(validationError),
+      }));
+      setFocusRequest((current) => current + 1);
+      return;
+    }
+
+    setSupportFile(file);
+    setFormErrors((current) => ({ ...current, support: undefined }));
+  };
+
+  const removeSupportFile = () => {
+    setSupportFile(null);
+    setFormErrors((current) => ({ ...current, support: undefined }));
+    setSubmissionError("");
+  };
+
   const submitReport = () => {
     if (
       selectedAmountBs === null
@@ -282,16 +313,28 @@ export function PaymentReportFlow({
       return;
     }
 
-    const errors = validatePaymentReportForm(
-      originBank,
-      senderPhone,
-      paymentDate,
-      reference,
-      sourceBanks,
-      today,
-    );
-    setFormErrors(errors);
-    if (Object.keys(errors).length > 0) {
+    const errors: PaymentReportFormErrors = {
+      ...validatePaymentReportForm(
+        originBank,
+        senderPhone,
+        paymentDate,
+        reference,
+        sourceBanks,
+        today,
+      ),
+    };
+    const supportValidationError = supportFile
+      ? validatePaymentSupportFileMetadata(supportFile)
+      : null;
+    const nextErrors = supportValidationError
+      ? {
+        ...errors,
+        support: getPaymentSupportErrorMessage(supportValidationError),
+      }
+      : errors;
+    setFormErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      if (supportValidationError) setSupportFile(null);
       setFocusRequest((current) => current + 1);
       return;
     }
@@ -302,23 +345,52 @@ export function PaymentReportFlow({
     setSubmissionError("");
     setStep("submitting");
 
-    void createPaymentReport({
-      amountBs: selectedAmountBs,
-      originBankCode: originBank,
-      senderPhone,
-      paymentDate,
-      bankReference: reference,
-    }, controller.signal)
+    const supportPromise = supportFile
+      ? encodePaymentSupportFile(supportFile, controller.signal)
+      : Promise.resolve(undefined);
+
+    void supportPromise
+      .then((support) => createPaymentReport({
+        amountBs: selectedAmountBs,
+        originBankCode: originBank,
+        senderPhone,
+        paymentDate,
+        bankReference: reference,
+        ...(support ? { support } : {}),
+      }, controller.signal))
       .then((nextResult) => {
         if (controller.signal.aborted) return;
+        setSupportFile(null);
         setResult(nextResult);
         setStep("result");
       })
       .catch((error: unknown) => {
         if (
+          controller.signal.aborted
+          || (error instanceof DOMException && error.name === "AbortError")
+        ) {
+          return;
+        }
+        if (
           error instanceof PaymentReportServiceError
           && error.type === "aborted"
         ) {
+          return;
+        }
+
+        if (!(error instanceof PaymentReportServiceError) && supportFile) {
+          setSupportFile(null);
+          setFormErrors((current) => ({
+            ...current,
+            support: getPaymentSupportErrorMessage("unreadable"),
+          }));
+          setFocusRequest((current) => current + 1);
+          setStep("form");
+          return;
+        }
+        if (!(error instanceof PaymentReportServiceError)) {
+          setSubmissionError("No pudimos enviar el reporte. Inténtalo nuevamente.");
+          setStep("form");
           return;
         }
         if (
@@ -330,22 +402,33 @@ export function PaymentReportFlow({
           return;
         }
 
-        const errorType = error instanceof PaymentReportServiceError
-          ? error.type
-          : "server";
+        const errorType = error.type;
         const failureStep = getSubmissionFailureStep(errorType);
         if (failureStep === "pending") {
           setSubmissionError("");
           setStep(failureStep);
           return;
         }
+        if (error.type === "invalid_support" || error.type === "support_too_large") {
+          setSupportFile(null);
+          setFormErrors((current) => ({
+            ...current,
+            support: error.type === "support_too_large"
+              ? getPaymentSupportErrorMessage("too_large")
+              : "El comprobante no es válido. Selecciona otro archivo.",
+          }));
+          setFocusRequest((current) => current + 1);
+          setSubmissionError("");
+          setStep("form");
+          return;
+        }
 
         setSubmissionError(
-          error instanceof PaymentReportServiceError
-          && error.type === "conflict"
+          error.type === "conflict"
             ? "Este pago ya fue reportado o existe un reporte pendiente. Evita enviarlo nuevamente."
-            : error instanceof PaymentReportServiceError
-              && error.type === "invalid"
+            : error.type === "no_debt"
+              ? "No tienes deuda pendiente para reportar un pago."
+              : error.type === "invalid"
               ? "Revisa los datos e inténtalo nuevamente."
               : "No pudimos enviar el reporte. Inténtalo nuevamente.",
         );
@@ -434,11 +517,14 @@ export function PaymentReportFlow({
           onReferenceChange={updateReference}
           onSenderPhoneChange={updateSenderPhone}
           onSubmit={submitReport}
+          onSupportRemove={removeSupportFile}
+          onSupportSelect={selectSupportFile}
           originBank={originBank}
           paymentDate={paymentDate}
           reference={reference}
           senderPhone={senderPhone}
           sourceBanks={sourceBanks}
+          supportFile={supportFile}
           submissionError={submissionError}
           titleRef={titleRef}
           today={today}

@@ -16,7 +16,11 @@ import {
   normalizeCoreMoney,
   parseCorePaymentReportResponse,
 } from "./corePaymentReportResponse";
-import type { CorePaymentReportConflict } from "./corePaymentReportResponse";
+import type {
+  CorePaymentReportBadRequest,
+  CorePaymentReportConflict,
+} from "./corePaymentReportResponse";
+import { toCorePaymentSupport } from "./paymentSupportValidation";
 import { toCoreAmountNumber } from "./requestValidation";
 
 export type CorePaymentReportErrorType =
@@ -30,17 +34,20 @@ export class CorePaymentReportError extends Error {
   readonly type: CorePaymentReportErrorType;
   readonly status: number | null;
   readonly conflict: CorePaymentReportConflict | null;
+  readonly badRequest: CorePaymentReportBadRequest | null;
 
   constructor(
     type: CorePaymentReportErrorType,
     status: number | null = null,
     conflict: CorePaymentReportConflict | null = null,
+    badRequest: CorePaymentReportBadRequest | null = null,
   ) {
     super(type);
     this.name = "CorePaymentReportError";
     this.type = type;
     this.status = status;
     this.conflict = conflict;
+    this.badRequest = badRequest;
   }
 }
 
@@ -188,12 +195,23 @@ export async function createPaymentReportInCore(
       telefonoEmisor: report.senderPhone,
       fechaPago: report.paymentDate,
       referenciaBancaria: report.bankReference,
+      ...(report.support
+        ? { soporte: toCorePaymentSupport(report.support) }
+        : {}),
     },
     signal,
   });
 
   const result = await parseCorePaymentReportResponse(response);
-  if (result.ok) return result.value;
+  if (result.ok) {
+    return {
+      amountBs: result.value.amountBs,
+      supportAttached: Boolean(report.support),
+    };
+  }
+  if (result.type === "bad_request") {
+    throw new CorePaymentReportError("http", 400, null, result.reason);
+  }
   if (result.type === "conflict") {
     throw new CorePaymentReportError("http", 409, result.conflict);
   }
