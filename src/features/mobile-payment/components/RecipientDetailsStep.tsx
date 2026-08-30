@@ -2,13 +2,14 @@
 
 import {
   FormEvent,
+  Ref,
   useEffect,
   useRef,
 } from "react";
 import {
   AccountBalanceRounded,
+  ChevronRightRounded,
   ContactsRounded,
-  EditRounded,
   PersonAddAltRounded,
 } from "@mui/icons-material";
 import {
@@ -30,8 +31,10 @@ import { alpha } from "@mui/material/styles";
 import {
   formatAmountInput,
   formatAmountOnBlur,
-  getBank,
   formatBank,
+  formatDocument,
+  formatPhone,
+  getBank,
   parseAmountToMinorUnits,
 } from "../format";
 import type {
@@ -54,6 +57,7 @@ type RecipientDetailsStepProps = Readonly<{
   manualRecipient: ManualRecipientData;
   recipientMode: RecipientMode;
   selectedContact: DirectoryContact | null;
+  titleRef: Ref<HTMLHeadingElement>;
   onAmountChange: (
     value: string,
     minorUnits: number | null,
@@ -79,6 +83,7 @@ export function RecipientDetailsStep({
   manualRecipient,
   recipientMode,
   selectedContact,
+  titleRef,
   onAmountChange,
   onChooseManual,
   onChangeRecipient,
@@ -161,20 +166,37 @@ export function RecipientDetailsStep({
         flexDirection: "column",
       }}
     >
-      <Stack spacing={2.5}>
+      <Stack spacing={{ xs: 2, sm: 3 }}>
         <Stack spacing={1}>
-          <Typography color="text.secondary" variant="body2">
-            Paso 1 de 2
-          </Typography>
+          {recipientMode !== "choice" && (
+            <Typography color="text.secondary" variant="body2">
+              Paso 1 de 2
+            </Typography>
+          )}
           <Typography
             component="h1"
-            variant="h4"
-            sx={{ color: "secondary.main", fontWeight: 700 }}
+            id="mobile-payment-details-title"
+            ref={titleRef}
+            tabIndex={-1}
+            sx={{
+              color: "secondary.main",
+              fontSize: recipientMode === "choice"
+                ? { xs: "clamp(1.25rem, 6vw, 1.75rem)", sm: "2rem" }
+                : { xs: "clamp(1.875rem, 9vw, 2rem)", sm: "2.25rem" },
+              fontWeight: 700,
+              letterSpacing: recipientMode === "choice" ? "-0.025em" : undefined,
+              lineHeight: 1.12,
+              whiteSpace: recipientMode === "choice" ? "nowrap" : "normal",
+            }}
           >
-            ¿A quién deseas enviar?
+            {recipientMode === "choice"
+              ? "¿A quién enviarás el pago?"
+              : "Datos del destinatario"}
           </Typography>
           <Typography color="text.secondary">
-            Ingresa los datos del destinatario y el monto de la solicitud.
+            {recipientMode === "choice"
+              ? "Elige cómo agregar al destinatario."
+              : "Completa sus datos y define el monto."}
           </Typography>
         </Stack>
 
@@ -193,32 +215,66 @@ export function RecipientDetailsStep({
               <CardActionArea
                 onClick={onChooseManual}
                 ref={manualChoiceRef}
-                sx={{ minHeight: 132, p: 2 }}
+                sx={{ minHeight: 112, height: "100%", p: 2 }}
               >
-                <Stack spacing={1} sx={{ alignItems: "flex-start" }}>
-                  <PersonAddAltRounded color="primary" />
-                  <Typography sx={{ fontWeight: 700 }}>
-                    Ingresar destinatario nuevo
-                  </Typography>
-                  <Typography color="text.secondary" variant="body2">
-                    Completa sus datos bancarios.
-                  </Typography>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                  <Box
+                    aria-hidden="true"
+                    sx={(theme) => ({
+                      width: 44,
+                      height: 44,
+                      flexShrink: 0,
+                      display: "grid",
+                      placeItems: "center",
+                      borderRadius: 1.5,
+                      color: "primary.main",
+                      bgcolor: alpha(theme.palette.primary.main, 0.08),
+                    })}
+                  >
+                    <PersonAddAltRounded />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{ fontWeight: 700 }}>
+                      Nuevo destinatario
+                    </Typography>
+                    <Typography color="text.secondary" variant="body2">
+                      Completa sus datos para realizar el pago.
+                    </Typography>
+                  </Box>
+                  <ChevronRightRounded aria-hidden="true" color="primary" />
                 </Stack>
               </CardActionArea>
             </Card>
             <Card variant="outlined">
               <CardActionArea
                 onClick={onOpenDirectory}
-                sx={{ minHeight: 132, p: 2 }}
+                sx={{ minHeight: 112, height: "100%", p: 2 }}
               >
-                <Stack spacing={1} sx={{ alignItems: "flex-start" }}>
-                  <ContactsRounded color="primary" />
-                  <Typography sx={{ fontWeight: 700 }}>
-                    Elegir del directorio
-                  </Typography>
-                  <Typography color="text.secondary" variant="body2">
-                    Busca entre tus contactos guardados.
-                  </Typography>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                  <Box
+                    aria-hidden="true"
+                    sx={(theme) => ({
+                      width: 44,
+                      height: 44,
+                      flexShrink: 0,
+                      display: "grid",
+                      placeItems: "center",
+                      borderRadius: 1.5,
+                      color: "primary.main",
+                      bgcolor: alpha(theme.palette.primary.main, 0.08),
+                    })}
+                  >
+                    <ContactsRounded />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography sx={{ fontWeight: 700 }}>
+                      Destinatario guardado
+                    </Typography>
+                    <Typography color="text.secondary" variant="body2">
+                      Elige uno de tu directorio.
+                    </Typography>
+                  </Box>
+                  <ChevronRightRounded aria-hidden="true" color="primary" />
                 </Stack>
               </CardActionArea>
             </Card>
@@ -252,16 +308,15 @@ export function RecipientDetailsStep({
                 variant="h6"
                 sx={{ color: "secondary.main", fontWeight: 700 }}
               >
-                Destinatario nuevo
+                Destinatario
               </Typography>
               <Button
                 disabled={isSubmitting}
                 onClick={onChangeRecipient}
-                startIcon={<EditRounded />}
                 type="button"
                 variant="text"
               >
-                Cambiar destinatario
+                Cambiar
               </Button>
             </Stack>
 
@@ -295,7 +350,17 @@ export function RecipientDetailsStep({
               ))}
             </TextField>
 
-            <Stack direction="row" spacing={1.5}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr)",
+                gap: 1.5,
+                alignItems: "start",
+                "@media (min-width: 400px)": {
+                  gridTemplateColumns: "152px minmax(0, 1fr)",
+                },
+              }}
+            >
               <TextField
                 disabled={isSubmitting}
                 label="Tipo de documento"
@@ -307,7 +372,7 @@ export function RecipientDetailsStep({
                 required
                 select
                 value={manualRecipient.documentType}
-                sx={{ width: 104, flexShrink: 0 }}
+                sx={{ width: "100%" }}
               >
                 <MenuItem value="V">V</MenuItem>
                 <MenuItem value="J">J</MenuItem>
@@ -326,6 +391,7 @@ export function RecipientDetailsStep({
                 )}
                 required
                 slotProps={{
+                  inputLabel: { shrink: true },
                   htmlInput: {
                     inputMode: "numeric",
                     maxLength: 9,
@@ -335,7 +401,7 @@ export function RecipientDetailsStep({
                 type="text"
                 value={manualRecipient.documentNumber}
               />
-            </Stack>
+            </Box>
 
             <TextField
               disabled={isSubmitting}
@@ -378,7 +444,8 @@ export function RecipientDetailsStep({
 
             <Box
               sx={(theme) => ({
-                p: 1.5,
+                py: 0.5,
+                px: 1,
                 borderRadius: 2,
                 bgcolor: alpha(theme.palette.primary.main, 0.06),
               })}
@@ -394,7 +461,15 @@ export function RecipientDetailsStep({
                     )}
                   />
                 }
-                label="Guardar en mi directorio al completar el pago"
+                label={(
+                  <Box sx={{ py: 0.5 }}>
+                    <Typography>Guardar en mi directorio</Typography>
+                    <Typography color="text.secondary" variant="caption">
+                      Se guardará cuando el pago se complete.
+                    </Typography>
+                  </Box>
+                )}
+                sx={{ m: 0, width: "100%", minHeight: 48 }}
               />
             </Box>
           </Stack>
@@ -418,16 +493,19 @@ export function RecipientDetailsStep({
                     variant="h6"
                     sx={{ color: "secondary.main", fontWeight: 700 }}
                   >
-                    {selectedContact.name}
+                    Destinatario
                   </Typography>
                   <Button
                     onClick={onChangeRecipient}
                     type="button"
                     variant="text"
                   >
-                    Cambiar destinatario
+                    Cambiar
                   </Button>
                 </Stack>
+                <Typography sx={{ fontWeight: 700 }}>
+                  {selectedContact.name}
+                </Typography>
                 <Stack
                   direction="row"
                   spacing={1}
@@ -439,9 +517,11 @@ export function RecipientDetailsStep({
                   </Typography>
                 </Stack>
                 <Typography color="text.secondary" variant="body2">
-                  {selectedContact.phone} ·{" "}
-                  {selectedContact.documentType}-
-                  {selectedContact.documentNumber}
+                  {formatPhone(selectedContact.phone)} ·{" "}
+                  {formatDocument(
+                    selectedContact.documentType,
+                    selectedContact.documentNumber,
+                  )}
                 </Typography>
               </Stack>
             </CardContent>
@@ -449,7 +529,7 @@ export function RecipientDetailsStep({
         )}
 
         {recipientMode !== "choice" && (
-          <Stack spacing={1}>
+          <Stack spacing={1.25}>
             <Typography
               component="h2"
               variant="h6"
@@ -481,30 +561,58 @@ export function RecipientDetailsStep({
                 },
                 htmlInput: {
                   inputMode: "decimal",
+                  style: {
+                    fontSize: "1.5rem",
+                    fontWeight: 700,
+                  },
                 },
               }}
               value={amount}
             />
-            <Typography color="text.secondary" variant="body2">
-              Disponible utilizable: {availableLabel}
-            </Typography>
-            <Typography color="text.secondary" variant="caption">
-              El monto y el disponible serán validados antes de confirmar.
-            </Typography>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={(theme) => ({
+                alignItems: "center",
+                justifyContent: "space-between",
+                p: 1.5,
+                borderRadius: 2,
+                bgcolor: alpha(theme.palette.primary.main, 0.07),
+              })}
+            >
+              <Typography color="text.secondary" variant="body2">
+                Disponible utilizable
+              </Typography>
+              <Typography sx={{ color: "secondary.main", fontWeight: 700 }}>
+                {availableLabel}
+              </Typography>
+            </Stack>
           </Stack>
         )}
       </Stack>
 
-      <Box sx={{ mt: "auto", pt: 3 }}>
-        <Button
-          disabled={recipientMode === "choice" || isSubmitting}
-          fullWidth
-          type="submit"
-          variant="contained"
+      {recipientMode !== "choice" && (
+        <Box
+          sx={{
+            position: { xs: "sticky", md: "static" },
+            zIndex: 2,
+            bottom: 0,
+            mt: "auto",
+            pt: 3,
+            pb: "calc(12px + env(safe-area-inset-bottom))",
+            bgcolor: "background.default",
+          }}
         >
-          {isSubmitting ? "Preparando solicitud…" : "Revisar solicitud"}
-        </Button>
-      </Box>
+          <Button
+            disabled={isSubmitting}
+            fullWidth
+            type="submit"
+            variant="contained"
+          >
+            {isSubmitting ? "Preparando pago…" : "Revisar pago"}
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 }

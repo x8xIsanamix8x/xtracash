@@ -61,11 +61,13 @@ type DirectoryDialogProps = Readonly<{
   isDeleting: boolean;
   open: boolean;
   status: DirectoryStatus;
+  suppressFocusRestore: boolean;
   suppressDeleteFocusRestore: boolean;
   onCancelDelete: () => void;
   onClose: () => void;
   onConfirmDelete: () => void;
   onDeleteDialogExited: () => void;
+  onExited: () => void;
   onFocusHandled: (requestId: number) => void;
   onRequestDelete: (
     contactId: string,
@@ -95,11 +97,13 @@ export function DirectoryDialog({
   isDeleting,
   open,
   status,
+  suppressFocusRestore,
   suppressDeleteFocusRestore,
   onCancelDelete,
   onClose,
   onConfirmDelete,
   onDeleteDialogExited,
+  onExited,
   onFocusHandled,
   onRequestDelete,
   onRetry,
@@ -196,6 +200,7 @@ export function DirectoryDialog({
   return (
     <Dialog
       aria-labelledby="directory-title"
+      disableRestoreFocus={suppressFocusRestore}
       fullWidth
       maxWidth="sm"
       onClose={closeDirectory}
@@ -203,6 +208,7 @@ export function DirectoryDialog({
       scroll="paper"
       slots={{ transition: DirectoryTransition }}
       slotProps={{
+        transition: { onExited },
         container: {
           sx: { alignItems: { xs: "flex-end", md: "center" } },
         },
@@ -241,9 +247,12 @@ export function DirectoryDialog({
       </IconButton>
 
       <DialogContent
-        sx={{ pb: "calc(24px + env(safe-area-inset-bottom))" }}
+        sx={{
+          px: { xs: 2, sm: 3 },
+          pb: "calc(20px + env(safe-area-inset-bottom))",
+        }}
       >
-        <Stack spacing={2}>
+        <Stack spacing={1.5}>
           {status === "ready" && contacts.length > 0 && (
             <TextField
               autoFocus={isDesktop}
@@ -389,7 +398,7 @@ export function DirectoryDialog({
                           contactRefs.current.delete(contact.id);
                         }
                       }}
-                      sx={{ minHeight: 96, borderRadius: 2, py: 1.5, pr: 7 }}
+                      sx={{ minHeight: 84, borderRadius: 2, py: 1.25, pr: 8 }}
                     >
                       <PersonOutlineRounded
                         aria-hidden="true"
@@ -406,13 +415,10 @@ export function DirectoryDialog({
                             : `${contact.bankCode} · Banco no disponible`}
                         </Typography>
                         <Typography color="text.secondary" variant="body2">
-                          {formatDocument(
+                          {formatPhone(contact.phone)} · {formatDocument(
                             contact.documentType,
                             contact.documentNumber,
                           )}
-                        </Typography>
-                        <Typography color="text.secondary" variant="body2">
-                          {formatPhone(contact.phone)}
                         </Typography>
                       </Stack>
                     </ListItemButton>

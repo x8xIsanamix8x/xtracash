@@ -24,6 +24,17 @@ export function formatBsAmount(amount: string) {
   return minorUnits === null ? "Bs. 0,00" : formatMinorUnits(minorUnits);
 }
 
+const rateSourceLabels: Readonly<Record<string, string>> = {
+  BANCO_ACTIVO: "Banco Activo",
+};
+
+export function formatRateLabel(rateValue: string, rateSource: string) {
+  const value = `Bs. ${rateValue.replace(".", ",")}`;
+  const source = rateSourceLabels[rateSource.trim().toUpperCase()];
+
+  return source ? `${value} · ${source}` : value;
+}
+
 function groupWholeUnits(wholeUnits: string) {
   return wholeUnits.replace(
     /\B(?=(\d{3})+(?!\d))/g,
