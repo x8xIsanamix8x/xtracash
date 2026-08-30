@@ -11,6 +11,13 @@ export type PaymentReportBffConflict =
   | "payment_report_conflict"
   | "payment_report_pending";
 
+export type PaymentReportBffError =
+  | PaymentReportBffConflict
+  | "invalid_payment_support"
+  | "invalid_request"
+  | "payment_report_no_debt"
+  | "payment_support_too_large";
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -84,20 +91,37 @@ export function parsePaymentReportResult(
   if (
     !isRecord(value)
     || !isCanonicalAmount(value.amountBs)
+    || typeof value.supportAttached !== "boolean"
   ) {
     return null;
   }
 
-  return { amountBs: value.amountBs };
+  return {
+    amountBs: value.amountBs,
+    supportAttached: value.supportAttached,
+  };
+}
+
+export function parsePaymentReportBffError(
+  value: unknown,
+): PaymentReportBffError | null {
+  if (!isRecord(value)) return null;
+
+  return value.error === "invalid_payment_support"
+    || value.error === "invalid_request"
+    || value.error === "payment_report_conflict"
+    || value.error === "payment_report_no_debt"
+    || value.error === "payment_report_pending"
+    || value.error === "payment_support_too_large"
+    ? value.error
+    : null;
 }
 
 export function parsePaymentReportBffConflict(
   value: unknown,
 ): PaymentReportBffConflict | null {
-  if (!isRecord(value)) return null;
-
-  return value.error === "payment_report_pending"
-    || value.error === "payment_report_conflict"
-    ? value.error
+  const error = parsePaymentReportBffError(value);
+  return error === "payment_report_pending" || error === "payment_report_conflict"
+    ? error
     : null;
 }

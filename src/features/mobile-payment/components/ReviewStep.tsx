@@ -1,7 +1,7 @@
 import type { Ref } from "react";
 import {
   AccountBalanceRounded,
-  ArrowBackRounded,
+  EditRounded,
 } from "@mui/icons-material";
 import {
   Box,
@@ -16,6 +16,8 @@ import { alpha } from "@mui/material/styles";
 
 import {
   formatBank,
+  formatDocument,
+  formatPhone,
 } from "../format";
 import type { Bank, ResolvedRecipient } from "../types";
 
@@ -76,7 +78,7 @@ export function ReviewStep({
         flexDirection: "column",
       }}
     >
-      <Stack spacing={2.5}>
+      <Stack spacing={{ xs: 2, sm: 2.5 }}>
         <Stack spacing={1}>
           <Typography color="text.secondary" variant="body2">
             Paso 2 de 2
@@ -86,45 +88,68 @@ export function ReviewStep({
             id="mobile-payment-review-title"
             ref={titleRef}
             tabIndex={-1}
-            variant="h4"
-            sx={{ color: "secondary.main", fontWeight: 700 }}
+            sx={{
+              color: "secondary.main",
+              fontSize: { xs: "clamp(1.875rem, 9vw, 2rem)", sm: "2.25rem" },
+              fontWeight: 700,
+              lineHeight: 1.12,
+            }}
           >
-            Revisa tu solicitud
+            Revisa el pago
           </Typography>
           <Typography color="text.secondary">
-            Verifica el destinatario y el monto antes de continuar.
+            Verifica los datos antes de confirmar.
           </Typography>
         </Stack>
 
         <Card variant="outlined">
-          <CardContent>
-            <Stack spacing={2}>
-              <Typography
-                component="h2"
-                variant="h6"
-                sx={{ color: "secondary.main", fontWeight: 700 }}
+          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+            <Stack spacing={1.5}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: "center", justifyContent: "space-between" }}
               >
-                Destinatario
+                <Typography
+                  component="h2"
+                  variant="h6"
+                  sx={{ color: "secondary.main", fontWeight: 700 }}
+                >
+                  Destinatario
+                </Typography>
+                <Button
+                  disabled={isSubmitting}
+                  onClick={onBack}
+                  startIcon={<EditRounded />}
+                  type="button"
+                  variant="text"
+                >
+                  Editar
+                </Button>
+              </Stack>
+              <Typography sx={{ fontWeight: 700 }}>
+                {recipient.name}
               </Typography>
               <Box
                 component="dl"
                 sx={{
                   m: 0,
-                  display: "grid",
-                  gap: 2,
-                  gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" },
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1.25,
                 }}
               >
-                <ReviewItem label="Nombre" value={recipient.name} />
                 <ReviewItem label="Banco" value={formatBank(bank)} />
                 <ReviewItem
                   label="Teléfono"
-                  value={recipient.phone}
+                  value={formatPhone(recipient.phone)}
                 />
-                <ReviewItem label="Tipo de documento" value={recipient.documentType} />
                 <ReviewItem
-                  label="Número de documento"
-                  value={recipient.documentNumber}
+                  label="Documento"
+                  value={formatDocument(
+                    recipient.documentType,
+                    recipient.documentNumber,
+                  )}
                 />
               </Box>
             </Stack>
@@ -137,8 +162,8 @@ export function ReviewStep({
             bgcolor: alpha(theme.palette.primary.main, 0.05),
           })}
         >
-          <CardContent>
-            <Stack spacing={2}>
+          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+            <Stack spacing={1.5}>
               <Stack
                 direction="row"
                 spacing={1}
@@ -150,21 +175,38 @@ export function ReviewStep({
                   variant="h6"
                   sx={{ color: "secondary.main", fontWeight: 700 }}
                 >
-                  Solicitud
+                  Detalle del pago
                 </Typography>
               </Stack>
               <Box
                 component="dl"
                 sx={{
                   m: 0,
-                  display: "grid",
-                  gap: 2,
-                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1.25,
                 }}
               >
-                <ReviewItem label="Monto a enviar" value={amountLabel} />
+                <Box
+                  sx={(theme) => ({
+                    p: 1.5,
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                  })}
+                >
+                  <Typography component="dt" color="text.secondary" variant="body2">
+                    Monto solicitado
+                  </Typography>
+                  <Typography
+                    component="dd"
+                    sx={{ m: 0, color: "secondary.main", fontWeight: 800 }}
+                    variant="h5"
+                  >
+                    {amountLabel}
+                  </Typography>
+                </Box>
                 <ReviewItem label="Comisión" value={feeLabel} />
-                <ReviewItem label="Total de la operación" value={totalLabel} />
+                <ReviewItem label="Resultado de la operación" value={totalLabel} />
                 <ReviewItem
                   label="Disponible actual"
                   value={availableLabel}
@@ -202,21 +244,17 @@ export function ReviewStep({
         )}
       </Stack>
 
-      <Stack
-        direction={{ xs: "column-reverse", sm: "row" }}
-        spacing={1.5}
-        sx={{ mt: "auto", pt: 3 }}
+      <Box
+        sx={{
+          position: { xs: "sticky", md: "static" },
+          zIndex: 2,
+          bottom: 0,
+          mt: "auto",
+          pt: 3,
+          pb: "calc(12px + env(safe-area-inset-bottom))",
+          bgcolor: "background.default",
+        }}
       >
-        <Button
-          disabled={isSubmitting}
-          fullWidth
-          onClick={onBack}
-          startIcon={<ArrowBackRounded />}
-          type="button"
-          variant="outlined"
-        >
-          Atrás
-        </Button>
         <Button
           disabled={isSubmitting}
           fullWidth
@@ -226,9 +264,9 @@ export function ReviewStep({
         >
           {isSubmitting
             ? "Confirmando transferencia…"
-            : "Confirmar solicitud"}
+            : "Confirmar Pago Móvil"}
         </Button>
-      </Stack>
+      </Box>
     </Box>
   );
 }

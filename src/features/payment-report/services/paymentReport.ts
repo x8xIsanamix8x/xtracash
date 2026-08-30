@@ -1,4 +1,5 @@
 import {
+  parsePaymentReportBffError,
   parsePaymentReportBffConflict,
   parsePaymentReportData,
   parsePaymentReportResult,
@@ -13,9 +14,12 @@ export type PaymentReportServiceErrorType =
   | "aborted"
   | "conflict"
   | "invalid"
+  | "invalid_support"
   | "network"
+  | "no_debt"
   | "pending"
   | "server"
+  | "support_too_large"
   | "unauthenticated"
   | "unconfigured";
 
@@ -56,7 +60,22 @@ async function request(
   if (response.status === 404) {
     throw new PaymentReportServiceError("unconfigured");
   }
-  if (response.status === 400) {
+  if (response.status === 400 || response.status === 413) {
+    let error = null;
+    try {
+      error = parsePaymentReportBffError(await response.json());
+    } catch {
+      // A malformed response remains a safe, generic validation error.
+    }
+    if (error === "invalid_payment_support") {
+      throw new PaymentReportServiceError("invalid_support");
+    }
+    if (error === "payment_support_too_large") {
+      throw new PaymentReportServiceError("support_too_large");
+    }
+    if (error === "payment_report_no_debt") {
+      throw new PaymentReportServiceError("no_debt");
+    }
     throw new PaymentReportServiceError("invalid");
   }
   if (response.status === 409) {
