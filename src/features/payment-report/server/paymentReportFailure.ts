@@ -1,13 +1,17 @@
-import type { CorePaymentReportConflict } from "./corePaymentReportResponse";
+import type {
+  CorePaymentReportBadRequest,
+  CorePaymentReportConflict,
+} from "./corePaymentReportResponse";
 
 type PaymentReportFailure = Readonly<{
   type: "configuration" | "http" | "network" | "not_configured" | "protocol";
   status: number | null;
   conflict: CorePaymentReportConflict | null;
+  badRequest?: CorePaymentReportBadRequest | null;
 }>;
 
 export type PaymentReportFailureResponse = Readonly<{
-  status: 404 | 409 | 502 | 503;
+  status: 400 | 404 | 409 | 502 | 503;
   body: Readonly<{ error: string }>;
 }>;
 
@@ -25,6 +29,16 @@ export function getPaymentReportFailureResponse(
       status: 409,
       body: {
         error: failure.conflict ?? "payment_report_conflict",
+      },
+    };
+  }
+  if (failure.type === "http" && failure.status === 400) {
+    return {
+      status: 400,
+      body: {
+        error: failure.badRequest === "payment_report_no_debt"
+          ? "payment_report_no_debt"
+          : "invalid_request",
       },
     };
   }

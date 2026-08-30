@@ -12,6 +12,7 @@ import {
 
 import type { PaymentReportFormErrors, SourceBank } from "../types";
 import { PaymentReportStepLayout } from "./PaymentReportStepLayout";
+import { PaymentSupportField } from "./PaymentSupportField";
 
 type PaymentReportFormStepProps = Readonly<{
   errors: PaymentReportFormErrors;
@@ -21,6 +22,7 @@ type PaymentReportFormStepProps = Readonly<{
   paymentDate: string;
   reference: string;
   senderPhone: string;
+  supportFile: File | null;
   sourceBanks: readonly SourceBank[];
   submissionError: string;
   titleRef: Ref<HTMLHeadingElement>;
@@ -30,6 +32,8 @@ type PaymentReportFormStepProps = Readonly<{
   onReferenceChange: (value: string) => void;
   onSenderPhoneChange: (value: string) => void;
   onSubmit: () => void;
+  onSupportRemove: () => void;
+  onSupportSelect: (file: File) => void;
 }>;
 
 export function PaymentReportFormStep({
@@ -40,6 +44,7 @@ export function PaymentReportFormStep({
   paymentDate,
   reference,
   senderPhone,
+  supportFile,
   sourceBanks,
   submissionError,
   titleRef,
@@ -49,6 +54,8 @@ export function PaymentReportFormStep({
   onReferenceChange,
   onSenderPhoneChange,
   onSubmit,
+  onSupportRemove,
+  onSupportSelect,
 }: PaymentReportFormStepProps) {
   const bankRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -173,6 +180,21 @@ export function PaymentReportFormStep({
             }}
             type="text"
             value={reference}
+          />
+
+          <PaymentSupportField
+            error={errors.support}
+            file={supportFile}
+            focusError={Boolean(
+              errors.support
+              && !errors.originBank
+              && !errors.senderPhone
+              && !errors.paymentDate
+              && !errors.reference
+            )}
+            focusRequest={focusRequest}
+            onRemove={onSupportRemove}
+            onSelect={onSupportSelect}
           />
 
           {submissionError && (
