@@ -15,12 +15,23 @@ import {
   Button,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   IconButton,
   Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
 
+import {
+  APP_BOTTOM_NAVIGATION_HEIGHT,
+  AppBottomNavigation,
+  appDestinationHref,
+  type AppDestination,
+} from "@/components/AppBottomNavigation";
 import { isCreditLineUsable } from "@/features/credit-line";
 import {
   AccountSummaryServiceError,
@@ -44,6 +55,10 @@ import {
   getBank,
   parseAmountToMinorUnits,
 } from "./format";
+import {
+  getMobilePaymentNavigationDecision,
+  hasMobilePaymentProgress,
+} from "./navigation";
 import {
   confirmMobilePayment,
   deleteDirectoryContact,
@@ -162,6 +177,8 @@ export function MobilePaymentView() {
     useState<InitiatedPayment | null>(null);
   const [transferResult, setTransferResult] = useState<TransferResult | null>(null);
   const [navigationNotice, setNavigationNotice] = useState("");
+  const [pendingDestination, setPendingDestination] =
+    useState<AppDestination | null>(null);
   const contextRequestRef = useRef<AbortController | null>(null);
   const paymentRequestRef = useRef<AbortController | null>(null);
   const deleteRequestRef = useRef<AbortController | null>(null);
@@ -646,6 +663,38 @@ export function MobilePaymentView() {
     router.replace("/home");
   };
 
+  const hasEnteredPaymentData = hasMobilePaymentProgress({
+    amount,
+    recipientMode,
+    selectedContactId,
+    step,
+  });
+  const isTransactionPending = isInitiating || isConfirming;
+
+  const handleBottomNavigation = (destination: AppDestination) => {
+    const decision = getMobilePaymentNavigationDecision({
+      destination,
+      hasEnteredData: hasEnteredPaymentData,
+      isTransactionPending,
+      step,
+    });
+
+    if (decision === "stay") return false;
+    if (decision === "allow") return true;
+
+    setPendingDestination(destination);
+    return false;
+  };
+
+  const continuePayment = () => setPendingDestination(null);
+
+  const exitPayment = () => {
+    if (pendingDestination === null || isTransactionPending) return;
+    const destination = appDestinationHref[pendingDestination];
+    setPendingDestination(null);
+    router.push(destination);
+  };
+
   const navigateBack = () => {
     if (isInitiating || isConfirming) return;
 
@@ -787,7 +836,7 @@ export function MobilePaymentView() {
         flexDirection: "column",
         bgcolor: "background.default",
         pt: "calc(16px + env(safe-area-inset-top))",
-        pb: "calc(16px + env(safe-area-inset-bottom))",
+        pb: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`,
       }}
     >
       <Container
@@ -865,6 +914,41 @@ export function MobilePaymentView() {
         suppressDeleteFocusRestore={suppressDeleteFocusRestore}
       />
 
+      <Dialog
+        aria-describedby="mobile-payment-exit-description"
+        aria-labelledby="mobile-payment-exit-title"
+        fullWidth
+        maxWidth="xs"
+        onClose={continuePayment}
+        open={pendingDestination !== null}
+      >
+        <DialogTitle
+          id="mobile-payment-exit-title"
+          sx={{ color: "secondary.main", fontWeight: 700 }}
+        >
+          ¿Salir del Pago Móvil?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="mobile-payment-exit-description">
+            Los datos ingresados se perderán.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ flexWrap: "wrap", gap: 1, p: 2 }}>
+          <Button onClick={continuePayment} type="button" variant="outlined">
+            Continuar con el pago
+          </Button>
+          <Button onClick={exitPayment} type="button" variant="contained">
+            Salir
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <AppBottomNavigation
+        activeItem="home"
+        disabled={isTransactionPending}
+        onNavigate={handleBottomNavigation}
+      />
+
       <Snackbar
         autoHideDuration={2800}
         message={(
@@ -874,7 +958,9 @@ export function MobilePaymentView() {
         )}
         onClose={() => setNavigationNotice("")}
         open={Boolean(navigationNotice)}
-        sx={{ bottom: "calc(16px + env(safe-area-inset-bottom)) !important" }}
+        sx={{
+          bottom: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 16}px + env(safe-area-inset-bottom)) !important`,
+        }}
       />
     </Box>
   );
