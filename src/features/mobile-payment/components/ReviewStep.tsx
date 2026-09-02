@@ -14,6 +14,8 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
+import { APP_BOTTOM_NAVIGATION_HEIGHT } from "@/components/AppBottomNavigation";
+
 import {
   formatBank,
   formatDocument,
@@ -248,10 +250,13 @@ export function ReviewStep({
         sx={{
           position: { xs: "sticky", md: "static" },
           zIndex: 2,
-          bottom: 0,
+          bottom: {
+            xs: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`,
+            md: "auto",
+          },
           mt: "auto",
           pt: 3,
-          pb: "calc(12px + env(safe-area-inset-bottom))",
+          pb: 1.5,
           bgcolor: "background.default",
         }}
       >
