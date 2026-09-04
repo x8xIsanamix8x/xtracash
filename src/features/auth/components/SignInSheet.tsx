@@ -26,6 +26,12 @@ import type { SlideProps } from "@mui/material/Slide";
 import { alpha } from "@mui/material/styles";
 
 import { themeTokens } from "@/theme/tokens";
+import {
+  biometricAccessFeatureEnabled,
+  BiometricLoginAction,
+  getBiometricAccessIntegration,
+  getBiometricAccessPreviewIntegration,
+} from "@/features/biometric-access";
 
 import {
   createLoginRequest,
@@ -55,6 +61,10 @@ function BottomSheetTransition(props: SlideProps) {
 }
 
 export function SignInSheet({ notification, open, onClose, onSuccess }: SignInSheetProps) {
+  const biometricIntegration = getBiometricAccessIntegration()
+    ?? getBiometricAccessPreviewIntegration();
+  const showBiometricAccess = biometricAccessFeatureEnabled
+    && biometricIntegration !== null;
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -447,34 +457,11 @@ export function SignInSheet({ notification, open, onClose, onSuccess }: SignInSh
                 variant="outlined"
                 sx={{ boxSizing: "border-box", maxWidth: "100%", minWidth: 0 }}
               />
-              <Button
-                aria-disabled={isLoading}
-                component={Link}
-                disabled={isLoading}
-                href="/recover-password"
-                onClick={(event) => {
-                  if (isLoading) {
-                    event.preventDefault();
-                    return;
-                  }
-
-                  requestClose();
-                }}
-                variant="text"
-                sx={{
-                  alignSelf: "flex-end",
-                  boxSizing: "border-box",
-                  maxWidth: "100%",
-                  minWidth: 0,
-                  minHeight: 44,
-                  color: themeTokens.color.brandLogo,
-                  "&:focus-visible": {
-                    outlineColor: themeTokens.color.focus,
-                  },
-                }}
-              >
-                ¿Olvidaste tu contraseña?
-              </Button>
+              {showBiometricAccess && (
+                <BiometricLoginAction
+                  onAuthenticate={biometricIntegration.authenticate}
+                />
+              )}
             </Stack>
 
           </Stack>
@@ -508,16 +495,46 @@ export function SignInSheet({ notification, open, onClose, onSuccess }: SignInSh
             },
           }}
         >
-          <Button
-            disabled={isLoading}
-            fullWidth
-            loading={isLoading}
-            sx={{ boxSizing: "border-box", width: "100%", maxWidth: "100%", minWidth: 0 }}
-            type="submit"
-            variant="contained"
-          >
-            Ingresar
-          </Button>
+          <Stack spacing={1.5}>
+            <Button
+              disabled={isLoading}
+              fullWidth
+              loading={isLoading}
+              sx={{ boxSizing: "border-box", width: "100%", maxWidth: "100%", minWidth: 0 }}
+              type="submit"
+              variant="contained"
+            >
+              Ingresar
+            </Button>
+            <Button
+              aria-disabled={isLoading}
+              component={Link}
+              disabled={isLoading}
+              href="/recover-password"
+              onClick={(event) => {
+                if (isLoading) {
+                  event.preventDefault();
+                  return;
+                }
+
+                requestClose();
+              }}
+              variant="text"
+              sx={{
+                alignSelf: "center",
+                boxSizing: "border-box",
+                maxWidth: "100%",
+                minWidth: 0,
+                minHeight: 44,
+                color: themeTokens.color.brandLogo,
+                "&:focus-visible": {
+                  outlineColor: themeTokens.color.focus,
+                },
+              }}
+            >
+              ¿Olvidaste tu contraseña?
+            </Button>
+          </Stack>
         </Box>
       </Box>
     </Dialog>

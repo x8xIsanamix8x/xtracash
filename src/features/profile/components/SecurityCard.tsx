@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { LockOutlined } from "@mui/icons-material";
-import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, Divider, Stack, Typography } from "@mui/material";
 
-export function SecurityCard() {
+import { BiometricProfileSection } from "@/features/biometric-access";
+import type { StartBiometricFlow } from "@/features/biometric-access";
+
+type SecurityCardProps = Readonly<{
+  onActivateBiometric?: StartBiometricFlow;
+}>;
+
+export function SecurityCard({ onActivateBiometric }: SecurityCardProps) {
   return (
     <Card component="section" variant="outlined" sx={{ boxShadow: "none" }}>
       <CardContent sx={{ p: { xs: 2.5, sm: 3 }, "&:last-child": { pb: { xs: 2.5, sm: 3 } } }}>
@@ -27,7 +34,9 @@ export function SecurityCard() {
               <LockOutlined />
             </Box>
             <Stack spacing={0.5}>
-              <Typography sx={{ fontWeight: 700 }}>Contraseña</Typography>
+              <Typography component="h3" sx={{ fontWeight: 700 }}>
+                Cambiar contraseña
+              </Typography>
               <Typography color="text.secondary" variant="body2">
                 Recibe un enlace seguro para cambiar tu contraseña.
               </Typography>
@@ -41,6 +50,12 @@ export function SecurityCard() {
           >
             Cambiar contraseña
           </Button>
+          {onActivateBiometric && (
+            <>
+              <Divider />
+              <BiometricProfileSection onActivate={onActivateBiometric} />
+            </>
+          )}
         </Stack>
       </CardContent>
     </Card>

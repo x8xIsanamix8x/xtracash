@@ -130,6 +130,8 @@ test("el Service Worker excluye APIs, mutaciones y datos privados del caché", a
 
   assert.match(source, /request\.method !== "GET"/);
   assert.match(source, /url\.pathname\.startsWith\("\/api\/"\)/);
+  assert.match(source, /isBiometricRoute\(url\)/);
+  assert.match(source, /biometric\|webauthn\|passkeys/);
   assert.match(source, /no-store\|private/i);
   assert.match(source, /response\.headers\.get\("Set-Cookie"\)/);
   assert.match(source, /request\.headers\.has\("Authorization"\)/);

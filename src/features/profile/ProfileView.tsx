@@ -15,6 +15,11 @@ import { signOut } from "@/features/auth/session/services/session";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { PwaInstallCard } from "@/features/pwa/PwaInstallCard";
 import { themeTokens } from "@/theme/tokens";
+import {
+  biometricAccessFeatureEnabled,
+  getBiometricAccessIntegration,
+  getBiometricAccessPreviewIntegration,
+} from "@/features/biometric-access";
 
 import { PersonalInformation } from "./components/PersonalInformation";
 import { ProfileState } from "./components/ProfileState";
@@ -30,6 +35,10 @@ import type { ProfilePersonalInfo, ProfileStatus } from "./types";
 
 export function ProfileView() {
   const router = useRouter();
+  const biometricIntegration = getBiometricAccessIntegration()
+    ?? getBiometricAccessPreviewIntegration();
+  const showBiometricAccess = biometricAccessFeatureEnabled
+    && biometricIntegration !== null;
   const [status, setStatus] = useState<ProfileStatus>("loading");
   const [personalInfo, setPersonalInfo] = useState<ProfilePersonalInfo | null>(
     null,
@@ -233,7 +242,11 @@ export function ProfileView() {
                 <PersonalInformation user={user} />
               </Box>
               <Box sx={{ gridArea: "security", minWidth: 0 }}>
-                <SecurityCard />
+                <SecurityCard
+                  onActivateBiometric={showBiometricAccess
+                    ? biometricIntegration.activate
+                    : undefined}
+                />
               </Box>
               <Box sx={{ gridArea: "session", minWidth: 0 }}>
                 <Stack spacing={3}>

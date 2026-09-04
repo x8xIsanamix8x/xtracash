@@ -30,6 +30,10 @@ function isPublicRuntimeAsset(url) {
   );
 }
 
+function isBiometricRoute(url) {
+  return /\/(?:biometric|webauthn|passkeys?)(?:\/|$)/i.test(url.pathname);
+}
+
 async function trimRuntimeCache(cache) {
   const keys = await cache.keys();
   const excess = keys.length - MAX_RUNTIME_ENTRIES;
@@ -109,6 +113,11 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  if (isBiometricRoute(url)) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(fetch(request));
