@@ -23,7 +23,7 @@ export function BiometricProfileSection() {
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
-  const [phase, setPhase] = useState<"password" | "ready" | "remove">("password");
+  const [phase, setPhase] = useState<"intro" | "password" | "ready" | "remove">("intro");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -69,7 +69,7 @@ export function BiometricProfileSection() {
 
   useEffect(() => { if (message && open) noticeRef.current?.focus(); }, [message, open]);
 
-  const begin = (next: "password" | "remove") => {
+  const begin = (next: "intro" | "remove") => {
     discard(); setPassword(""); setVisible(false); setConsent(false);
     setFieldError(false); setMessage(""); setPhase(next); setOpen(true);
   };
@@ -80,6 +80,10 @@ export function BiometricProfileSection() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (controllerRef.current) return;
+    if (phase === "intro") {
+      setPhase("password");
+      return;
+    }
     if (phase === "password" && (!password || !consent)) {
       setFieldError(!password);
       if (!password) passwordRef.current?.focus();
@@ -145,7 +149,7 @@ export function BiometricProfileSection() {
         {configured === true && <Typography role="status" variant="body2">Hay una configuración cifrada en este navegador.</Typography>}
         {configured === null && !storageProblem && <Typography role="status" variant="body2">Comprobando configuración…</Typography>}
         {(configured !== null || storageProblem) && (
-          <BiometricActionControl actionLabel={configured ? "Actualizar acceso biométrico" : "Configurar acceso biométrico"} onAction={async () => begin("password")} />
+          <BiometricActionControl actionLabel={configured ? "Actualizar acceso biométrico" : "Activar acceso biométrico"} onAction={async () => begin("intro")} />
         )}
         {(configured || storageProblem) && <Button fullWidth type="button" variant="text" onClick={() => begin("remove")}>Quitar de este navegador</Button>}
       </Stack>
@@ -165,12 +169,13 @@ export function BiometricProfileSection() {
             </Box>
             <Stack spacing={1} sx={{ textAlign: "center" }}>
               <DialogTitle component="h2" id="biometric-activation-title" sx={{ p: 0, color: "secondary.main", fontWeight: 700 }}>
-                {phase === "remove" ? "¿Quitar el acceso guardado?" : "Configura el acceso biométrico"}
+                {phase === "remove" ? "¿Quitar el acceso guardado?" : phase === "intro" ? "Activa el acceso biométrico" : "Configura el acceso biométrico"}
               </DialogTitle>
               <DialogContentText id="biometric-activation-description">
                 {phase === "remove" ? "Se eliminará la copia cifrada de este navegador. Podrás seguir ingresando con contraseña. Esta acción no elimina la passkey del administrador del dispositivo."
-                  : phase === "ready" ? "Contraseña verificada. El dispositivo te pedirá crear y comprobar una passkey; puede solicitar dos verificaciones."
-                    : "Guardaremos tu contraseña cifrada en este navegador. La seguridad del dispositivo permitirá utilizarla para ingresar a Core."}
+                  : phase === "intro" ? "Usa la seguridad de este dispositivo para ingresar más rápido."
+                    : phase === "ready" ? "Contraseña verificada. El dispositivo te pedirá crear y comprobar una passkey; puede solicitar dos verificaciones."
+                      : "Confirma tu contraseña para vincular este dispositivo."}
               </DialogContentText>
             </Stack>
             {message && <Alert ref={noticeRef} tabIndex={-1} severity={severity} role="status">{message}</Alert>}
@@ -193,7 +198,7 @@ export function BiometricProfileSection() {
             <Stack spacing={1} sx={{ mt: "auto", pt: 1 }}>
               <Button type="submit" fullWidth variant="contained" disabled={busy || (phase === "password" && (!password || !consent))}
                 startIcon={busy ? <CircularProgress color="inherit" size={20} /> : <FingerprintRounded />} sx={{ minHeight: 48 }}>
-                {busy ? "Procesando…" : phase === "remove" ? "Quitar configuración" : phase === "ready" ? "Guardar con seguridad del dispositivo" : "Verificar contraseña"}
+                {busy ? "Procesando…" : phase === "remove" ? "Quitar configuración" : phase === "intro" ? "Activar acceso biométrico" : phase === "ready" ? "Guardar con seguridad del dispositivo" : "Verificar contraseña"}
               </Button>
               <Button fullWidth type="button" color="secondary" disabled={busy} onClick={close} sx={{ minHeight: 44 }}>Ahora no</Button>
             </Stack>

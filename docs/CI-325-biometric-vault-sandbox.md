@@ -16,9 +16,9 @@ de Core y AUTH_SESSION_SECRET. El Service Worker sigue sin cachear autenticació
 
 ## Habilitación
 
-- `.env.example` conserva `NEXT_PUBLIC_BIOMETRIC_ACCESS_ENABLED=false`.
-- El archivo local ignorado `.env.development.local` lo habilita para `npm run dev`.
-  Reinicia el servidor si ya estaba ejecutándose.
+- No requiere una variable pública de habilitación. Está limitado al origen sandbox
+  permitido y a Core sandbox para que la experiencia sea comprobable sin una
+  configuración de build adicional.
 - El servidor exige Core sandbox (`https://core-api.sandbox.impulsa.vc`) y un host
   permitido: localhost en desarrollo o `https://impulsamovil.onrender.com`.
 - El navegador vuelve a comprobar el flag, el origen y el contexto seguro.

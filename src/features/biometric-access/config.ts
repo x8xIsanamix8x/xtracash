@@ -1,9 +1,3 @@
-export function isBiometricAccessFeatureEnabled(
-  value = process.env.NEXT_PUBLIC_BIOMETRIC_ACCESS_ENABLED,
-): boolean {
-  return value === "true";
-}
-
 export function isBiometricPrototypeOriginAllowed(origin: string, development: boolean): boolean {
   try {
     const url = new URL(origin);
@@ -15,7 +9,7 @@ export function isBiometricPrototypeOriginAllowed(origin: string, development: b
 }
 
 export function isBiometricPrototypeBrowserAllowed(): boolean {
-  return isBiometricAccessFeatureEnabled() && typeof window !== "undefined"
+  return typeof window !== "undefined"
     && window.isSecureContext
     && isBiometricPrototypeOriginAllowed(window.location.origin, process.env.NODE_ENV === "development");
 }

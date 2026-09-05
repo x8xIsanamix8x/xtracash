@@ -22,8 +22,8 @@ function fixture(overrides = {}) {
 }
 const prototypeError = (type) => (e) => e instanceof BiometricPrototypeError && e.type === type;
 
-test("sandbox gate fails closed for disabled flag, production Core and unknown host", () => {
-  const env = { NODE_ENV: "production", NEXT_PUBLIC_BIOMETRIC_ACCESS_ENABLED: "true", CORE_API_URL: "https://core-api.sandbox.impulsa.vc" };
+test("sandbox gate fails closed for production Core and unknown host", () => {
+  const env = { NODE_ENV: "production", CORE_API_URL: "https://core-api.sandbox.impulsa.vc" };
   assert.equal(isBiometricPrototypeEnabled("impulsamovil.onrender.com", env), true);
   for (const host of [null, "localhost:3000", "production.impulsa.vc", "impulsamovil.onrender.com.evil.test", "user@impulsamovil.onrender.com"]) {
     assert.equal(isBiometricPrototypeEnabled(host, env), false);
@@ -31,7 +31,6 @@ test("sandbox gate fails closed for disabled flag, production Core and unknown h
   for (const CORE_API_URL of ["", "https://core-api.impulsa.vc", "https://core-api.sandbox.impulsa.vc/path", "https://user:password@core-api.sandbox.impulsa.vc"]) {
     assert.equal(isBiometricPrototypeEnabled("impulsamovil.onrender.com", { ...env, CORE_API_URL }), false);
   }
-  assert.equal(isBiometricPrototypeEnabled("impulsamovil.onrender.com", { ...env, NEXT_PUBLIC_BIOMETRIC_ACCESS_ENABLED: "false" }), false);
   assert.equal(isBiometricPrototypeEnabled("localhost:3000", { ...env, NODE_ENV: "development" }), true);
   assert.equal(isBiometricPrototypeOriginAllowed("https://impulsamovil.onrender.com/home", false), false);
   assert.equal(isBiometricPrototypeOriginAllowed("https://impulsamovil.onrender.com?secret=1", false), false);

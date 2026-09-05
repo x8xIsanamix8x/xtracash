@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { isBiometricAccessFeatureEnabled } from "../../src/features/biometric-access/config.ts";
 import {
   detectWebAuthnCapability,
   getBiometricActionFailureStatus,
@@ -22,13 +21,6 @@ function createRuntime(overrides = {}) {
     ...overrides,
   };
 }
-
-test("mantiene la biometría desactivada salvo habilitación explícita", () => {
-  assert.equal(isBiometricAccessFeatureEnabled(undefined), false);
-  assert.equal(isBiometricAccessFeatureEnabled("false"), false);
-  assert.equal(isBiometricAccessFeatureEnabled("TRUE"), false);
-  assert.equal(isBiometricAccessFeatureEnabled("true"), true);
-});
 
 test("admite WebAuthn únicamente bajo HTTPS seguro o localhost seguro", () => {
   assert.equal(isSecureWebAuthnContext(createRuntime()), true);
@@ -112,7 +104,7 @@ test("integra la presentación en Login y Perfil sin alterar las credenciales tr
 
   assert.match(login, />\s*Ingresar\s*</);
   assert.match(login, /BiometricLoginAction/);
-  assert.match(loginAction, /Ingresar con biometría/);
+  assert.match(loginAction, /Identificación biométrica/);
   assert.match(loginAction, /presentation="login-icon"/);
   assert.match(profile, /biometricEnabled/);
   assert.match(security, /Cambiar contraseña/);
@@ -127,8 +119,9 @@ test("integra la presentación en Login y Perfil sin alterar las credenciales tr
   assert.match(profileSection, /clearEnrollmentCredentials/);
   assert.match(profileSection, /aria-labelledby="biometric-activation-title"/);
   assert.match(profileSection, /overflowY: "auto"/);
-  assert.match(loginAction, /hasBiometricVault/);
+  assert.doesNotMatch(loginAction, /hasBiometricVault/);
   assert.match(profileSection, /76dvh/);
+  assert.match(profileSection, /Activa el acceso biométrico/);
   assert.match(action, /ButtonBase/);
   assert.match(action, /Este dispositivo o navegador no permite el acceso biométrico/);
   assert.match(integration, /createBiometricVaultService/);
