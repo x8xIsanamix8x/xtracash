@@ -142,7 +142,7 @@ export function TransferResultView({
         flex: 1,
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden",
+        overflow: "visible",
       }}
     >
       <Stack
@@ -374,7 +374,7 @@ export function TransferResultView({
             flexDirection: "column",
             gap: 1,
             pt: 2,
-            pb: "calc(4px + env(safe-area-inset-bottom))",
+            pb: 1,
             "@media (min-width: 390px)": {
               flexDirection: "row",
             },

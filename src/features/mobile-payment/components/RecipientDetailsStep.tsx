@@ -28,6 +28,8 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
+import { APP_BOTTOM_NAVIGATION_HEIGHT } from "@/components/AppBottomNavigation";
+
 import {
   formatAmountInput,
   formatAmountOnBlur,
@@ -45,6 +47,7 @@ import type {
   ManualRecipientData,
   RecipientMode,
 } from "../types";
+import { BankOptionLabel } from "./BankOptionLabel";
 
 type RecipientDetailsStepProps = Readonly<{
   amount: string;
@@ -334,9 +337,46 @@ export function RecipientDetailsStep({
               )}
               required
               select
+              sx={{
+                minWidth: 0,
+                "& .MuiSelect-select": {
+                  minHeight: "44px !important",
+                  display: "flex",
+                  alignItems: "center",
+                  boxSizing: "border-box",
+                  py: 1.25,
+                  pr: "40px !important",
+                  whiteSpace: "normal !important",
+                  overflow: "visible",
+                },
+              }}
               slotProps={{
                 inputLabel: { shrink: true },
-                select: { displayEmpty: true },
+                select: {
+                  displayEmpty: true,
+                  renderValue: (value) => {
+                    const selectedBankOption = getBank(
+                      banks,
+                      String(value),
+                    );
+
+                    return selectedBankOption
+                      ? <BankOptionLabel bank={selectedBankOption} />
+                      : "Selecciona un banco";
+                  },
+                  MenuProps: {
+                    slotProps: {
+                      paper: {
+                        sx: {
+                          width: "auto",
+                          maxWidth: "calc(100vw - 32px)",
+                          maxHeight: "min(420px, 70dvh)",
+                          overflowX: "hidden",
+                        },
+                      },
+                    },
+                  },
+                },
               }}
               value={manualRecipient.bankCode}
             >
@@ -344,8 +384,21 @@ export function RecipientDetailsStep({
                 Selecciona un banco
               </MenuItem>
               {banks.map((bank) => (
-                <MenuItem key={bank.code} value={bank.code}>
-                  {formatBank(bank)}
+                <MenuItem
+                  key={bank.code}
+                  value={bank.code}
+                  sx={{
+                    width: "100%",
+                    minWidth: 0,
+                    minHeight: "44px !important",
+                    height: "auto",
+                    alignItems: "flex-start",
+                    py: 1.25,
+                    whiteSpace: "normal",
+                    overflow: "hidden",
+                  }}
+                >
+                  <BankOptionLabel bank={bank} />
                 </MenuItem>
               ))}
             </TextField>
@@ -596,10 +649,13 @@ export function RecipientDetailsStep({
           sx={{
             position: { xs: "sticky", md: "static" },
             zIndex: 2,
-            bottom: 0,
+            bottom: {
+              xs: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`,
+              md: "auto",
+            },
             mt: "auto",
             pt: 3,
-            pb: "calc(12px + env(safe-area-inset-bottom))",
+            pb: 1.5,
             bgcolor: "background.default",
           }}
         >

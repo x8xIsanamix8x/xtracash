@@ -20,7 +20,7 @@ import {
 
 type EntryScreen = "checking" | "onboarding" | "access";
 
-export function EntryFlow() {
+export function EntryFlow({ biometricEnabled = false }: Readonly<{ biometricEnabled?: boolean }>) {
   const [screen, setScreen] = useState<EntryScreen>("checking");
   const [stepIndex, setStepIndex] = useState(0);
   const [accessRequest, setAccessRequest] = useState<AccessNavigationRequest | null>(null);
@@ -109,6 +109,7 @@ export function EntryFlow() {
 
   return (
     <AccessView
+      biometricEnabled={biometricEnabled}
       accessRequest={accessRequest}
       onAccessRequestConsumed={() => setAccessRequest(null)}
     />
