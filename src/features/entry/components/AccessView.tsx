@@ -34,6 +34,7 @@ import { BubbleField } from "./BubbleField";
 import { TEMPORARY_SUPPORT_EMAIL } from "../data/supportContact";
 
 type AccessViewProps = Readonly<{
+  biometricEnabled?: boolean;
   accessRequest: AccessNavigationRequest | null;
   onAccessRequestConsumed: () => void;
 }>;
@@ -60,6 +61,7 @@ const accessNotificationContent: Readonly<
 };
 
 export function AccessView({
+  biometricEnabled = false,
   accessRequest,
   onAccessRequestConsumed,
 }: AccessViewProps) {
@@ -362,6 +364,7 @@ export function AccessView({
         </DialogContent>
       </Dialog>
       <SignInSheet
+        biometricEnabled={biometricEnabled}
         notification={(
           <Snackbar
             anchorOrigin={{ horizontal: "center", vertical: "top" }}

@@ -32,6 +32,8 @@ import {
 } from "@mui/material";
 import type { SlideProps } from "@mui/material/Slide";
 
+import { APP_BOTTOM_NAVIGATION_HEIGHT } from "@/components/AppBottomNavigation";
+
 import {
   formatBank,
   formatDocument,
@@ -221,6 +223,9 @@ export function DirectoryDialog({
           },
         },
       }}
+      sx={{
+        bottom: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`,
+      }}
       transitionDuration={prefersReducedMotion ? 0 : undefined}
     >
       <DialogTitle
@@ -409,7 +414,16 @@ export function DirectoryDialog({
                         <Typography sx={{ fontWeight: 700, overflowWrap: "anywhere" }}>
                           {contact.name}
                         </Typography>
-                        <Typography color="text.secondary" variant="body2">
+                        <Typography
+                          color="text.secondary"
+                          variant="body2"
+                          sx={{
+                            minWidth: 0,
+                            whiteSpace: "normal",
+                            overflowWrap: "anywhere",
+                            wordBreak: "break-word",
+                          }}
+                        >
                           {bank
                             ? formatBank(bank)
                             : `${contact.bankCode} · Banco no disponible`}
@@ -446,6 +460,9 @@ export function DirectoryDialog({
           }
         }}
         open={contactToDelete !== null}
+        sx={{
+          bottom: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`,
+        }}
         slotProps={{
           transition: { onExited: onDeleteDialogExited },
         }}

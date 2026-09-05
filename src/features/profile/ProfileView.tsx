@@ -28,8 +28,9 @@ import {
 } from "./services/profile";
 import type { ProfilePersonalInfo, ProfileStatus } from "./types";
 
-export function ProfileView() {
+export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEnabled?: boolean }>) {
   const router = useRouter();
+  const showBiometricAccess = biometricEnabled;
   const [status, setStatus] = useState<ProfileStatus>("loading");
   const [personalInfo, setPersonalInfo] = useState<ProfilePersonalInfo | null>(
     null,
@@ -233,7 +234,9 @@ export function ProfileView() {
                 <PersonalInformation user={user} />
               </Box>
               <Box sx={{ gridArea: "security", minWidth: 0 }}>
-                <SecurityCard />
+                <SecurityCard
+                  biometricEnabled={showBiometricAccess}
+                />
               </Box>
               <Box sx={{ gridArea: "session", minWidth: 0 }}>
                 <Stack spacing={3}>
