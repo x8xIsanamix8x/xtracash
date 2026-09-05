@@ -27,10 +27,9 @@ import { alpha } from "@mui/material/styles";
 
 import { themeTokens } from "@/theme/tokens";
 import {
-  biometricAccessFeatureEnabled,
   BiometricLoginAction,
-  getBiometricAccessIntegration,
-  getBiometricAccessPreviewIntegration,
+  authenticateBiometricVault,
+  type StartBiometricFlow,
 } from "@/features/biometric-access";
 
 import {
@@ -43,6 +42,7 @@ import { validateLogin } from "../login/validation";
 import { SignInVisual } from "./SignInVisual";
 
 type SignInSheetProps = Readonly<{
+  biometricEnabled?: boolean;
   notification?: ReactNode;
   open: boolean;
   onClose: () => void;
@@ -60,11 +60,8 @@ function BottomSheetTransition(props: SlideProps) {
   return <Slide {...props} direction="up" />;
 }
 
-export function SignInSheet({ notification, open, onClose, onSuccess }: SignInSheetProps) {
-  const biometricIntegration = getBiometricAccessIntegration()
-    ?? getBiometricAccessPreviewIntegration();
-  const showBiometricAccess = biometricAccessFeatureEnabled
-    && biometricIntegration !== null;
+export function SignInSheet({ biometricEnabled = false, notification, open, onClose, onSuccess }: SignInSheetProps) {
+  const showBiometricAccess = biometricEnabled;
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -76,6 +73,7 @@ export function SignInSheet({ notification, open, onClose, onSuccess }: SignInSh
   const passwordRef = useRef<HTMLInputElement>(null);
   const formErrorRef = useRef<HTMLDivElement>(null);
   const submissionRef = useRef(false);
+  const biometricSubmissionRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
 
@@ -96,6 +94,7 @@ export function SignInSheet({ notification, open, onClose, onSuccess }: SignInSh
   };
 
   const requestClose = () => {
+    if (biometricSubmissionRef.current) return;
     cancelSubmission();
     onClose();
   };
@@ -171,6 +170,30 @@ export function SignInSheet({ notification, open, onClose, onSuccess }: SignInSh
 
   const keepPasswordFocus = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
+  };
+
+  const authenticateWithPasskey: StartBiometricFlow = async ({ signal }) => {
+    if (submissionRef.current) throw new Error("authentication-busy");
+    const controller = new AbortController();
+    const combined = AbortSignal.any([signal, controller.signal]);
+    abortControllerRef.current = controller;
+    submissionRef.current = true;
+    biometricSubmissionRef.current = true;
+    setIsLoading(true);
+    try {
+      await authenticateBiometricVault(combined);
+      if (isMountedRef.current && !combined.aborted) {
+        setPassword("");
+        setShowPassword(false);
+        onSuccess();
+      }
+    }
+    finally {
+      submissionRef.current = false;
+      biometricSubmissionRef.current = false;
+      if (abortControllerRef.current === controller) abortControllerRef.current = null;
+      if (isMountedRef.current) setIsLoading(false);
+    }
   };
 
   return (
@@ -459,7 +482,8 @@ export function SignInSheet({ notification, open, onClose, onSuccess }: SignInSh
               />
               {showBiometricAccess && (
                 <BiometricLoginAction
-                  onAuthenticate={biometricIntegration.authenticate}
+                  disabled={isLoading}
+                  onAuthenticate={authenticateWithPasskey}
                 />
               )}
             </Stack>

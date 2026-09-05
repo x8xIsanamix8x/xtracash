@@ -3,13 +3,12 @@ import { LockOutlined } from "@mui/icons-material";
 import { Box, Button, Card, CardContent, Divider, Stack, Typography } from "@mui/material";
 
 import { BiometricProfileSection } from "@/features/biometric-access";
-import type { StartBiometricFlow } from "@/features/biometric-access";
 
 type SecurityCardProps = Readonly<{
-  onActivateBiometric?: StartBiometricFlow;
+  biometricEnabled?: boolean;
 }>;
 
-export function SecurityCard({ onActivateBiometric }: SecurityCardProps) {
+export function SecurityCard({ biometricEnabled = false }: SecurityCardProps) {
   return (
     <Card component="section" variant="outlined" sx={{ boxShadow: "none" }}>
       <CardContent sx={{ p: { xs: 2.5, sm: 3 }, "&:last-child": { pb: { xs: 2.5, sm: 3 } } }}>
@@ -50,10 +49,10 @@ export function SecurityCard({ onActivateBiometric }: SecurityCardProps) {
           >
             Cambiar contraseña
           </Button>
-          {onActivateBiometric && (
+          {biometricEnabled && (
             <>
               <Divider />
-              <BiometricProfileSection onActivate={onActivateBiometric} />
+              <BiometricProfileSection />
             </>
           )}
         </Stack>

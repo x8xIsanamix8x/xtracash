@@ -12,6 +12,7 @@ import {
 import type { ButtonProps } from "@mui/material/Button";
 
 import { themeTokens } from "@/theme/tokens";
+import { useOnlineStatus } from "@/features/pwa/useOnlineStatus";
 
 import type { StartBiometricFlow } from "../types";
 import { useBiometricAccess } from "../client/useBiometricAccess";
@@ -21,6 +22,7 @@ type BiometricActionControlProps = Readonly<{
   buttonVariant?: ButtonProps["variant"];
   onAction: StartBiometricFlow;
   presentation?: "button" | "login-icon";
+  disabled?: boolean;
 }>;
 
 const INCOMPATIBLE_MESSAGE =
@@ -31,9 +33,11 @@ export function BiometricActionControl({
   buttonVariant = "outlined",
   onAction,
   presentation = "button",
+  disabled = false,
 }: BiometricActionControlProps) {
-  const { checkCapability, start, status } = useBiometricAccess(onAction);
+  const { checkCapability, start, status, message } = useBiometricAccess(onAction);
   const isChecking = status === "checking";
+  const isOnline = useOnlineStatus();
   const canStart = ["supported", "cancelled"].includes(status);
 
   return (
@@ -55,7 +59,7 @@ export function BiometricActionControl({
 
       {status === "cancelled" && (
         <Alert severity="info" variant="standard">
-          Se canceló la solicitud biométrica. Puedes intentarlo nuevamente.
+          La solicitud se canceló o venció. Puedes intentarlo nuevamente.
         </Alert>
       )}
 
@@ -69,13 +73,15 @@ export function BiometricActionControl({
           severity="error"
           variant="standard"
         >
-          No pudimos comprobar el acceso biométrico.
+          {message || "No pudimos comprobar el acceso biométrico."}
         </Alert>
       )}
 
-      {canStart && (
+      {!isOnline && <Typography role="status" variant="body2">Conéctate a internet para continuar.</Typography>}
+      {canStart && isOnline && (
         presentation === "login-icon" ? (
           <ButtonBase
+            disabled={disabled}
             onClick={() => void start()}
             type="button"
             sx={{
@@ -100,6 +106,7 @@ export function BiometricActionControl({
           </ButtonBase>
         ) : (
           <Button
+            disabled={disabled}
             fullWidth
             onClick={() => void start()}
             startIcon={<FingerprintRounded aria-hidden="true" />}

@@ -15,11 +15,6 @@ import { signOut } from "@/features/auth/session/services/session";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { PwaInstallCard } from "@/features/pwa/PwaInstallCard";
 import { themeTokens } from "@/theme/tokens";
-import {
-  biometricAccessFeatureEnabled,
-  getBiometricAccessIntegration,
-  getBiometricAccessPreviewIntegration,
-} from "@/features/biometric-access";
 
 import { PersonalInformation } from "./components/PersonalInformation";
 import { ProfileState } from "./components/ProfileState";
@@ -33,12 +28,9 @@ import {
 } from "./services/profile";
 import type { ProfilePersonalInfo, ProfileStatus } from "./types";
 
-export function ProfileView() {
+export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEnabled?: boolean }>) {
   const router = useRouter();
-  const biometricIntegration = getBiometricAccessIntegration()
-    ?? getBiometricAccessPreviewIntegration();
-  const showBiometricAccess = biometricAccessFeatureEnabled
-    && biometricIntegration !== null;
+  const showBiometricAccess = biometricEnabled;
   const [status, setStatus] = useState<ProfileStatus>("loading");
   const [personalInfo, setPersonalInfo] = useState<ProfilePersonalInfo | null>(
     null,
@@ -243,9 +235,7 @@ export function ProfileView() {
               </Box>
               <Box sx={{ gridArea: "security", minWidth: 0 }}>
                 <SecurityCard
-                  onActivateBiometric={showBiometricAccess
-                    ? biometricIntegration.activate
-                    : undefined}
+                  biometricEnabled={showBiometricAccess}
                 />
               </Box>
               <Box sx={{ gridArea: "session", minWidth: 0 }}>

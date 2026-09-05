@@ -14,12 +14,6 @@ export type StartBiometricFlow = (
   context: BiometricFlowContext,
 ) => Promise<void>;
 
-export type BiometricAccessIntegration = Readonly<{
-  activate: StartBiometricFlow;
-  authenticate: StartBiometricFlow;
-  deactivate: StartBiometricFlow;
-}>;
-
 export type WebAuthnCapability = Readonly<{
   hasPublicKeyCredential: boolean;
   isSecureExecutionContext: boolean;

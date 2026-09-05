@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { BiometricAccessStatus, StartBiometricFlow } from "../types";
+import { getBiometricVaultErrorMessage } from "../integration";
 import {
   detectWebAuthnCapability,
   getBiometricActionFailureStatus,
@@ -10,6 +11,7 @@ import {
 
 export function useBiometricAccess(action: StartBiometricFlow) {
   const [status, setStatus] = useState<BiometricAccessStatus>("checking");
+  const [message, setMessage] = useState("");
   const requestRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
 
@@ -29,6 +31,7 @@ export function useBiometricAccess(action: StartBiometricFlow) {
 
     void detectWebAuthnCapability().then((capability) => {
       if (isActive && requestRef.current === null) {
+        // This is only a preliminary check. Real PRF output is required by the vault.
         setStatus(capability.status);
       }
     });
@@ -49,12 +52,14 @@ export function useBiometricAccess(action: StartBiometricFlow) {
     const controller = new AbortController();
     requestRef.current = controller;
     setStatus("checking");
+    setMessage("");
 
     try {
       await action({ signal: controller.signal });
       if (mountedRef.current) setStatus("supported");
     } catch (error) {
       if (mountedRef.current) {
+        setMessage(getBiometricVaultErrorMessage(error));
         setStatus(getBiometricActionFailureStatus(error));
       }
     } finally {
@@ -62,5 +67,5 @@ export function useBiometricAccess(action: StartBiometricFlow) {
     }
   }, [action, status]);
 
-  return { checkCapability, start, status } as const;
+  return { checkCapability, start, status, message } as const;
 }

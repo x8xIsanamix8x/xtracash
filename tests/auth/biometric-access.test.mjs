@@ -3,11 +3,6 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { isBiometricAccessFeatureEnabled } from "../../src/features/biometric-access/config.ts";
-import { biometricBffRequestPolicy } from "../../src/features/biometric-access/bffContract.ts";
-import {
-  getBiometricAccessIntegration,
-  getBiometricAccessPreviewIntegration,
-} from "../../src/features/biometric-access/integration.ts";
 import {
   detectWebAuthnCapability,
   getBiometricActionFailureStatus,
@@ -33,20 +28,6 @@ test("mantiene la biometría desactivada salvo habilitación explícita", () => 
   assert.equal(isBiometricAccessFeatureEnabled("false"), false);
   assert.equal(isBiometricAccessFeatureEnabled("TRUE"), false);
   assert.equal(isBiometricAccessFeatureEnabled("true"), true);
-});
-
-test("prepara las futuras llamadas BFF sin caché y con credenciales same-origin", () => {
-  assert.deepEqual(biometricBffRequestPolicy, {
-    cache: "no-store",
-    credentials: "same-origin",
-  });
-});
-
-test("habilita solo la previsualización local y mantiene producción sin integración", () => {
-  assert.equal(getBiometricAccessIntegration(), null);
-  assert.notEqual(getBiometricAccessPreviewIntegration("development"), null);
-  assert.equal(getBiometricAccessPreviewIntegration("production"), null);
-  assert.equal(getBiometricAccessPreviewIntegration("test"), null);
 });
 
 test("admite WebAuthn únicamente bajo HTTPS seguro o localhost seguro", () => {
@@ -131,17 +112,30 @@ test("integra la presentación en Login y Perfil sin alterar las credenciales tr
 
   assert.match(login, />\s*Ingresar\s*</);
   assert.match(login, /BiometricLoginAction/);
-  assert.match(loginAction, /Identificación biométrica/);
+  assert.match(loginAction, /Ingresar con biometría/);
   assert.match(loginAction, /presentation="login-icon"/);
-  assert.match(profile, /onActivateBiometric/);
+  assert.match(profile, /biometricEnabled/);
   assert.match(security, /Cambiar contraseña/);
   assert.match(security, /BiometricProfileSection/);
   assert.match(profileSection, /alignItems: "flex-end"/);
-  assert.match(profileSection, /buttonVariant="contained"/);
+  assert.match(profileSection, /variant="contained"/);
+  assert.match(profileSection, /Autorizo guardar una copia cifrada/);
+  assert.match(profileSection, /verifyEnrollmentPassword/);
+  assert.match(profileSection, /activateBiometricVault/);
+  assert.match(profileSection, /deactivateBiometricVault/);
+  assert.match(profileSection, /120_000/);
+  assert.match(profileSection, /clearEnrollmentCredentials/);
+  assert.match(profileSection, /aria-labelledby="biometric-activation-title"/);
+  assert.match(profileSection, /overflowY: "auto"/);
+  assert.match(loginAction, /hasBiometricVault/);
   assert.match(profileSection, /76dvh/);
   assert.match(action, /ButtonBase/);
   assert.match(action, /Este dispositivo o navegador no permite el acceso biométrico/);
-  assert.match(integration, /nodeEnv === "development"/);
+  assert.match(integration, /createBiometricVaultService/);
+  assert.match(integration, /profile: getProfilePersonalInfo/);
+  assert.match(login, /await authenticateBiometricVault\(combined\)/);
+  assert.match(login, /if \(isMountedRef.current && !combined.aborted\)/);
+  assert.doesNotMatch(integration, /PreviewIntegration|localStorage|sessionStorage/);
   assert.doesNotMatch(action, /navigator\.credentials\.(?:create|get)/);
 
   const passwordPosition = login.indexOf('id="sign-in-password"');

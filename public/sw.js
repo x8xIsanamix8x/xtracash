@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "impulsate-pwa";
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime-${CACHE_VERSION}`;
 const MAX_RUNTIME_ENTRIES = 60;
@@ -32,6 +32,11 @@ function isPublicRuntimeAsset(url) {
 
 function isBiometricRoute(url) {
   return /\/(?:biometric|webauthn|passkeys?)(?:\/|$)/i.test(url.pathname);
+}
+
+function containsSensitiveParameters(url) {
+  return ["access_token", "id_token", "refresh_token", "password", "identifier"]
+    .some((name) => url.searchParams.has(name));
 }
 
 async function trimRuntimeCache(cache) {
@@ -114,13 +119,13 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (isBiometricRoute(url)) {
-    event.respondWith(fetch(request));
+  if (isBiometricRoute(url) || containsSensitiveParameters(url)) {
+    event.respondWith(fetch(request, { cache: "no-store" }));
     return;
   }
 
   if (url.pathname.startsWith("/api/")) {
-    event.respondWith(fetch(request));
+    event.respondWith(fetch(request, { cache: "no-store" }));
     return;
   }
 
