@@ -13,9 +13,9 @@ export function OnboardingVisual({ imageAlt, imageSrc }: OnboardingVisualProps) 
       src={imageSrc}
       sx={{
         display: "block",
-        width: "min(100%, 450px)",
+        width: "min(100%, 562px)",
         maxWidth: "100%",
-        height: "clamp(230px, 48dvh, 460px)",
+        height: "clamp(288px, 60dvh, 575px)",
         objectFit: "contain",
         objectPosition: "center",
       }}
