@@ -11,6 +11,7 @@
     "test:auth": "node --no-warnings --experimental-strip-types --test tests/auth/*.test.mjs",
     "test:home": "node --no-warnings --experimental-strip-types --test tests/home/*.test.mjs",
     "test:profile": "node --no-warnings --experimental-strip-types --test tests/profile/*.test.mjs",
+    "test:entry": "node --no-warnings --experimental-strip-types --test tests/entry/*.test.mjs",
     "test:help": "node --no-warnings --experimental-strip-types --test tests/entry/helpCenter.test.mjs",
     "test:pwa": "node --no-warnings --experimental-strip-types --test tests/pwa/*.test.mjs"
   },
