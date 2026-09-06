@@ -301,6 +301,8 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
               width: "100%",
               maxWidth: "100%",
               minWidth: 0,
+              flex: "1 1 auto",
+              justifyContent: { xs: "space-between", sm: "flex-start" },
               "@media (max-height: 700px)": { gap: 1.5 },
               "@media (min-width: 900px) and (max-height: 820px)": { gap: 1.25 },
             }}
@@ -520,7 +522,7 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
               sm: "calc(24px + env(safe-area-inset-right))",
             },
             pb: {
-              xs: "calc(16px + env(safe-area-inset-bottom))",
+              xs: "max(8px, env(safe-area-inset-bottom))",
               sm: "calc(24px + env(safe-area-inset-bottom))",
             },
             pl: {

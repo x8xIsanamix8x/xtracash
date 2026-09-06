@@ -183,7 +183,7 @@ export function AccessView({
             mt: "auto",
             pt: 3,
             pr: "calc(24px + env(safe-area-inset-right))",
-            pb: "calc(28px + env(safe-area-inset-bottom))",
+            pb: "max(8px, env(safe-area-inset-bottom))",
             pl: "calc(24px + env(safe-area-inset-left))",
             "@media (max-height: 650px)": {
               gap: 1,
