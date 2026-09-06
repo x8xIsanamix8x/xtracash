@@ -49,7 +49,7 @@ export function OnboardingView({
         overflow: "hidden",
         pt: "calc(16px + env(safe-area-inset-top))",
         pr: "calc(24px + env(safe-area-inset-right))",
-        pb: "calc(12px + env(safe-area-inset-bottom))",
+        pb: "max(8px, env(safe-area-inset-bottom))",
         pl: "calc(24px + env(safe-area-inset-left))",
       }}
     >
@@ -86,13 +86,15 @@ export function OnboardingView({
           <OnboardingVisual imageAlt={step.imageAlt} imageSrc={step.imageSrc} />
         </Box>
 
-        <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 560, mx: "auto", textAlign: "center" }}>
+        <Stack spacing={{ xs: 2.25, sm: 1.5 }} sx={{ width: "100%", maxWidth: 560, mx: "auto", textAlign: "center" }}>
           <Typography
             component="h1"
             ref={titleRef}
             tabIndex={-1}
             variant="h3"
             sx={{
+              fontSize: { xs: "clamp(1.625rem, 7vw, 2rem)", sm: "2rem" },
+              lineHeight: { xs: 1.14, sm: 1.2 },
               "&:focus-visible": {
                 outline: "3px solid",
                 outlineColor: "primary.main",
@@ -102,7 +104,7 @@ export function OnboardingView({
           >
             {step.title}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: "1.125rem" }}>
+          <Typography color="text.secondary" sx={{ fontSize: { xs: "1rem", sm: "1.125rem" }, lineHeight: 1.45 }}>
             {step.description}
           </Typography>
         </Stack>
