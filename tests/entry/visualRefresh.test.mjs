@@ -39,6 +39,7 @@ test("el acceso usa el nuevo fondo, isotipo y ayuda solo por icono", async () =>
   assert.match(accessView, /isopulsa\.png/);
   assert.match(accessView, /width: "clamp\(142px, 37vw, 164px\)"/);
   assert.match(accessView, /@media \(min-width: 414px\)/);
+  assert.match(accessView, /pb: "max\(8px, env\(safe-area-inset-bottom\)\)"/);
   assert.match(accessView, /HelpOutlineRounded/);
   assert.match(accessView, /aria-label="Ayuda"/);
   assert.match(accessView, />\s*Iniciar sesión\s*</);
@@ -60,4 +61,5 @@ test("el formulario de ingreso móvil ocupa toda la vista y usa la ilustración 
   assert.match(signInSheet, /transitionDuration=\{prefersReducedMotion \? 0 : \{ enter: 220, exit: 180 \}\}/);
   assert.match(signInVisual, /LoginIlustration\.webp/);
   assert.match(signInVisual, /@media \(max-width: 413px\)/);
+  assert.match(signInSheet, /justifyContent: \{ xs: "space-between", sm: "flex-start" \}/);
 });
