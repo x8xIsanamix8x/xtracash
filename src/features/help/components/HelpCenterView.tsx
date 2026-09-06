@@ -39,7 +39,7 @@ export function HelpCenterView() {
           <Typography component="h2" variant="h5" sx={{ mb: 2.5, color: "secondary.main", fontWeight: 800, lineHeight: 1.2 }}>
             Preguntas frecuentes
           </Typography>
-          <Stack spacing={1.5}>
+          <Stack spacing={2.5}>
             {frequentlyAskedQuestions.map((item, index) => (
               <Accordion
                 disableGutters
