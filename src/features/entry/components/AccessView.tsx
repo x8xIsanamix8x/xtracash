@@ -152,7 +152,14 @@ export function AccessView({
             alt="Impúlsate Móvil"
             component="img"
             src="/entry/isopulsa.png"
-            sx={{ width: "clamp(164px, 43vw, 242px)", height: "auto", display: "block" }}
+            sx={{
+              width: "clamp(142px, 37vw, 164px)",
+              height: "auto",
+              display: "block",
+              "@media (min-width: 414px)": {
+                width: "clamp(164px, 43vw, 242px)",
+              },
+            }}
           />
           <Typography
             component="h1"

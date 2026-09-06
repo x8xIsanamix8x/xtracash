@@ -31,7 +31,15 @@ export function SignInVisual() {
         alt=""
         component="img"
         src="/entry/LoginIlustration.webp"
-        sx={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }}
+        sx={{
+          display: "block",
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          "@media (max-width: 413px)": {
+            transform: "scale(1.25)",
+          },
+        }}
       />
     </Box>
   );
