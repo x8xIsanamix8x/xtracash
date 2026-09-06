@@ -4,6 +4,7 @@ import { FormEvent, MouseEvent, type ReactNode, useEffect, useRef, useState } fr
 import Link from "next/link";
 import {
   CloseRounded,
+  FingerprintRounded,
   VisibilityOffRounded,
   VisibilityRounded,
 } from "@mui/icons-material";
@@ -13,13 +14,13 @@ import {
   Button,
   Dialog,
   DialogContent,
-  DialogContentText,
   DialogTitle,
   IconButton,
   InputAdornment,
   Slide,
   Stack,
   TextField,
+  Typography,
   useMediaQuery,
 } from "@mui/material";
 import type { SlideProps } from "@mui/material/Slide";
@@ -57,7 +58,7 @@ const SERVICE_ERROR_MESSAGE =
   "No pudimos iniciar sesión en este momento. Inténtalo nuevamente más tarde.";
 
 function BottomSheetTransition(props: SlideProps) {
-  return <Slide {...props} direction="up" />;
+  return <Slide {...props} direction={props.in ? "right" : "left"} />;
 }
 
 export function SignInSheet({ biometricEnabled = false, notification, open, onClose, onSuccess }: SignInSheetProps) {
@@ -214,7 +215,7 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
           sx: {
             minWidth: 0,
             maxWidth: "100%",
-            alignItems: { xs: "flex-end", md: "center" },
+            alignItems: "center",
             overflowX: "hidden",
           },
         },
@@ -226,14 +227,14 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
             minWidth: 0,
             maxWidth: { xs: "100%", md: "min(520px, calc(100% - 32px))" },
             height: {
-              xs: "85dvh",
+              xs: "100dvh",
               md: "auto",
             },
             maxHeight: {
-              xs: "calc(100dvh - 16px - env(safe-area-inset-top))",
+              xs: "100dvh",
               md: "calc(100dvh - 32px)",
             },
-            borderRadius: { xs: "24px 24px 0 0", md: 3 },
+            borderRadius: { xs: 0, md: 3 },
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
@@ -243,7 +244,7 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
           onExited: resetForm,
         },
       }}
-      transitionDuration={prefersReducedMotion ? 0 : undefined}
+      transitionDuration={prefersReducedMotion ? 0 : { enter: 220, exit: 180 }}
     >
       <Box
         aria-busy={isLoading}
@@ -277,7 +278,8 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
             minWidth: 0,
             overflowX: "hidden",
             overflowY: "auto",
-            pb: { xs: 1.5, sm: 2 },
+            pt: { xs: "calc(12px + env(safe-area-inset-top))", sm: 3 },
+            pb: { xs: 1, sm: 2 },
             pr: {
               xs: "calc(16px + env(safe-area-inset-right))",
               sm: "calc(24px + env(safe-area-inset-right))",
@@ -312,7 +314,7 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
                 width: "100%",
                 maxWidth: "100%",
                 minWidth: 0,
-                mb: 2,
+                mb: 0.5,
                 "@media (max-height: 700px)": {
                   mb: 0,
                 },
@@ -367,14 +369,14 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
               </IconButton>
             </Box>
 
-            <Stack spacing={1.5} sx={{ maxWidth: "100%", minWidth: 0 }}>
+            <Stack spacing={0.75} sx={{ maxWidth: "100%", minWidth: 0 }}>
               <DialogTitle
                 component="h2"
                 id="sign-in-title"
                 sx={{
                   p: 0,
                   fontWeight: 700,
-                  fontSize: { xs: "1.5rem", sm: "1.625rem" },
+                  fontSize: { xs: "1.375rem", sm: "1.625rem" },
                   lineHeight: 1.2,
                   letterSpacing: "-0.01em",
                   textAlign: "left",
@@ -383,9 +385,6 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
                 Inicia sesión
               </DialogTitle>
 
-              <DialogContentText id="sign-in-description" sx={{ textAlign: "left" }}>
-                Ingresa tus datos para continuar.
-              </DialogContentText>
             </Stack>
 
             {formError && (
@@ -467,7 +466,7 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
                           onClick={() => setShowPassword((current) => !current)}
                           onMouseDown={keepPasswordFocus}
                           type="button"
-                          sx={{ color: themeTokens.color.brandLogo }}
+                          sx={{ color: themeTokens.color.primary }}
                         >
                           {showPassword ? <VisibilityOffRounded /> : <VisibilityRounded />}
                         </IconButton>
@@ -485,6 +484,21 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
                   disabled={isLoading}
                   onAuthenticate={authenticateWithPasskey}
                 />
+              )}
+              {!showBiometricAccess && (
+                <Stack
+                  direction="row"
+                  spacing={0.75}
+                  sx={{ alignItems: "center", justifyContent: "flex-end", pt: 0.5 }}
+                >
+                  <Typography color="text.secondary" sx={{ fontSize: "0.8125rem", textAlign: "right" }}>
+                    Ingresa con tu usuario y contraseña. Activa tu biometría desde tu Perfil para acceder más rápido.
+                  </Typography>
+                  <FingerprintRounded
+                    aria-hidden="true"
+                    sx={{ flexShrink: 0, color: themeTokens.color.brandLogo, width: 25, height: 25 }}
+                  />
+                </Stack>
               )}
             </Stack>
 
