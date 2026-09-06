@@ -99,10 +99,13 @@ export function BiometricActionControl({
               },
             }}
           >
-            <Typography sx={{ fontWeight: 700 }}>
+            <Typography sx={{ fontWeight: 400 }}>
               {actionLabel}
             </Typography>
-            <FingerprintRounded aria-hidden="true" sx={{ width: 32, height: 32 }} />
+            <FingerprintRounded
+              aria-hidden="true"
+              sx={{ color: themeTokens.color.brandLogo, width: 32, height: 32 }}
+            />
           </ButtonBase>
         ) : (
           <Button

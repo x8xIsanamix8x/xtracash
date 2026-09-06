@@ -105,6 +105,7 @@ export function AccessView({
           position: "relative",
           isolation: "isolate",
           minHeight: "100dvh",
+          height: "100dvh",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -151,7 +152,7 @@ export function AccessView({
             alt="Impúlsate Móvil"
             component="img"
             src="/entry/isopulsa.png"
-            sx={{ width: "clamp(192px, 51vw, 285px)", height: "auto", display: "block" }}
+            sx={{ width: "clamp(164px, 43vw, 242px)", height: "auto", display: "block" }}
           />
           <Typography
             component="h1"
@@ -185,7 +186,7 @@ export function AccessView({
           }}
         >
           <Button fullWidth onClick={openSignIn} variant="contained">
-            Ingresar
+            Iniciar sesión
           </Button>
           <Button
             fullWidth
