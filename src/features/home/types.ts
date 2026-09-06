@@ -44,10 +44,15 @@ export type HomeAccountMovement = Readonly<{
   amountBs: string;
 }>;
 
+export type OnboardingMasterProgress = Readonly<{
+  completedPhases: 0 | 1 | 2 | 3 | 4;
+}>;
+
 export type HomeAccountSummary = Readonly<{
   name: string;
   accountStatus: string;
   product: HomeAccountProduct | null;
   payments: HomeAccountPayments;
   movements: readonly HomeAccountMovement[];
+  onboardingMaster: OnboardingMasterProgress | null;
 }>;

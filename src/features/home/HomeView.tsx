@@ -7,6 +7,7 @@ import { Box, Container, Snackbar, Stack } from "@mui/material";
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
 import { CreditLineStatusNotice } from "@/features/credit-line";
 import { PaymentReportFlow } from "@/features/payment-report";
+import { MasterOnboardingPrompt, consumeMasterOnboardingPrompt } from "@/features/master-onboarding";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 
 import { AppHeader } from "./components/AppHeader";
@@ -25,7 +26,7 @@ import {
   AccountSummaryServiceError,
   getAccountSummary,
 } from "./services/accountSummary";
-import type { HomeAccountSummary } from "./types";
+import type { HomeAccountSummary, OnboardingMasterProgress } from "./types";
 
 export function HomeView() {
   const router = useRouter();
@@ -35,6 +36,7 @@ export function HomeView() {
   );
   const [summary, setSummary] = useState<HomeAccountSummary | null>(null);
   const [isPaymentReportOpen, setIsPaymentReportOpen] = useState(false);
+  const [masterOnboardingProgress, setMasterOnboardingProgress] = useState<OnboardingMasterProgress | null>(null);
   const requestRef = useRef<{
     controller: AbortController;
     id: number;
@@ -54,6 +56,11 @@ export function HomeView() {
         if (requestRef.current?.id !== requestId) return;
 
         setSummary(nextSummary);
+        if (nextSummary.onboardingMaster
+          && nextSummary.onboardingMaster.completedPhases <= 3
+          && consumeMasterOnboardingPrompt()) {
+          setMasterOnboardingProgress(nextSummary.onboardingMaster);
+        }
         setOverviewStatus(
           nextSummary.accountStatus !== "ACTIVE"
             ? "unavailable"
@@ -173,6 +180,11 @@ export function HomeView() {
         onClose={closePaymentReport}
         open={isPaymentReportOpen}
       />
+      {masterOnboardingProgress && <MasterOnboardingPrompt
+        onClose={() => setMasterOnboardingProgress(null)}
+        open
+        progress={masterOnboardingProgress}
+      />}
       <Snackbar
         autoHideDuration={2800}
         message={

@@ -28,6 +28,7 @@ import type {
   AccessNotification,
 } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
+import { resetMasterOnboardingPrompt } from "@/features/master-onboarding";
 
 import { AccessVisual } from "./AccessVisual";
 import { BubbleField } from "./BubbleField";
@@ -98,6 +99,7 @@ export function AccessView({
   };
 
   const completeSignIn = () => {
+    resetMasterOnboardingPrompt();
     router.replace("/home");
   };
 

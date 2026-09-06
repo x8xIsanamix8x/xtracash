@@ -14,6 +14,9 @@ import {
 import { signOut } from "@/features/auth/session/services/session";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { PwaInstallCard } from "@/features/pwa/PwaInstallCard";
+import { MasterOnboardingProfileCard, resetMasterOnboardingPrompt } from "@/features/master-onboarding";
+import { getAccountSummary } from "@/features/home/services/accountSummary";
+import type { OnboardingMasterProgress } from "@/features/home/types";
 import { themeTokens } from "@/theme/tokens";
 
 import { PersonalInformation } from "./components/PersonalInformation";
@@ -39,6 +42,7 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
   const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [announcement, setAnnouncement] = useState("");
+  const [masterOnboardingProgress, setMasterOnboardingProgress] = useState<OnboardingMasterProgress | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const profileRequestRef = useRef<{
     controller: AbortController;
@@ -112,6 +116,14 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
     };
   }, [loadProfile]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    void getAccountSummary(controller.signal)
+      .then((summary) => setMasterOnboardingProgress(summary.onboardingMaster))
+      .catch(() => { /* The profile remains available if summary progress cannot load. */ });
+    return () => controller.abort();
+  }, []);
+
   const retryProfile = () => loadProfile();
 
   const openSignOut = () => {
@@ -138,6 +150,7 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
 
     try {
       await signOut(controller.signal);
+      resetMasterOnboardingPrompt();
       router.replace("/");
     } catch {
       if (!controller.signal.aborted) {
@@ -217,8 +230,8 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
                 display: "grid",
                 gap: 3,
                 gridTemplateAreas: {
-                  xs: '"summary" "information" "security" "session"',
-                  md: '"summary information" "security information" "session information"',
+                  xs: '"summary" "information" "onboarding" "security" "session"',
+                  md: '"summary information" "onboarding information" "security information" "session information"',
                 },
                 gridTemplateColumns: {
                   xs: "minmax(0, 1fr)",
@@ -233,6 +246,9 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
               <Box sx={{ gridArea: "information", minWidth: 0 }}>
                 <PersonalInformation user={user} />
               </Box>
+              {masterOnboardingProgress && <Box sx={{ gridArea: "onboarding", minWidth: 0 }}>
+                <MasterOnboardingProfileCard progress={masterOnboardingProgress} />
+              </Box>}
               <Box sx={{ gridArea: "security", minWidth: 0 }}>
                 <SecurityCard
                   biometricEnabled={showBiometricAccess}

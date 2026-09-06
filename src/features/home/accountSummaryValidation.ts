@@ -4,6 +4,7 @@ import type {
   HomeAccountPayments,
   HomeAccountProduct,
   HomeAccountSummary,
+  OnboardingMasterProgress,
 } from "./types";
 
 const amountPattern = /^\d+(?:\.\d{1,2})?$/;
@@ -207,6 +208,24 @@ function parseMovements(
   return movements;
 }
 
+function parseCoreOnboardingMaster(value: unknown): OnboardingMasterProgress | null {
+  if (value === undefined) return null;
+  if (!isRecord(value)) return null;
+  const completedPhases = value.fasesCompletadas;
+  if (typeof completedPhases !== "number" || !Number.isInteger(completedPhases)) return null;
+  if (completedPhases < 0 || completedPhases > 4) return null;
+  return { completedPhases: completedPhases as OnboardingMasterProgress["completedPhases"] };
+}
+
+function parseHomeOnboardingMaster(value: unknown): OnboardingMasterProgress | null {
+  if (value === undefined) return null;
+  if (!isRecord(value)) return null;
+  const completedPhases = value.completedPhases;
+  if (typeof completedPhases !== "number" || !Number.isInteger(completedPhases)) return null;
+  if (completedPhases < 0 || completedPhases > 4) return null;
+  return { completedPhases: completedPhases as OnboardingMasterProgress["completedPhases"] };
+}
+
 export function parseCoreAccountSummary(value: unknown): HomeAccountSummary | null {
   if (!isRecord(value)) return null;
   if (typeof value.name !== "string" || !value.name.trim()) return null;
@@ -222,7 +241,8 @@ export function parseCoreAccountSummary(value: unknown): HomeAccountSummary | nu
 
   const payments = parsePayments(value.payments, readCoreAmount);
   const movements = parseMovements(value.movements, readCoreAmount, true);
-  if (payments === null || movements === null) return null;
+  const onboardingMaster = parseCoreOnboardingMaster(value.OnboardingMaster);
+  if (payments === null || movements === null || (value.OnboardingMaster !== undefined && onboardingMaster === null)) return null;
 
   return {
     name: value.name.trim(),
@@ -230,6 +250,7 @@ export function parseCoreAccountSummary(value: unknown): HomeAccountSummary | nu
     product,
     payments,
     movements,
+    onboardingMaster,
   };
 }
 
@@ -261,7 +282,8 @@ export function parseHomeAccountSummary(value: unknown): HomeAccountSummary | nu
     delinquencyStage: value.payments.delinquencyStage,
   }, readDtoAmount);
   const movements = parseMovements(value.movements, readDtoAmount);
-  if (payments === null || movements === null) return null;
+  const onboardingMaster = parseHomeOnboardingMaster(value.onboardingMaster);
+  if (payments === null || movements === null || (value.onboardingMaster !== undefined && onboardingMaster === null)) return null;
 
   return {
     name: value.name.trim(),
@@ -269,5 +291,6 @@ export function parseHomeAccountSummary(value: unknown): HomeAccountSummary | nu
     product,
     payments,
     movements,
+    onboardingMaster,
   };
 }
