@@ -58,7 +58,7 @@ const SERVICE_ERROR_MESSAGE =
   "No pudimos iniciar sesión en este momento. Inténtalo nuevamente más tarde.";
 
 function BottomSheetTransition(props: SlideProps) {
-  return <Slide {...props} direction={props.in ? "right" : "left"} />;
+  return <Slide {...props} direction={props.in ? "left" : "right"} />;
 }
 
 export function SignInSheet({ biometricEnabled = false, notification, open, onClose, onSuccess }: SignInSheetProps) {
