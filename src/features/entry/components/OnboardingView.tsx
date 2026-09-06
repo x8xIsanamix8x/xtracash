@@ -80,6 +80,7 @@ export function OnboardingView({
             minHeight: 0,
             display: "grid",
             placeItems: "center",
+            overflow: "hidden",
           }}
         >
           <OnboardingVisual imageAlt={step.imageAlt} imageSrc={step.imageSrc} />

@@ -25,6 +25,8 @@ test("las ilustraciones respetan el ancho del contenedor para evitar scroll late
 
   assert.match(onboardingVisual, /width: "min\(100%, 562px\)"/);
   assert.match(onboardingVisual, /maxWidth: "100%"/);
+  assert.match(onboardingVisual, /height: "min\(100%, clamp\(240px, 48dvh, 500px\)\)"/);
+  assert.match(onboardingVisual, /maxHeight: "100%"/);
 });
 
 test("el acceso usa el nuevo fondo, isotipo y ayuda solo por icono", async () => {
