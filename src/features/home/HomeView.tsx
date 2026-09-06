@@ -57,7 +57,7 @@ export function HomeView() {
 
         setSummary(nextSummary);
         if (nextSummary.onboardingMaster
-          && nextSummary.onboardingMaster.completedPhases <= 3
+          && nextSummary.onboardingMaster.completedPhases <= 2
           && consumeMasterOnboardingPrompt()) {
           setMasterOnboardingProgress(nextSummary.onboardingMaster);
         }

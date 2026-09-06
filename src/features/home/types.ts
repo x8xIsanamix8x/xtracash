@@ -45,7 +45,7 @@ export type HomeAccountMovement = Readonly<{
 }>;
 
 export type OnboardingMasterProgress = Readonly<{
-  completedPhases: 0 | 1 | 2 | 3 | 4;
+  completedPhases: 0 | 1 | 2 | 3;
 }>;
 
 export type HomeAccountSummary = Readonly<{
