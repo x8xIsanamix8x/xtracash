@@ -213,7 +213,7 @@ function parseCoreOnboardingMaster(value: unknown): OnboardingMasterProgress | n
   if (!isRecord(value)) return null;
   const completedPhases = value.fasesCompletadas;
   if (typeof completedPhases !== "number" || !Number.isInteger(completedPhases)) return null;
-  if (completedPhases < 0 || completedPhases > 4) return null;
+  if (completedPhases < 0 || completedPhases > 3) return null;
   return { completedPhases: completedPhases as OnboardingMasterProgress["completedPhases"] };
 }
 
@@ -222,7 +222,7 @@ function parseHomeOnboardingMaster(value: unknown): OnboardingMasterProgress | n
   if (!isRecord(value)) return null;
   const completedPhases = value.completedPhases;
   if (typeof completedPhases !== "number" || !Number.isInteger(completedPhases)) return null;
-  if (completedPhases < 0 || completedPhases > 4) return null;
+  if (completedPhases < 0 || completedPhases > 3) return null;
   return { completedPhases: completedPhases as OnboardingMasterProgress["completedPhases"] };
 }
 

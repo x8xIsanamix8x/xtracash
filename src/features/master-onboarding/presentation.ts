@@ -12,7 +12,7 @@ export type MasterOnboardingMessage = Readonly<{
 export function getMasterOnboardingMessage(
   progress: OnboardingMasterProgress,
 ): MasterOnboardingMessage {
-  const percentage = Math.max(25, progress.completedPhases * 25);
+  const percentage = (progress.completedPhases + 1) * 25;
 
   switch (progress.completedPhases) {
     case 0:
@@ -22,8 +22,6 @@ export function getMasterOnboardingMessage(
     case 2:
       return { completed: false, percentage, title: "Tu avance está creciendo", description: `Ya tienes el ${percentage}% de tu crédito disponible. Continúa con tu información para acceder a un límite mayor.` };
     case 3:
-      return { completed: false, percentage, title: "¡Estás muy cerca!", description: `Ya tienes el ${percentage}% de tu crédito disponible. Completa la última fase para aprovechar todos los beneficios.` };
-    case 4:
       return { completed: true, percentage: 100, title: "¡Información completada!", description: "Felicidades, has completado tu información para Impúlsate. Puedes continuar disfrutando de todos los beneficios de tu crédito." };
   }
 }
