@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CloseRounded } from "@mui/icons-material";
+import { CloseRounded, HelpOutlineRounded } from "@mui/icons-material";
 import {
   Alert,
   AlertTitle,
@@ -23,11 +23,8 @@ import type {
   AccessNavigationRequest,
   AccessNotification,
 } from "@/lib/accessNotificationNavigation";
-import { themeTokens } from "@/theme/tokens";
 import { resetMasterOnboardingPrompt } from "@/features/master-onboarding";
-
-import { AccessVisual } from "./AccessVisual";
-import { BubbleField } from "./BubbleField";
+import { themeTokens } from "@/theme/tokens";
 
 type AccessViewProps = Readonly<{
   biometricEnabled?: boolean;
@@ -103,125 +100,69 @@ export function AccessView({
   return (
     <>
       <Box
-      component="main"
-      sx={{
-        position: "relative",
-        isolation: "isolate",
-        minHeight: "100dvh",
-        display: "flex",
-        flexDirection: "column",
-        overflowX: "hidden",
-        bgcolor: "background.default",
-      }}
-    >
-      <Box
+        component="main"
         sx={{
           position: "relative",
-          flexShrink: 0,
-          width: "100%",
-          height: "clamp(248px, 50dvh, 500px)",
-          color: "secondary.contrastText",
-          borderRadius: "0 0 28px 28px",
-          pt: "calc(16px + env(safe-area-inset-top))",
-          pr: "calc(24px + env(safe-area-inset-right))",
-          pl: "calc(24px + env(safe-area-inset-left))",
+          isolation: "isolate",
+          minHeight: "100dvh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          bgcolor: "background.default",
+          backgroundImage: "url('/entry/login-background.webp')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       >
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            overflow: "hidden",
-            borderRadius: "inherit",
-            bgcolor: "secondary.main",
-          }}
-        >
-          <BubbleField variant="dark" />
-        </Box>
-
         <Stack
           direction="row"
           sx={{
-            position: "relative",
-            zIndex: 1,
             width: "100%",
             maxWidth: 720,
             mx: "auto",
             minHeight: 48,
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "flex-end",
+            pt: "calc(12px + env(safe-area-inset-top))",
+            pr: "calc(16px + env(safe-area-inset-right))",
+            pl: "calc(16px + env(safe-area-inset-left))",
           }}
         >
-          <Typography
-            noWrap
-            variant="h5"
-            sx={{
-              color: themeTokens.color.brandLogo,
-              fontSize: { xs: "1.125rem", sm: "1.5rem" },
-              fontWeight: 800,
-              letterSpacing: "-0.03em",
-            }}
-          >
-            Impúlsate Móvil
-          </Typography>
-          <Button
-            color="inherit"
+          <IconButton
+            aria-label="Ayuda"
             component={Link}
             href="/help"
-            variant="text"
-            sx={{ "&:focus-visible": { outlineColor: "common.white" } }}
+            sx={{ color: "secondary.main" }}
           >
-            Ayuda
-          </Button>
+            <HelpOutlineRounded />
+          </IconButton>
         </Stack>
 
-        <Box
+        <Stack
+          spacing={1.5}
           sx={{
-            position: "absolute",
-            zIndex: 2,
-            left: "50%",
-            bottom: 0,
-            transform: "translate(-50%, 24%)",
-            "@media (max-height: 650px)": { "& > *": { maxWidth: 140 } },
-            "@media (max-height: 520px)": { "& > *": { maxWidth: 112 } },
+            alignItems: "center",
+            textAlign: "center",
+            pt: { xs: "clamp(80px, 16dvh, 164px)", sm: 10 },
+            px: 3,
           }}
         >
-          <AccessVisual />
-        </Box>
-      </Box>
-
-      <Box
-        sx={{
-          flex: 1,
-          width: "100%",
-          maxWidth: 720,
-          mx: "auto",
-          display: "flex",
-          flexDirection: "column",
-          pt: { xs: 8, md: 10 },
-          pr: "calc(24px + env(safe-area-inset-right))",
-          pb: 0,
-          pl: "calc(24px + env(safe-area-inset-left))",
-          "@media (max-height: 650px)": { pt: 4 },
-          "@media (max-height: 520px)": { pt: 3 },
-        }}
-      >
-        <Stack spacing={1.5} sx={{ alignItems: "center", textAlign: "center" }}>
+          <Box
+            alt="Impúlsate Móvil"
+            component="img"
+            src="/entry/isopulsa.png"
+            sx={{ width: "clamp(192px, 51vw, 285px)", height: "auto", display: "block" }}
+          />
           <Typography
             component="h1"
-            variant="h2"
             sx={{
-              color: "secondary.main",
-              fontSize: { xs: "clamp(2rem, 9vw, 2.35rem)", md: "3.5rem" },
+              color: themeTokens.color.brandLogo,
+              fontSize: { xs: "1.75rem", sm: "2.15rem" },
+              fontWeight: 800,
+              letterSpacing: "0.02em",
             }}
           >
-            Tu crédito, más simple.
-          </Typography>
-          <Typography
-            color="text.secondary"
-            sx={{ maxWidth: 480, fontSize: { xs: "1rem", sm: "1.125rem" } }}
-          >
-            Solicita y consulta el avance desde un solo lugar.
+            IMPÚLSATE MÓVIL
           </Typography>
         </Stack>
 
@@ -233,11 +174,14 @@ export function AccessView({
             mx: "auto",
             mt: "auto",
             pt: 3,
-            pb: {
-              xs: "calc(28px + env(safe-area-inset-bottom))",
-              sm: "calc(36px + env(safe-area-inset-bottom))",
+            pr: "calc(24px + env(safe-area-inset-right))",
+            pb: "calc(28px + env(safe-area-inset-bottom))",
+            pl: "calc(24px + env(safe-area-inset-left))",
+            "@media (max-height: 650px)": {
+              gap: 1,
+              pt: 2,
+              pb: "calc(16px + env(safe-area-inset-bottom))",
             },
-            "@media (max-height: 650px)": { gap: 1, pt: 2 },
           }}
         >
           <Button fullWidth onClick={openSignIn} variant="contained">
@@ -257,8 +201,6 @@ export function AccessView({
             Registrarme
           </Button>
         </Stack>
-      </Box>
-
       </Box>
 
       <SignInSheet

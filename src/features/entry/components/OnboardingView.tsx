@@ -71,6 +71,7 @@ export function OnboardingView({
           display: "grid",
           gridTemplateRows: "minmax(96px, 1fr) auto",
           overflowY: "auto",
+          overflowX: "hidden",
           py: 1,
         }}
       >
@@ -79,10 +80,9 @@ export function OnboardingView({
             minHeight: 0,
             display: "grid",
             placeItems: "center",
-            transform: "translateY(-3%)",
           }}
         >
-          <OnboardingVisual imageAlt={step.imageAlt} visualKey={step.visualKey} />
+          <OnboardingVisual imageAlt={step.imageAlt} imageSrc={step.imageSrc} />
         </Box>
 
         <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 560, mx: "auto", textAlign: "center" }}>
