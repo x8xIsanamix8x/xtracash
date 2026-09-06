@@ -47,7 +47,21 @@ export function HelpCenterView() {
                 key={item.question}
                 onChange={(_event, expanded) => setExpandedQuestion(expanded ? item.question : false)}
                 slotProps={{ transition: { timeout: prefersReducedMotion ? 0 : 180 } }}
-                sx={{ border: "1px solid", borderColor: "divider", borderRadius: "12px !important", boxShadow: "none", overflow: "hidden", "&::before": { display: "none" }, "&.Mui-expanded": { my: 0, borderColor: "primary.main" } }}
+                sx={{
+                  m: "0 !important",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: "12px !important",
+                  boxShadow: "none",
+                  overflow: "hidden",
+                  transformOrigin: "top center",
+                  transition: "border-color 180ms ease",
+                  "&::before": { display: "none" },
+                  "&.Mui-expanded": {
+                    m: "0 !important",
+                    borderColor: "primary.main",
+                  },
+                }}
               >
                 <AccordionSummary
                   aria-controls={`faq-panel-${index}`}
