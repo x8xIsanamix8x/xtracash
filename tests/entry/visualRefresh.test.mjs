@@ -25,6 +25,8 @@ test("las ilustraciones respetan el ancho del contenedor para evitar scroll late
 
   assert.match(onboardingVisual, /width: "min\(100%, 562px\)"/);
   assert.match(onboardingVisual, /maxWidth: "100%"/);
+  assert.match(onboardingVisual, /height: "min\(100%, clamp\(240px, 48dvh, 500px\)\)"/);
+  assert.match(onboardingVisual, /maxHeight: "100%"/);
 });
 
 test("el acceso usa el nuevo fondo, isotipo y ayuda solo por icono", async () => {
@@ -35,7 +37,9 @@ test("el acceso usa el nuevo fondo, isotipo y ayuda solo por icono", async () =>
 
   assert.match(accessView, /login-background\.webp/);
   assert.match(accessView, /isopulsa\.png/);
-  assert.match(accessView, /width: "clamp\(164px, 43vw, 242px\)"/);
+  assert.match(accessView, /width: "clamp\(142px, 37vw, 164px\)"/);
+  assert.match(accessView, /@media \(min-width: 414px\)/);
+  assert.match(accessView, /pb: "max\(8px, env\(safe-area-inset-bottom\)\)"/);
   assert.match(accessView, /HelpOutlineRounded/);
   assert.match(accessView, /aria-label="Ayuda"/);
   assert.match(accessView, />\s*Iniciar sesión\s*</);
@@ -53,7 +57,9 @@ test("el formulario de ingreso móvil ocupa toda la vista y usa la ilustración 
   assert.match(signInSheet, /overflowX: "hidden"/);
   assert.doesNotMatch(signInSheet, /Ingresa tus datos para continuar\./);
   assert.match(signInSheet, /Activa tu biometría desde tu Perfil para acceder más rápido\./);
-  assert.match(signInSheet, /direction=\{props\.in \? "right" : "left"\}/);
+  assert.match(signInSheet, /direction=\{props\.in \? "left" : "right"\}/);
   assert.match(signInSheet, /transitionDuration=\{prefersReducedMotion \? 0 : \{ enter: 220, exit: 180 \}\}/);
   assert.match(signInVisual, /LoginIlustration\.webp/);
+  assert.match(signInVisual, /@media \(max-width: 413px\)/);
+  assert.match(signInSheet, /justifyContent: \{ xs: "space-between", sm: "flex-start" \}/);
 });
