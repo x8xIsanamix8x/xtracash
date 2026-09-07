@@ -42,4 +42,6 @@ test("usa una vista propia y conserva un único acordeón expandido", async () =
   assert.match(helpView, /useState<string \| false>\(false\)/);
   assert.match(helpView, /setExpandedQuestion\(expanded \? item.question : false\)/);
   assert.match(helpView, /prefersReducedMotion \? 0 : 180/);
+  assert.match(helpView, /m: "0 !important"/);
+  assert.match(helpView, /transformOrigin: "top center"/);
 });
