@@ -38,8 +38,6 @@ import {
   getAccountSummary,
 } from "@/features/home/services/accountSummary";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
-import { themeTokens } from "@/theme/tokens";
-
 import {
   DirectoryDialog,
   type DirectoryFocusDestination,
@@ -830,8 +828,12 @@ export function MobilePaymentView() {
         flexDirection: "column",
         overflow: step === "result" ? "hidden" : undefined,
         bgcolor: "background.default",
-        pt: "calc(16px + env(safe-area-inset-top))",
-        pb: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`,
+        pt: step === "result"
+          ? "calc(8px + env(safe-area-inset-top))"
+          : "calc(16px + env(safe-area-inset-top))",
+        pb: step === "result"
+          ? `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 8}px + env(safe-area-inset-bottom))`
+          : `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`,
       }}
     >
       <Container
@@ -841,8 +843,7 @@ export function MobilePaymentView() {
         <Stack
           component="header"
           direction="row"
-          spacing={1}
-          sx={{ minHeight: 48, alignItems: "center" }}
+          sx={{ minHeight: step === "result" ? 44 : 48, alignItems: "center" }}
         >
           <IconButton
             aria-label={backLabel}
@@ -854,9 +855,6 @@ export function MobilePaymentView() {
           >
             <ArrowBackRounded />
           </IconButton>
-          <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800, letterSpacing: "-0.03em" }}>
-            Impúlsate Móvil
-          </Typography>
         </Stack>
 
         <Box
@@ -875,7 +873,7 @@ export function MobilePaymentView() {
             flexDirection: "column",
             overflow: step === "result" ? "hidden" : undefined,
             mx: "auto",
-            mt: { xs: 1, sm: 2 },
+            mt: step === "result" ? 0 : { xs: 1, sm: 2 },
             p: step === "result" ? 0 : { xs: 1, sm: 2.5 },
           }}
         >
