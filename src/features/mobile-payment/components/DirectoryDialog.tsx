@@ -214,7 +214,7 @@ export function DirectoryDialog({
         container: {
           sx: {
             alignItems: { xs: "flex-end", md: "center" },
-            pb: { xs: "env(safe-area-inset-bottom)", md: 0 },
+            height: { xs: "100dvh", md: "100%" },
           },
         },
         paper: {
