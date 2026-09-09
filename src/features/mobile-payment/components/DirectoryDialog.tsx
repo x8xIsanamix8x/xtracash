@@ -35,7 +35,6 @@ import type { SlideProps } from "@mui/material/Slide";
 import { APP_BOTTOM_NAVIGATION_HEIGHT } from "@/components/AppBottomNavigation";
 
 import {
-  formatBank,
   formatDocument,
   formatPhone,
   getBank,
@@ -403,14 +402,14 @@ export function DirectoryDialog({
                           contactRefs.current.delete(contact.id);
                         }
                       }}
-                      sx={{ minHeight: 84, borderRadius: 2, py: 1.25, pr: 8 }}
+                      sx={{ minHeight: 104, borderRadius: 2, py: 1.25, pr: 8 }}
                     >
                       <PersonOutlineRounded
                         aria-hidden="true"
                         color="primary"
                         sx={{ mr: 1.5, flexShrink: 0 }}
                       />
-                      <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+                      <Stack spacing={0.375} sx={{ minWidth: 0 }}>
                         <Typography sx={{ fontWeight: 700, overflowWrap: "anywhere" }}>
                           {contact.name}
                         </Typography>
@@ -424,15 +423,16 @@ export function DirectoryDialog({
                             wordBreak: "break-word",
                           }}
                         >
-                          {bank
-                            ? formatBank(bank)
-                            : `${contact.bankCode} · Banco no disponible`}
+                          {bank?.name ?? "Banco no disponible"}
                         </Typography>
                         <Typography color="text.secondary" variant="body2">
-                          {formatPhone(contact.phone)} · {formatDocument(
+                          Cédula: {formatDocument(
                             contact.documentType,
                             contact.documentNumber,
                           )}
+                        </Typography>
+                        <Typography color="text.secondary" variant="body2">
+                          Teléfono: {formatPhone(contact.phone)}
                         </Typography>
                       </Stack>
                     </ListItemButton>

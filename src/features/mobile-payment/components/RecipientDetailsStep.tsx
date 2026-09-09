@@ -559,6 +559,15 @@ export function RecipientDetailsStep({
                 <Typography sx={{ fontWeight: 700 }}>
                   {selectedContact.name}
                 </Typography>
+                <Typography color="text.secondary" variant="body2">
+                  {formatDocument(
+                    selectedContact.documentType,
+                    selectedContact.documentNumber,
+                  )}
+                </Typography>
+                <Typography color="text.secondary" variant="body2">
+                  {formatPhone(selectedContact.phone)}
+                </Typography>
                 <Stack
                   direction="row"
                   spacing={1}
@@ -569,13 +578,6 @@ export function RecipientDetailsStep({
                     {selectedBank ? formatBank(selectedBank) : "Banco no disponible"}
                   </Typography>
                 </Stack>
-                <Typography color="text.secondary" variant="body2">
-                  {formatPhone(selectedContact.phone)} ·{" "}
-                  {formatDocument(
-                    selectedContact.documentType,
-                    selectedContact.documentNumber,
-                  )}
-                </Typography>
               </Stack>
             </CardContent>
           </Card>

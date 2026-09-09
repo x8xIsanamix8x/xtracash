@@ -149,7 +149,7 @@ export function TransferResultView({
           alignItems: "center",
           justifyContent: "center",
           px: { xs: 2, sm: 3.5 },
-          py: { xs: 1.25, sm: 2.5 },
+          py: { xs: 0.75, sm: 2.5 },
           textAlign: "center",
           bgcolor: "transparent",
         }}
@@ -197,15 +197,16 @@ export function TransferResultView({
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          py: { xs: 1.25, sm: 2.5 },
+          gap: { xs: 0.75, sm: 1.5 },
+          py: { xs: 0.75, sm: 2.5 },
           px: { xs: 2, sm: 3.5 },
           bgcolor: "transparent",
           overflow: "hidden",
-          justifyContent: "space-between",
+          justifyContent: "flex-start",
         }}
       >
-        <Card variant="outlined" sx={{ minHeight: { xs: "clamp(438px, 52.25dvh, 480px)", sm: "auto" }, borderRadius: 3, boxShadow: "none" }}>
-          <CardContent sx={{ boxSizing: "border-box", p: { xs: "17px", sm: "23px" }, "&:last-child": { pb: { xs: "17px", sm: "23px" } } }}>
+        <Card variant="outlined" sx={{ borderRadius: 3, boxShadow: "none", flexShrink: 0 }}>
+          <CardContent sx={{ boxSizing: "border-box", p: { xs: 2, sm: "23px" }, "&:last-child": { pb: { xs: 2, sm: "23px" } } }}>
             <Stack spacing={{ xs: 1.75, sm: 2 }}>
               <Stack spacing={0} sx={{ textAlign: "center" }}>
                 {result.bankReference ? (
@@ -263,7 +264,7 @@ export function TransferResultView({
           sx={{
             flexDirection: "column",
             gap: 1,
-            pt: { xs: 1, sm: 2 },
+            pt: { xs: 0.25, sm: 0.5 },
             pb: 0,
             alignItems: result.status === "rejected" ? "stretch" : "center",
             justifyContent: result.status === "rejected" ? "flex-start" : "center",
