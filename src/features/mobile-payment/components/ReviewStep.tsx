@@ -17,7 +17,6 @@ import { alpha } from "@mui/material/styles";
 import { APP_BOTTOM_NAVIGATION_HEIGHT } from "@/components/AppBottomNavigation";
 
 import {
-  formatBank,
   formatDocument,
   formatPhone,
 } from "../format";
@@ -129,9 +128,6 @@ export function ReviewStep({
                   Editar
                 </Button>
               </Stack>
-              <Typography sx={{ fontWeight: 700 }}>
-                {recipient.name}
-              </Typography>
               <Box
                 component="dl"
                 sx={{
@@ -141,18 +137,19 @@ export function ReviewStep({
                   gap: 1.25,
                 }}
               >
-                <ReviewItem label="Banco" value={formatBank(bank)} />
+                <ReviewItem label="Beneficiario" value={recipient.name} />
                 <ReviewItem
-                  label="Teléfono"
-                  value={formatPhone(recipient.phone)}
-                />
-                <ReviewItem
-                  label="Documento"
+                  label="Cédula"
                   value={formatDocument(
                     recipient.documentType,
                     recipient.documentNumber,
                   )}
                 />
+                <ReviewItem
+                  label="Teléfono"
+                  value={formatPhone(recipient.phone)}
+                />
+                <ReviewItem label="Banco receptor" value={bank.name} />
               </Box>
             </Stack>
           </CardContent>

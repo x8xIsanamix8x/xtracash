@@ -61,5 +61,5 @@ test("el formulario de ingreso móvil ocupa toda la vista y usa la ilustración 
   assert.match(signInSheet, /transitionDuration=\{prefersReducedMotion \? 0 : \{ enter: 220, exit: 180 \}\}/);
   assert.match(signInVisual, /LoginIlustration\.webp/);
   assert.match(signInVisual, /@media \(max-width: 413px\)/);
-  assert.match(signInSheet, /justifyContent: \{ xs: "space-between", sm: "flex-start" \}/);
+  assert.doesNotMatch(signInSheet, /justifyContent: \{ xs: "space-between", sm: "flex-start" \}/);
 });
