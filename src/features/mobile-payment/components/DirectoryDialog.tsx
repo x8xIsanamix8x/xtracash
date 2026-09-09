@@ -212,19 +212,19 @@ export function DirectoryDialog({
       slotProps={{
         transition: { onExited },
         container: {
-          sx: { alignItems: { xs: "flex-end", md: "center" } },
+          sx: {
+            alignItems: { xs: "flex-end", md: "center" },
+            pb: { xs: "env(safe-area-inset-bottom)", md: 0 },
+          },
         },
         paper: {
           sx: {
             m: { xs: 0, md: 2 },
             width: "100%",
-            maxHeight: "80dvh",
+            maxHeight: { xs: "82dvh", md: "80dvh" },
             borderRadius: { xs: "24px 24px 0 0", md: 3 },
           },
         },
-      }}
-      sx={{
-        bottom: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`,
       }}
       transitionDuration={prefersReducedMotion ? 0 : undefined}
     >
