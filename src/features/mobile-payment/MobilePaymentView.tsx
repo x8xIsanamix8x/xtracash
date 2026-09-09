@@ -645,12 +645,6 @@ export function MobilePaymentView() {
     loadPaymentContext();
   };
 
-  const startNewPayment = () => {
-    setNavigationNotice("");
-    resetTransaction();
-    retryPaymentContext();
-  };
-
   const reviewRejectedTransfer = () => {
     setTransferResult(null);
     setInitiatedPayment(null);
@@ -815,7 +809,6 @@ export function MobilePaymentView() {
       return (
         <TransferResultView
           onBackHome={returnHome}
-          onNewPayment={startNewPayment}
           onNotice={setNavigationNotice}
           onReview={reviewRejectedTransfer}
           result={transferResult}
@@ -832,8 +825,10 @@ export function MobilePaymentView() {
       component="main"
       sx={{
         minHeight: "100dvh",
+        height: step === "result" ? "100dvh" : undefined,
         display: "flex",
         flexDirection: "column",
+        overflow: step === "result" ? "hidden" : undefined,
         bgcolor: "background.default",
         pt: "calc(16px + env(safe-area-inset-top))",
         pb: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`,
@@ -878,6 +873,7 @@ export function MobilePaymentView() {
             flex: 1,
             display: "flex",
             flexDirection: "column",
+            overflow: step === "result" ? "hidden" : undefined,
             mx: "auto",
             mt: { xs: 1, sm: 2 },
             p: step === "result" ? 0 : { xs: 1, sm: 2.5 },

@@ -3,42 +3,38 @@
 import { Ref, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircleOutlineRounded,
+  ChevronLeftRounded,
   ContentCopyRounded,
   ErrorOutlineRounded,
   HourglassTopRounded,
 } from "@mui/icons-material";
-import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, IconButton, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
-import {
-  formatBank,
-  formatDocument,
-  formatMinorUnits,
-  formatTransactionDate,
-} from "../format";
+import { formatDocument, formatMinorUnits, formatTransactionDate } from "../format";
 import type { TransferResult } from "../types";
 
 type TransferResultViewProps = Readonly<{
   result: TransferResult;
   titleRef: Ref<HTMLHeadingElement>;
   onBackHome: () => void;
-  onNewPayment: () => void;
   onReview: () => void;
   onNotice: (message: string) => void;
 }>;
 
 type ResultItemProps = Readonly<{
+  fullWidth?: boolean;
   label: string;
   value: string;
 }>;
 
-function ResultItem({ label, value }: ResultItemProps) {
+function ResultItem({ fullWidth = false, label, value }: ResultItemProps) {
   return (
-    <Box sx={{ minWidth: 0, display: "grid", gap: 0.25 }}>
-      <Typography color="text.secondary" variant="body2">
+    <Box sx={{ minWidth: 0, display: "grid", gap: 0.25, gridColumn: fullWidth ? "1 / -1" : undefined }}>
+      <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="body2">
         {label}
       </Typography>
-      <Typography sx={{ fontWeight: 700, overflowWrap: "anywhere" }}>
+      <Typography sx={{ fontWeight: 400, overflowWrap: "anywhere" }}>
         {value}
       </Typography>
     </Box>
@@ -49,7 +45,6 @@ export function TransferResultView({
   result,
   titleRef,
   onBackHome,
-  onNewPayment,
   onReview,
   onNotice,
 }: TransferResultViewProps) {
@@ -142,38 +137,28 @@ export function TransferResultView({
         flex: 1,
         display: "flex",
         flexDirection: "column",
-        overflow: "visible",
+        overflow: "hidden",
       }}
     >
       <Stack
         aria-live={result.status === "rejected" ? "assertive" : "polite"}
         role={resultPresentation.role}
-        spacing={1.25}
-        sx={(theme) => {
-          const statusColor = result.status === "success"
-            ? theme.palette.success.main
-            : result.status === "processing"
-              ? theme.palette.primary.main
-              : theme.palette.error.main;
-
-          return {
-            flexShrink: 0,
-            alignItems: "center",
-            justifyContent: "center",
-            px: { xs: 2, sm: 3.5 },
-            py: { xs: 2.25, sm: 2.5 },
-            textAlign: "center",
-            borderTop: "4px solid",
-            borderTopColor: statusColor,
-            bgcolor: alpha(statusColor, 0.1),
-          };
+        spacing={0.75}
+        sx={{
+          flexShrink: 0,
+          alignItems: "center",
+          justifyContent: "center",
+          px: { xs: 2, sm: 3.5 },
+          py: { xs: 1.25, sm: 2.5 },
+          textAlign: "center",
+          bgcolor: "transparent",
         }}
       >
         <Box
           aria-hidden="true"
           sx={(theme) => ({
-            width: { xs: 56, sm: 60 },
-            height: { xs: 56, sm: 60 },
+            width: { xs: 66, sm: 72 },
+            height: { xs: 66, sm: 72 },
             display: "grid",
             placeItems: "center",
             borderRadius: "50%",
@@ -188,7 +173,7 @@ export function TransferResultView({
             ),
           })}
         >
-          <StatusIcon sx={{ width: { xs: 32, sm: 34 }, height: { xs: 32, sm: 34 } }} />
+          <StatusIcon sx={{ width: { xs: 39, sm: 42 }, height: { xs: 39, sm: 42 } }} />
         </Box>
         <Typography
           component="h1"
@@ -197,7 +182,7 @@ export function TransferResultView({
           tabIndex={-1}
           sx={{
             color: "secondary.main",
-            fontSize: { xs: "clamp(1.875rem, 8vw, 2.125rem)", sm: "2.25rem" },
+            fontSize: { xs: "clamp(1.5rem, 7vw, 1.875rem)", sm: "2.25rem" },
             fontWeight: 700,
             lineHeight: 1.12,
           }}
@@ -212,179 +197,81 @@ export function TransferResultView({
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          py: { xs: 2, sm: 2.5 },
-          px: { xs: 2.5, sm: 3.5 },
-          bgcolor: "background.paper",
+          py: { xs: 1.25, sm: 2.5 },
+          px: { xs: 2, sm: 3.5 },
+          bgcolor: "transparent",
+          overflow: "hidden",
+          justifyContent: "space-between",
         }}
       >
-        <Stack spacing={2}>
-          {result.status === "rejected" && (
-            <Typography color="text.secondary">
-              {result.userMessage
-                ?? "Revisa los datos antes de intentarlo nuevamente."}
-            </Typography>
-          )}
-
-          {result.bankReference && (
-            <Card
-              variant="outlined"
-              sx={(theme) => ({
-                borderColor: alpha(theme.palette.primary.main, 0.32),
-                bgcolor: alpha(theme.palette.primary.main, 0.07),
-                boxShadow: "none",
-              })}
-            >
-              <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                <Stack spacing={0.75}>
-                  <Typography color="text.secondary" variant="body2">
-                    Número de referencia
-                  </Typography>
-                  <Stack
-                    sx={{
-                      flexDirection: "column",
-                      alignItems: "stretch",
-                      gap: 1,
-                      "@media (min-width: 360px)": {
-                        flexDirection: "row",
-                        alignItems: "center",
-                      },
-                    }}
-                  >
-                    <Typography
-                      sx={{
-                        minWidth: 0,
-                        flex: 1,
-                        color: "secondary.main",
-                        fontSize: "1.125rem",
-                        fontVariantNumeric: "tabular-nums",
-                        fontWeight: 600,
-                        lineHeight: 1.4,
-                        overflowWrap: "anywhere",
-                        userSelect: "text",
-                      }}
-                    >
+        <Card variant="outlined" sx={{ minHeight: { xs: "clamp(438px, 52.25dvh, 480px)", sm: "auto" }, borderRadius: 3, boxShadow: "none" }}>
+          <CardContent sx={{ boxSizing: "border-box", p: { xs: "17px", sm: "23px" }, "&:last-child": { pb: { xs: "17px", sm: "23px" } } }}>
+            <Stack spacing={{ xs: 1.75, sm: 2 }}>
+              <Stack spacing={0} sx={{ textAlign: "center" }}>
+                {result.bankReference ? (
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", justifyContent: "center" }}>
+                    <Typography color="text.secondary" variant="body2">Referencia:</Typography>
+                    <Typography sx={{ fontVariantNumeric: "tabular-nums", fontWeight: 700 }} variant="body2">
                       {result.bankReference}
                     </Typography>
-                    <Button
-                      aria-label="Copiar número de referencia"
-                      onClick={copyReference}
-                      startIcon={<ContentCopyRounded />}
-                      sx={{ minHeight: 44, minWidth: 112, alignSelf: "flex-start" }}
-                      type="button"
-                      variant="text"
-                    >
-                      {isCopied ? "Copiado" : "Copiar"}
-                    </Button>
+                    <IconButton aria-label={isCopied ? "Referencia copiada" : "Copiar número de referencia"} onClick={copyReference} size="small" sx={{ width: 28, height: 28, minWidth: 28, minHeight: 28, p: 0.25, color: "primary.main" }} type="button">
+                      <ContentCopyRounded fontSize="small" />
+                    </IconButton>
                   </Stack>
-                  {copyError && (
-                    <Typography color="error" role="alert" variant="body2">
-                      {copyError}
-                    </Typography>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          )}
-
-          <Stack spacing={1.5}>
-            <Box sx={{ display: "grid", gap: 0.25 }}>
-              <Typography color="text.secondary" variant="body2">
-                Monto transferido
-              </Typography>
-              <Typography
-                variant="h4"
-                sx={{ color: "secondary.main", fontWeight: 800, overflowWrap: "anywhere" }}
-              >
-                {formatMinorUnits(result.amountMinorUnits)}
-              </Typography>
-            </Box>
-            <Box
-              component="dl"
-              sx={{
-                m: 0,
-                display: "flex",
-                flexDirection: "column",
-                gap: 1.5,
-              }}
-            >
-              <ResultItem label="Beneficiario" value={result.beneficiaryName} />
-              {result.status === "success" && (
-                <>
-                  <ResultItem
-                    label="Banco receptor"
-                    value={formatBank({ code: result.bankCode, name: result.bankName })}
-                  />
-                  <ResultItem
-                    label="Cédula"
-                    value={formatDocument(result.documentType, result.documentNumber)}
-                  />
-                  <ResultItem label="Teléfono" value={result.phone} />
-                </>
-              )}
-              {transactionDateLabel && (
-                <Box sx={{ minWidth: 0, display: "grid", gap: 0.25 }}>
+                ) : (
+                  <Typography color="text.secondary" variant="body2">Comprobante de operación</Typography>
+                )}
                 <Typography color="text.secondary" variant="body2">
-                  Fecha y hora
+                  {transactionDateLabel ? `${transactionDateLabel.date} · ${transactionDateLabel.time}` : "Fecha pendiente de confirmación"}
                 </Typography>
-                <Typography
-                  component="dd"
-                  sx={{
-                    m: 0,
-                    display: "flex",
-                    flexWrap: "wrap",
-                    columnGap: 0.5,
-                    fontWeight: 700,
-                  }}
-                >
-                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
-                    {transactionDateLabel.date}
-                  </Box>
-                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
-                    · {transactionDateLabel.time}
-                  </Box>
-                </Typography>
-                </Box>
-              )}
-            </Box>
-          </Stack>
+                {copyError && <Typography color="error" role="alert" variant="body2">{copyError}</Typography>}
+              </Stack>
 
-          {result.status === "processing" && (
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={(theme) => ({
-                alignItems: "flex-start",
-                p: 1.5,
-                borderRadius: 2,
-                color: "text.primary",
-                bgcolor: alpha(theme.palette.primary.main, 0.08),
-              })}
-            >
-              <HourglassTopRounded aria-hidden="true" color="primary" />
-              <Typography>
-                Estamos validando la operación. No realices nuevamente el pago
-                mientras confirmamos el resultado.
-              </Typography>
+              <Stack spacing={{ xs: 1.75, sm: 2.25 }}>
+                <Typography component="h2" sx={{ color: "secondary.main", fontSize: "1rem", fontWeight: 700 }}>
+                  Detalles de la transferencia
+                </Typography>
+                {result.status === "rejected" && (
+                  <Typography color="text.secondary" variant="body2">
+                    {result.userMessage ?? "Revisa los datos antes de intentarlo nuevamente."}
+                  </Typography>
+                )}
+                <Box sx={{ display: "grid", gap: 0.25, mb: { xs: 1.75, sm: 2 } }}>
+                  <Typography color="text.secondary" variant="body2">Monto transferido</Typography>
+                  <Typography variant="h4" sx={{ color: "secondary.main", fontSize: { xs: "2rem", sm: "2.125rem" }, fontWeight: 800, lineHeight: 1.1, overflowWrap: "anywhere" }}>
+                    {formatMinorUnits(result.amountMinorUnits)}
+                  </Typography>
+                </Box>
+                <Box component="dl" sx={{ m: 0, display: "grid", gap: { xs: 1.5, sm: 2 } }}>
+                  <ResultItem fullWidth label="Beneficiario" value={result.beneficiaryName} />
+                  <ResultItem fullWidth label="Cédula" value={formatDocument(result.documentType, result.documentNumber)} />
+                  <ResultItem fullWidth label="Teléfono" value={result.phone} />
+                  <ResultItem fullWidth label="Banco receptor" value={result.bankName} />
+                </Box>
+                {result.status === "processing" && (
+                  <Stack direction="row" spacing={0.75} sx={(theme) => ({ alignItems: "flex-start", p: 1, borderRadius: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.08) })}>
+                    <HourglassTopRounded aria-hidden="true" color="primary" fontSize="small" />
+                    <Typography color="text.secondary" variant="body2">Estamos validando la operación. No realices nuevamente el pago mientras confirmamos el resultado.</Typography>
+                  </Stack>
+                )}
+              </Stack>
             </Stack>
-          )}
-        </Stack>
+          </CardContent>
+        </Card>
 
         <Stack
           sx={{
             flexDirection: "column",
             gap: 1,
-            pt: 2,
-            pb: 1,
+            pt: { xs: 1, sm: 2 },
+            pb: 0,
+            alignItems: result.status === "rejected" ? "stretch" : "center",
+            justifyContent: result.status === "rejected" ? "flex-start" : "center",
             "@media (min-width: 390px)": {
               flexDirection: "row",
             },
           }}
         >
-          {result.status === "success" && (
-            <Button fullWidth onClick={onNewPayment} type="button" variant="outlined">
-              Realizar otro pago
-            </Button>
-          )}
           {result.status === "rejected" && (
             <Button fullWidth onClick={onBackHome} type="button" variant="outlined">
               Volver al inicio
@@ -396,9 +283,21 @@ export function TransferResultView({
             </Button>
           )}
           {result.status !== "rejected" && (
-            <Button fullWidth onClick={onBackHome} type="button" variant="contained">
-              Volver al inicio
-            </Button>
+            <IconButton
+              aria-label="Volver al inicio"
+              onClick={onBackHome}
+              type="button"
+              sx={(theme) => ({
+                width: 70,
+                height: 70,
+                bgcolor: theme.palette.primary.main,
+                boxShadow: `0 8px 18px ${alpha(theme.palette.primary.main, 0.28)}`,
+                color: theme.palette.common.white,
+                "&:hover": { bgcolor: theme.palette.primary.dark },
+              })}
+            >
+              <ChevronLeftRounded sx={{ width: 44, height: 44 }} />
+            </IconButton>
           )}
         </Stack>
       </Box>
