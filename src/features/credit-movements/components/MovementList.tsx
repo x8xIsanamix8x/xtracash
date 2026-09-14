@@ -128,7 +128,7 @@ export function MovementList({ groups, isFiltered }: MovementListProps) {
                 >
                   {day.label}
                 </Typography>
-                <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                <Card variant="outlined" sx={{ borderRadius: 1.5 }}>
                   <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
                     <List disablePadding aria-label={`Movimientos del ${day.label}`}>
                       {day.items.map((item, index) => {

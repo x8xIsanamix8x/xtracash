@@ -65,9 +65,20 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }
 
-function parseMovement(value: unknown): CreditMovement | null {
+function readNullableString(value: unknown): string | null {
+  return value === undefined || value === null || typeof value === "string"
+    ? value?.trim() ?? null
+    : null;
+}
+
+function parseLegacyMovement(value: unknown): CreditMovement | null {
   if (!isRecord(value)) return null;
   const amountBs = readMoney(value.monto);
+  const counterparty = value.contraparte === null
+    ? "Crédito"
+    : isNonEmptyString(value.contraparte)
+    ? value.contraparte.trim()
+    : null;
   if (
     !isUuid(value.id)
     || !isCreditMovementType(value.tipo)
@@ -75,7 +86,7 @@ function parseMovement(value: unknown): CreditMovement | null {
     || !isNonEmptyString(value.estadoDetalle)
     || amountBs === null
     || !isDateTime(value.fecha)
-    || !isNonEmptyString(value.contraparte)
+    || counterparty === null
     || !isNullableString(value.codigo)
     || !isNullableString(value.referencia)
     || !isNullableString(value.motivoRechazo)
@@ -90,11 +101,60 @@ function parseMovement(value: unknown): CreditMovement | null {
     statusDetail: value.estadoDetalle.trim(),
     amountBs,
     occurredAt: value.fecha,
-    counterparty: value.contraparte.trim(),
+    counterparty,
     rejectionReason: value.motivoRechazo === null
       ? null
       : value.motivoRechazo.trim(),
   };
+}
+
+/**
+ * Maps the payment-report item currently published by Core's
+ * /estado-cuenta contract to the stable BFF contract consumed by the UI.
+ *
+ * Core's documented response does not include `tipo`, `contraparte`, or
+ * `estadoDetalle`. These items are payment reports by shape, so their type and
+ * detail are made explicit here instead of requiring undocumented fields.
+ */
+function parseCorePaymentReportMovement(value: unknown): CreditMovement | null {
+  if (!isRecord(value)) return null;
+
+  const amountBs = readMoney(value.monto);
+  const rejectionReason = readNullableString(value.motivoRechazo);
+  const hasValidRejectionReason = value.motivoRechazo === undefined
+    || value.motivoRechazo === null
+    || typeof value.motivoRechazo === "string";
+  const occurredAt = isDateTime(value.reportadoEn)
+    ? value.reportadoEn
+    : isCalendarDate(value.fechaPago)
+    ? `${value.fechaPago}T12:00:00-04:00`
+    : null;
+
+  if (
+    !isUuid(value.id)
+    || amountBs === null
+    || !isCreditMovementStatus(value.estado)
+    || !isNonEmptyString(value.bancoEmisor)
+    || occurredAt === null
+    || !hasValidRejectionReason
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    type: "REPORTE_PAGO",
+    status: value.estado,
+    statusDetail: `Reporte de pago ${value.estado.toLocaleLowerCase("es-VE")}`,
+    amountBs,
+    occurredAt,
+    counterparty: value.bancoEmisor.trim(),
+    rejectionReason,
+  };
+}
+
+function parseMovement(value: unknown): CreditMovement | null {
+  return parseLegacyMovement(value) ?? parseCorePaymentReportMovement(value);
 }
 
 export function parseCoreCreditMovements(
