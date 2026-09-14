@@ -335,7 +335,13 @@ export function CreditMovementsView() {
                       component="h2"
                       id="recent-movements-title"
                       variant="h5"
-                      sx={{ color: "secondary.main", fontWeight: 700 }}
+                      sx={{
+                        color: "secondary.main",
+                        fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                        fontWeight: 700,
+                        letterSpacing: "-0.02em",
+                        whiteSpace: "nowrap",
+                      }}
                     >
                       Movimientos recientes
                     </Typography>
