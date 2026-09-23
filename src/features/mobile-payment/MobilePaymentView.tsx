@@ -8,8 +8,9 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowBackRounded, ErrorOutlineRounded } from "@mui/icons-material";
+import { ArrowBackRounded, ChevronLeftRounded, ErrorOutlineRounded } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -38,6 +39,7 @@ import {
   getAccountSummary,
 } from "@/features/home/services/accountSummary";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
+import { themeTokens } from "@/theme/tokens";
 import {
   DirectoryDialog,
   type DirectoryFocusDestination,
@@ -57,6 +59,13 @@ import {
   getMobilePaymentNavigationDecision,
   hasMobilePaymentProgress,
 } from "./navigation";
+import { recipientDataFromContact } from "./recipientDraft";
+import {
+  previewAvailableBs,
+  previewBanks,
+  previewContacts,
+  previewLimitBs,
+} from "./previewContext";
 import {
   confirmMobilePayment,
   deleteDirectoryContact,
@@ -73,6 +82,7 @@ import type {
   InitiatedPayment,
   ManualRecipientData,
   MobilePaymentStep,
+  PaymentPurposeDraft,
   RecipientMode,
   ResolvedRecipient,
   TransferResult,
@@ -80,7 +90,9 @@ import type {
 } from "./types";
 import { validateDetails } from "./validation";
 
-type PaymentContextStatus = "loading" | "ready" | "error" | "unavailable";
+type PaymentContextStatus = "loading" | "ready" | "preview" | "error" | "unavailable";
+
+const enableLocalPreview = process.env.NODE_ENV === "development";
 
 const initialManualRecipient: ManualRecipientData = {
   bankCode: "",
@@ -147,9 +159,11 @@ export function MobilePaymentView() {
   const [manualRecipient, setManualRecipient] =
     useState<ManualRecipientData>(initialManualRecipient);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [purpose, setPurpose] = useState<PaymentPurposeDraft>({ concept: "", iconId: null });
   const [amount, setAmount] = useState("");
   const [availableMinorUnits, setAvailableMinorUnits] = useState(0);
   const [availableLabel, setAvailableLabel] = useState("Bs. 0,00");
+  const [limitLabel, setLimitLabel] = useState("Bs. 0,00");
   const [banks, setBanks] = useState<readonly Bank[]>([]);
   const [detailsErrors, setDetailsErrors] = useState<DetailsErrors>({});
   const [focusField, setFocusField] = useState<DetailsField | null>(null);
@@ -208,7 +222,7 @@ export function MobilePaymentView() {
       };
     }
 
-    if (recipientMode === "manual") {
+    if (recipientMode === "manual" || recipientMode === "choice") {
       return {
         id: null,
         name: manualRecipient.name.trim(),
@@ -228,6 +242,16 @@ export function MobilePaymentView() {
     const controller = new AbortController();
     contextRequestRef.current = controller;
 
+    const showLocalPreview = () => {
+      setAvailableMinorUnits(parseAmountToMinorUnits(previewAvailableBs) ?? 0);
+      setAvailableLabel(formatBsAmount(previewAvailableBs));
+      setLimitLabel(formatBsAmount(previewLimitBs));
+      setBanks(previewBanks);
+      setDirectoryEntries(previewContacts);
+      setDirectoryStatus("ready");
+      setContextStatus("preview");
+    };
+
     void (async () => {
       try {
         const summary = await getAccountSummary(controller.signal);
@@ -238,7 +262,8 @@ export function MobilePaymentView() {
           || summary.product === null
           || !isCreditLineUsable(summary.payments.delinquencyStage)
         ) {
-          setContextStatus("unavailable");
+          if (enableLocalPreview) showLocalPreview();
+          else setContextStatus("unavailable");
           return;
         }
 
@@ -246,7 +271,8 @@ export function MobilePaymentView() {
           summary.product.availableBs,
         );
         if (nextAvailableMinorUnits === null) {
-          setContextStatus("error");
+          if (enableLocalPreview) showLocalPreview();
+          else setContextStatus("error");
           return;
         }
 
@@ -255,6 +281,7 @@ export function MobilePaymentView() {
 
         setAvailableMinorUnits(nextAvailableMinorUnits);
         setAvailableLabel(formatBsAmount(summary.product.availableBs));
+        setLimitLabel(formatBsAmount(summary.product.limitBs));
         setBanks(options.banks);
         setDirectoryEntries(options.contacts);
         setDirectoryStatus(options.contacts.length > 0 ? "ready" : "empty");
@@ -277,8 +304,12 @@ export function MobilePaymentView() {
           return;
         }
 
-        setDirectoryStatus("error");
-        setContextStatus("error");
+        if (enableLocalPreview) {
+          showLocalPreview();
+        } else {
+          setDirectoryStatus("error");
+          setContextStatus("error");
+        }
       } finally {
         if (contextRequestRef.current === controller) {
           contextRequestRef.current = null;
@@ -297,7 +328,7 @@ export function MobilePaymentView() {
   }, [loadPaymentContext]);
 
   useEffect(() => {
-    if (contextStatus !== "ready") return;
+    if (contextStatus !== "ready" && contextStatus !== "preview") return;
 
     const animationFrame = window.requestAnimationFrame(() => {
       if (step === "details") {
@@ -310,16 +341,11 @@ export function MobilePaymentView() {
     });
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [contextStatus, recipientMode, step]);
+  }, [contextStatus, step]);
 
   const clearDetailsError = (field: DetailsField) => {
     setDetailsErrors((current) => ({ ...current, [field]: undefined }));
     setLineError("");
-  };
-
-  const chooseManual = () => {
-    setRecipientMode("manual");
-    clearDetailsError("recipient");
   };
 
   const openDirectory = () => {
@@ -327,18 +353,39 @@ export function MobilePaymentView() {
     clearDetailsError("recipient");
   };
 
-  const selectDirectoryContact = (contactId: string) => {
-    setSuppressDirectoryFocusRestore(true);
+  const fillRecipientFromContact = (contactId: string) => {
+    const contact = directoryEntries.find((entry) => entry.id === contactId);
+    if (!contact) return false;
+
+    setManualRecipient(recipientDataFromContact(contact));
     setSelectedContactId(contactId);
     setRecipientMode("directory");
+    setDetailsErrors((current) => (
+      current.amount ? { amount: current.amount } : {}
+    ));
+    setFocusField(null);
+    setLineError("");
+    return true;
+  };
+
+  const selectDirectoryContact = (contactId: string) => {
+    if (!fillRecipientFromContact(contactId)) return;
+    setSuppressDirectoryFocusRestore(true);
     setIsDirectoryOpen(false);
-    clearDetailsError("recipient");
+  };
+
+  const selectVisibleContact = (contactId: string) => {
+    fillRecipientFromContact(contactId);
   };
 
   const requestDeleteContact = (
     contactId: string,
     focusDestination: DirectoryFocusDestination,
   ) => {
+    if (contextStatus === "preview") {
+      setNavigationNotice("Los beneficiarios de ejemplo no se pueden modificar.");
+      return;
+    }
     if (isDeletingContact) return;
     pendingDeleteFocusRef.current = focusDestination;
     setDeleteError("");
@@ -375,6 +422,7 @@ export function MobilePaymentView() {
         if (selectedContactId === contactId) {
           setSelectedContactId(null);
           setRecipientMode("choice");
+          setManualRecipient(initialManualRecipient);
         }
         setNavigationNotice(`Se eliminó a ${contactName} del directorio`);
         setSuppressDeleteFocusRestore(true);
@@ -440,6 +488,7 @@ export function MobilePaymentView() {
     setStep("details");
     setRecipientMode("choice");
     setSelectedContactId(null);
+    setManualRecipient(initialManualRecipient);
     setInitiatedPayment(null);
     setTransferResult(null);
     setLineError("");
@@ -450,6 +499,11 @@ export function MobilePaymentView() {
     field: keyof ManualRecipientData,
     value: string | boolean,
   ) => {
+    if (manualRecipient[field] === value) return;
+    if (recipientMode !== "manual") {
+      setSelectedContactId(null);
+      setRecipientMode("manual");
+    }
     setManualRecipient((current) => ({
       ...current,
       [field]: value,
@@ -468,7 +522,7 @@ export function MobilePaymentView() {
 
   const continueToReview = () => {
     if (
-      contextStatus !== "ready"
+      (contextStatus !== "ready" && contextStatus !== "preview")
       || isInitiating
       || paymentRequestRef.current !== null
     ) {
@@ -492,6 +546,18 @@ export function MobilePaymentView() {
       || validation.amountMinorUnits === null
       || resolvedRecipient === null
     ) {
+      return;
+    }
+
+    if (contextStatus === "preview") {
+      setNavigationNotice("Vista previa: no se enviará ninguna solicitud de pago.");
+      return;
+    }
+
+    if (purpose.concept.trim() || purpose.iconId !== null) {
+      setLineError(
+        "El concepto y el ícono estarán disponibles cuando se actualice el servicio de Pago Móvil.",
+      );
       return;
     }
 
@@ -626,6 +692,7 @@ export function MobilePaymentView() {
     setRecipientMode("choice");
     setManualRecipient(initialManualRecipient);
     setSelectedContactId(null);
+    setPurpose({ concept: "", iconId: null });
     setAmount("");
     setDetailsErrors({});
     setFocusField(null);
@@ -657,8 +724,10 @@ export function MobilePaymentView() {
 
   const hasEnteredPaymentData = hasMobilePaymentProgress({
     amount,
+    concept: purpose.concept,
     recipientMode,
     selectedContactId,
+    selectedIcon: purpose.iconId,
     step,
   });
   const isTransactionPending = isInitiating || isConfirming;
@@ -695,8 +764,8 @@ export function MobilePaymentView() {
       return;
     }
 
-    if (step === "details" && recipientMode !== "choice") {
-      changeRecipient();
+    if (step === "details" && hasEnteredPaymentData) {
+      setPendingDestination("home");
       return;
     }
 
@@ -705,9 +774,7 @@ export function MobilePaymentView() {
 
   const backLabel = step === "review"
     ? "Volver a los datos del pago"
-    : step === "details" && recipientMode !== "choice"
-      ? "Volver a elegir destinatario"
-      : "Volver al inicio";
+    : "Volver al inicio";
 
   const renderPaymentContent = () => {
     if (contextStatus === "loading") {
@@ -764,20 +831,26 @@ export function MobilePaymentView() {
           amount={amount}
           availableLabel={availableLabel}
           banks={banks}
+          concept={purpose.concept}
+          contacts={directoryEntries}
           errors={detailsErrors}
           focusField={focusField}
           focusRequest={focusRequest}
           isSubmitting={isInitiating}
+          isPreview={contextStatus === "preview"}
+          limitLabel={limitLabel}
           manualRecipient={manualRecipient}
           onAmountChange={updateAmount}
           onChangeRecipient={changeRecipient}
-          onChooseManual={chooseManual}
+          onConceptChange={(value) => setPurpose((current) => ({ ...current, concept: value }))}
           onContinue={continueToReview}
           onManualChange={updateManualRecipient}
           onOpenDirectory={openDirectory}
+          onSelectContact={selectVisibleContact}
+          onSelectIcon={(iconId) => setPurpose((current) => ({ ...current, iconId }))}
           recipientMode={recipientMode}
           selectedContact={selectedContact}
-          titleRef={detailsTitleRef}
+          selectedIcon={purpose.iconId}
         />
       );
     }
@@ -818,6 +891,10 @@ export function MobilePaymentView() {
     return null;
   };
 
+  const isDetailsReady = (contextStatus === "ready" || contextStatus === "preview")
+    && step === "details";
+  const detailsHorizontalGutter = { xs: "1rem", sm: "1.5rem" };
+
   return (
     <Box
       component="main"
@@ -827,35 +904,91 @@ export function MobilePaymentView() {
         display: "flex",
         flexDirection: "column",
         overflow: step === "result" ? "hidden" : undefined,
-        bgcolor: "background.default",
+        bgcolor: isDetailsReady
+          ? themeTokens.color.preLoginBackground
+          : "background.default",
         pt: step === "result"
-          ? "calc(8px + env(safe-area-inset-top))"
-          : "calc(16px + env(safe-area-inset-top))",
+          ? "calc(0.5rem + env(safe-area-inset-top))"
+          : isDetailsReady
+            ? "max(2.1875rem, env(safe-area-inset-top))"
+            : "calc(1rem + env(safe-area-inset-top))",
         pb: step === "result"
           ? `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 8}px + env(safe-area-inset-bottom))`
-          : `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`,
+          : isDetailsReady
+            ? `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`
+            : `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`,
       }}
     >
       <Container
+        disableGutters={isDetailsReady}
         maxWidth="md"
         sx={{ width: "100%", flex: 1, display: "flex", flexDirection: "column" }}
       >
-        <Stack
-          component="header"
-          direction="row"
-          sx={{ minHeight: step === "result" ? 44 : 48, alignItems: "center" }}
-        >
-          <IconButton
-            aria-label={backLabel}
-            color="primary"
-            disabled={isInitiating || isConfirming}
-            onClick={navigateBack}
-            sx={{ minWidth: 44, minHeight: 44 }}
-            type="button"
+        {isDetailsReady ? (
+          <Stack
+            component="header"
+            direction="row"
+            sx={{
+              width: "100%",
+              maxWidth: 480,
+              minHeight: "3rem",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mx: "auto",
+              px: detailsHorizontalGutter,
+            }}
           >
-            <ArrowBackRounded />
-          </IconButton>
-        </Stack>
+            <Box sx={{ width: "2.75rem", display: "flex", alignItems: "center" }}>
+              <Image
+                alt="Impúlsate"
+                height={32}
+                src="/icons/impulsate-icon-master.png"
+                style={{ borderRadius: "50%" }}
+                width={32}
+              />
+            </Box>
+            <Typography
+              component="h1"
+              id="mobile-payment-details-title"
+              ref={detailsTitleRef}
+              tabIndex={-1}
+              sx={{ color: "secondary.main", fontSize: "1rem", fontWeight: 600 }}
+            >
+              Usar disponible
+            </Typography>
+            <IconButton
+              aria-label={backLabel}
+              disabled={isInitiating || isConfirming}
+              onClick={navigateBack}
+              sx={{
+                minWidth: "2.75rem",
+                minHeight: "2.75rem",
+                color: "#FF7900",
+                "& .MuiSvgIcon-root": { bgcolor: "#FF7900", color: "#fff", borderRadius: 1, fontSize: "1.75rem" },
+              }}
+              type="button"
+            >
+              <ChevronLeftRounded />
+            </IconButton>
+          </Stack>
+        ) : (
+          <Stack
+            component="header"
+            direction="row"
+            sx={{ minHeight: step === "result" ? 44 : 48, alignItems: "center" }}
+          >
+            <IconButton
+              aria-label={backLabel}
+              color="primary"
+              disabled={isInitiating || isConfirming}
+              onClick={navigateBack}
+              sx={{ minWidth: 44, minHeight: 44 }}
+              type="button"
+            >
+              <ArrowBackRounded />
+            </IconButton>
+          </Stack>
+        )}
 
         <Box
           component="section"
@@ -866,19 +999,20 @@ export function MobilePaymentView() {
               : "mobile-payment-details-title"}
           sx={{
             width: "100%",
-            maxWidth: 720,
-            minHeight: 0,
+            maxWidth: isDetailsReady ? 480 : 720,
+            minHeight: isDetailsReady ? "auto" : 0,
             flex: 1,
             display: "flex",
             flexDirection: "column",
             overflow: step === "result" ? "hidden" : undefined,
             mx: "auto",
-            mt: step === "result" ? 0 : { xs: 1, sm: 2 },
-            p: step === "result" ? 0 : { xs: 1, sm: 2.5 },
+            mt: step === "result" ? 0 : isDetailsReady ? "2.1875rem" : { xs: 1, sm: 2 },
+            p: step === "result" || isDetailsReady ? 0 : { xs: 1, sm: 2.5 },
+            px: isDetailsReady ? detailsHorizontalGutter : undefined,
           }}
         >
           {lineError && (
-            <Typography color="error" role="alert" sx={{ mb: 2 }}>
+            <Typography color="error" role="alert" sx={{ mb: 2, px: isDetailsReady ? 2 : 0 }}>
               {lineError}
             </Typography>
           )}
@@ -938,7 +1072,7 @@ export function MobilePaymentView() {
       </Dialog>
 
       <AppBottomNavigation
-        activeItem="home"
+        activeItem="mobile-payment"
         disabled={isTransactionPending}
         onNavigate={handleBottomNavigation}
       />

@@ -4,6 +4,24 @@ export type TransferResultStatus = "success" | "processing" | "rejected";
 
 export type RecipientMode = "choice" | "manual" | "directory";
 
+export type PaymentIconId =
+  | "education"
+  | "health"
+  | "pets"
+  | "notes"
+  | "food"
+  | "transport"
+  | "home"
+  | "shopping"
+  | "work"
+  | "other";
+
+// Local draft until the next Core payment contract defines these fields.
+export type PaymentPurposeDraft = Readonly<{
+  concept: string;
+  iconId: PaymentIconId | null;
+}>;
+
 export type DirectoryStatus = "loading" | "ready" | "error" | "empty";
 
 export type DocumentType = "V" | "J";

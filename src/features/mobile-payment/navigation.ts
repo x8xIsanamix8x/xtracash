@@ -1,11 +1,13 @@
 import type { AppDestination } from "@/components/AppBottomNavigation";
 
-import type { MobilePaymentStep, RecipientMode } from "./types";
+import type { MobilePaymentStep, PaymentIconId, RecipientMode } from "./types";
 
 type PaymentProgress = Readonly<{
   amount: string;
+  concept?: string;
   recipientMode: RecipientMode;
   selectedContactId: string | null;
+  selectedIcon?: PaymentIconId | null;
   step: MobilePaymentStep;
 }>;
 
@@ -20,14 +22,18 @@ export type MobilePaymentNavigationDecision = "allow" | "confirm" | "stay";
 
 export function hasMobilePaymentProgress({
   amount,
+  concept = "",
   recipientMode,
   selectedContactId,
+  selectedIcon = null,
   step,
 }: PaymentProgress): boolean {
   return step !== "details"
     || recipientMode !== "choice"
     || selectedContactId !== null
-    || amount !== "";
+    || amount !== ""
+    || concept.trim() !== ""
+    || selectedIcon !== null;
 }
 
 export function getMobilePaymentNavigationDecision({

@@ -52,6 +52,24 @@ test("protege la salida del pago cuando ya existen datos", () => {
     isTransactionPending: false,
     step: "details",
   }), "confirm");
+
+  assert.equal(hasMobilePaymentProgress({
+    amount: "",
+    concept: "Medicinas",
+    recipientMode: "choice",
+    selectedContactId: null,
+    selectedIcon: null,
+    step: "details",
+  }), true);
+
+  assert.equal(hasMobilePaymentProgress({
+    amount: "",
+    concept: "",
+    recipientMode: "choice",
+    selectedContactId: null,
+    selectedIcon: "health",
+    step: "details",
+  }), true);
 });
 
 test("bloquea la navegación transaccional y libera las pantallas de resultado", () => {
