@@ -18,7 +18,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { darken } from "@mui/material/styles";
+import { alpha, darken } from "@mui/material/styles";
 
 import { registrationSubmittedUrl } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
@@ -428,10 +428,12 @@ export function RegistrationView() {
             bgcolor: themeTokens.color.paper,
             borderTopLeftRadius: 32,
             borderTopRightRadius: 32,
+            mr: "calc(19px + env(safe-area-inset-right))",
+            ml: "calc(19px + env(safe-area-inset-left))",
             pt: 3,
             pb: "calc(24px + env(safe-area-inset-bottom))",
-            pr: "calc(19px + env(safe-area-inset-right))",
-            pl: "calc(19px + env(safe-area-inset-left))",
+            pr: "19px",
+            pl: "19px",
           }}
         >
           <Stack spacing={1}>
@@ -525,6 +527,10 @@ export function RegistrationView() {
                   "&:focus-visible": {
                     outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
                     outlineOffset: 2,
+                  },
+                  "&.Mui-disabled": {
+                    bgcolor: alpha(themeTokens.color.preLoginNavy, 0.12),
+                    color: alpha(themeTokens.color.preLoginNavy, 0.38),
                   },
                 }}
                 type="submit"

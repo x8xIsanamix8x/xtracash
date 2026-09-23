@@ -3,6 +3,7 @@
 import { FingerprintRounded } from "@mui/icons-material";
 import {
   Alert,
+  Box,
   Button,
   ButtonBase,
   CircularProgress,
@@ -11,7 +12,6 @@ import {
 } from "@mui/material";
 import type { ButtonProps } from "@mui/material/Button";
 
-import { PreLoginIconBadge } from "@/features/auth/shared/components/PreLoginIconBadge";
 import { themeTokens } from "@/theme/tokens";
 import { useOnlineStatus } from "@/features/pwa/useOnlineStatus";
 
@@ -103,7 +103,13 @@ export function BiometricActionControl({
               "&.Mui-disabled": { opacity: 0.5 },
             }}
           >
-            <PreLoginIconBadge icon={FingerprintRounded} size={56} />
+            <Box
+              alt=""
+              aria-hidden="true"
+              component="img"
+              src="/entry/face-scan.svg"
+              sx={{ display: "block", width: 50, height: 50 }}
+            />
             <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
               {actionLabel}
             </Typography>

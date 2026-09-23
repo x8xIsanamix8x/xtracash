@@ -12,7 +12,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { darken } from "@mui/material/styles";
+import { alpha, darken } from "@mui/material/styles";
 
 import { recoveryRequestedUrl } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
@@ -301,6 +301,10 @@ export function RecoveryView() {
               "&:focus-visible": {
                 outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
                 outlineOffset: 2,
+              },
+              "&.Mui-disabled": {
+                bgcolor: alpha(themeTokens.color.preLoginNavy, 0.12),
+                color: alpha(themeTokens.color.preLoginNavy, 0.38),
               },
             }}
             type="submit"
