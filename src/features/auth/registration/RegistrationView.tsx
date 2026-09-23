@@ -3,29 +3,30 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowBackRounded } from "@mui/icons-material";
+import {
+  ArrowBackRounded,
+  BadgeRounded,
+  SecurityRounded,
+  VerifiedUserRounded,
+} from "@mui/icons-material";
 import {
   Alert,
   Box,
   Button,
-  Container,
   IconButton,
   LinearProgress,
-  Paper,
   Stack,
   Typography,
 } from "@mui/material";
+import { alpha, darken } from "@mui/material/styles";
 
 import { registrationSubmittedUrl } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
+import { PreLoginIconBadge } from "../shared/components/PreLoginIconBadge";
 import { ConfirmationStep } from "./components/ConfirmationStep";
 import { ContactSecurityStep } from "./components/ContactSecurityStep";
 import { IdentificationStep } from "./components/IdentificationStep";
-import {
-  RegistrationStepVisual,
-  type RegistrationVisualKey,
-} from "./components/RegistrationStepVisual";
 import {
   createRegistrationRequest,
   registerUser,
@@ -64,22 +65,22 @@ const initialData: RegistrationData = {
 const stepContent: readonly Readonly<{
   title: string;
   description: string;
-  visualKey: RegistrationVisualKey;
+  icon: typeof BadgeRounded;
 }>[] = [
   {
     title: "Cuéntanos quién eres",
     description: "Necesitamos estos datos para identificarte y preparar el acceso a tu línea de crédito.",
-    visualKey: "identity",
+    icon: BadgeRounded,
   },
   {
     title: "Protege tu cuenta",
     description: "Indica cómo podemos contactarte y crea una contraseña segura para proteger tu información.",
-    visualKey: "security",
+    icon: SecurityRounded,
   },
   {
     title: "Revisa y confirma",
     description: "Verifica que tus datos estén correctos antes de crear tu cuenta.",
-    visualKey: "confirmation",
+    icon: VerifiedUserRounded,
   },
 ];
 
@@ -331,171 +332,235 @@ export function RegistrationView() {
   };
 
   return (
-    <Box component="main" sx={{ minHeight: "100dvh", bgcolor: "background.default" }}>
-      <Container
-        maxWidth={false}
+    <Box
+      component="main"
+      sx={{
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        bgcolor: themeTokens.color.preLoginBackground,
+        overflowX: "hidden",
+      }}
+    >
+      <Stack
+        component="header"
+        direction="row"
         sx={{
           width: "100%",
-          maxWidth: 1120,
-          minHeight: "100dvh",
-          display: "flex",
-          flexDirection: "column",
-          py: "calc(16px + env(safe-area-inset-top))",
-          pb: "calc(16px + env(safe-area-inset-bottom))",
+          maxWidth: 520,
+          minHeight: 48,
+          mx: "auto",
+          alignItems: "center",
+          justifyContent: "space-between",
+          pt: "calc(12px + env(safe-area-inset-top))",
+          pr: "calc(16px + env(safe-area-inset-right))",
+          pl: "calc(16px + env(safe-area-inset-left))",
         }}
       >
-        <Stack direction="row" sx={{ minHeight: 48, alignItems: "center", justifyContent: "space-between" }}>
-          <IconButton aria-label="Volver a la pantalla de acceso" component={Link} href="/">
-            <ArrowBackRounded />
-          </IconButton>
-          <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>
-            Impúlsate Móvil
+        <IconButton
+          aria-label="Volver a la pantalla de acceso"
+          component={Link}
+          href="/"
+          sx={{ color: themeTokens.color.preLoginNavy }}
+        >
+          <ArrowBackRounded />
+        </IconButton>
+        <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>
+          Impúlsate Móvil
+        </Typography>
+      </Stack>
+
+      <Box
+        sx={{
+          flex: 1,
+          width: "100%",
+          maxWidth: 520,
+          mx: "auto",
+          display: "flex",
+          flexDirection: "column",
+          pt: "clamp(4px, 3dvh, 32px)",
+        }}
+      >
+        <Stack
+          sx={{
+            alignItems: "center",
+            textAlign: "center",
+            px: 3,
+            pb: 3,
+          }}
+        >
+          <Box sx={{ "@media (max-height: 700px)": { transform: "scale(0.73)" } }}>
+            <PreLoginIconBadge icon={currentContent.icon} />
+          </Box>
+          <Typography
+            component="h1"
+            ref={titleRef}
+            tabIndex={-1}
+            sx={{
+              mt: "24px",
+              color: themeTokens.color.preLoginNavy,
+              fontSize: "clamp(1.5rem, 7vw, 2rem)",
+              fontWeight: 600,
+              lineHeight: 1.2,
+            }}
+          >
+            {currentContent.title}
+          </Typography>
+          <Typography
+            sx={{
+              mt: 1.5,
+              maxWidth: 360,
+              color: themeTokens.color.preLoginNavy,
+              fontSize: "1rem",
+              fontWeight: 500,
+              lineHeight: 1.4,
+            }}
+          >
+            {currentContent.description}
           </Typography>
         </Stack>
 
         <Box
           sx={{
             flex: 1,
-            width: "100%",
             display: "flex",
             flexDirection: "column",
-            py: { xs: 2, sm: 4 },
+            bgcolor: themeTokens.color.paper,
+            borderTopLeftRadius: 32,
+            borderTopRightRadius: 32,
+            mr: "calc(19px + env(safe-area-inset-right))",
+            ml: "calc(19px + env(safe-area-inset-left))",
+            pt: 3,
+            pb: "calc(24px + env(safe-area-inset-bottom))",
+            pr: "19px",
+            pl: "19px",
           }}
         >
-          <Paper
-            variant="outlined"
-            sx={{
-              flex: "0 0 auto",
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 38fr) minmax(0, 62fr)" },
-              my: { xs: 0, sm: "auto" },
-              overflow: "hidden",
-              boxShadow: "none",
-            }}
+          <Stack spacing={1}>
+            <Typography
+              id="registration-progress-label"
+              sx={{ color: themeTokens.color.preLoginMuted, fontSize: "0.8125rem" }}
+            >
+              Paso {step + 1} de 3
+            </Typography>
+            <LinearProgress
+              aria-labelledby="registration-progress-label"
+              value={((step + 1) / 3) * 100}
+              variant="determinate"
+              sx={{
+                height: 6,
+                borderRadius: 999,
+                bgcolor: "rgba(70, 55, 245, 0.15)",
+                "& .MuiLinearProgress-bar": {
+                  borderRadius: 999,
+                  bgcolor: themeTokens.color.preLoginPrimary,
+                },
+              }}
+            />
+          </Stack>
+
+          <Box
+            aria-busy={isSubmitting}
+            component="form"
+            noValidate
+            onSubmit={
+              flowState.name === "identification" || flowState.name === "contactSecurity"
+                ? submitStep
+                : submitRegistration
+            }
+            sx={{ flex: 1, display: "flex", flexDirection: "column", pt: 3 }}
           >
-            <Box
-              sx={{
-                minWidth: 0,
-                overflow: "hidden",
-                bgcolor: "background.default",
-                borderBottom: { xs: "1px solid", lg: 0 },
-                borderRight: { xs: 0, lg: "1px solid" },
-                borderColor: "divider",
-              }}
-            >
-              <RegistrationStepVisual visualKey={currentContent.visualKey} />
-            </Box>
+            {flowState.name === "identification" && (
+              <IdentificationStep
+                data={data}
+                errors={errors}
+                inputRefs={inputRefs}
+                onChange={updateField}
+                onFieldBlur={validateFieldOnBlur}
+              />
+            )}
+            {flowState.name === "contactSecurity" && (
+              <ContactSecurityStep
+                data={data}
+                errors={errors}
+                inputRefs={inputRefs}
+                onChange={updateField}
+                onFieldBlur={validateFieldOnBlur}
+                onPhonePartsChange={updatePhoneParts}
+                phoneParts={phoneParts}
+              />
+            )}
+            {(flowState.name === "review" || flowState.name === "submitting") && (
+              <ConfirmationStep
+                data={data}
+                isSubmitting={isSubmitting}
+                onTermsChange={(checked) => {
+                  setTermsAccepted(checked);
+                  setSubmissionError("");
+                }}
+                termsAccepted={termsAccepted}
+              />
+            )}
 
-            <Box
-              sx={{
-                display: "flex",
-                width: "100%",
-                maxWidth: { xs: 680, lg: "none" },
-                minWidth: 0,
-                mx: "auto",
-                flexDirection: "column",
-                p: { xs: 2, sm: 3, lg: 4 },
-              }}
-            >
-              <Stack spacing={1}>
-                <Typography color="text.secondary" id="registration-progress-label" variant="body2">
-                  Paso {step + 1} de 3
-                </Typography>
-                <LinearProgress
-                  aria-labelledby="registration-progress-label"
-                  value={((step + 1) / 3) * 100}
-                  variant="determinate"
-                />
-                <Typography
-                  component="h1"
-                  ref={titleRef}
-                  tabIndex={-1}
-                  variant="h4"
-                  sx={{ pt: 1, color: "secondary.main", fontWeight: 700 }}
-                >
-                  {currentContent.title}
-                </Typography>
-                <Typography color="text.secondary">{currentContent.description}</Typography>
-              </Stack>
+            {submissionError && (
+              <Alert role="alert" severity="error" sx={{ mt: 2, borderRadius: 2 }}>
+                {submissionError}
+              </Alert>
+            )}
 
-              <Box
-                aria-busy={isSubmitting}
-                component="form"
-                noValidate
-                onSubmit={
-                  flowState.name === "identification" || flowState.name === "contactSecurity"
-                    ? submitStep
-                    : submitRegistration
+            <Stack spacing={1.5} sx={{ mt: 3, pt: 3 }}>
+              <Button
+                disabled={
+                  isSubmitting ||
+                  (step < 2 && !canContinueCurrentStep) ||
+                  (step === 2 && !termsAccepted)
                 }
-                sx={{ flex: 1, display: "flex", flexDirection: "column", pt: 3 }}
+                fullWidth
+                loading={isSubmitting}
+                sx={{
+                  minHeight: 50,
+                  borderRadius: "999px",
+                  fontWeight: 400,
+                  bgcolor: themeTokens.color.preLoginPrimary,
+                  "&:hover": { bgcolor: darken(themeTokens.color.preLoginPrimary, 0.12) },
+                  "&:active": { bgcolor: darken(themeTokens.color.preLoginPrimary, 0.2) },
+                  "&:focus-visible": {
+                    outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
+                    outlineOffset: 2,
+                  },
+                  "&.Mui-disabled": {
+                    bgcolor: alpha(themeTokens.color.preLoginNavy, 0.12),
+                    color: alpha(themeTokens.color.preLoginNavy, 0.38),
+                  },
+                }}
+                type="submit"
+                variant="contained"
               >
-                {flowState.name === "identification" && (
-                  <IdentificationStep
-                    data={data}
-                    errors={errors}
-                    inputRefs={inputRefs}
-                    onChange={updateField}
-                    onFieldBlur={validateFieldOnBlur}
-                  />
-                )}
-                {flowState.name === "contactSecurity" && (
-                  <ContactSecurityStep
-                    data={data}
-                    errors={errors}
-                    inputRefs={inputRefs}
-                    onChange={updateField}
-                    onFieldBlur={validateFieldOnBlur}
-                    onPhonePartsChange={updatePhoneParts}
-                    phoneParts={phoneParts}
-                  />
-                )}
-                {(flowState.name === "review" || flowState.name === "submitting") && (
-                  <ConfirmationStep
-                    data={data}
-                    isSubmitting={isSubmitting}
-                    onTermsChange={(checked) => {
-                      setTermsAccepted(checked);
-                      setSubmissionError("");
-                    }}
-                    termsAccepted={termsAccepted}
-                  />
-                )}
-
-                {submissionError && (
-                  <Alert role="alert" severity="error" sx={{ mt: 2 }}>
-                    {submissionError}
-                  </Alert>
-                )}
-
-                <Stack
-                  direction={{ xs: "column-reverse", sm: "row" }}
-                  spacing={1.5}
-                  sx={{ mt: 3, pt: 3, borderTop: "1px solid", borderColor: "divider" }}
+                {step < 2 ? "Continuar" : "Crear cuenta"}
+              </Button>
+              {step > 0 && (
+                <Button
+                  disabled={isSubmitting}
+                  fullWidth
+                  onClick={goBack}
+                  type="button"
+                  variant="text"
+                  sx={{
+                    minHeight: 44,
+                    color: themeTokens.color.preLoginNavy,
+                    fontWeight: 500,
+                    "&:focus-visible": {
+                      outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
+                    },
+                  }}
                 >
-                  {step > 0 && (
-                    <Button disabled={isSubmitting} fullWidth onClick={goBack} type="button" variant="outlined">
-                      Atrás
-                    </Button>
-                  )}
-                  <Button
-                    disabled={
-                      isSubmitting ||
-                      (step < 2 && !canContinueCurrentStep) ||
-                      (step === 2 && !termsAccepted)
-                    }
-                    fullWidth
-                    loading={isSubmitting}
-                    type="submit"
-                    variant="contained"
-                  >
-                    {step < 2 ? "Continuar" : "Crear cuenta"}
-                  </Button>
-                </Stack>
-              </Box>
-            </Box>
-          </Paper>
+                  Atrás
+                </Button>
+              )}
+            </Stack>
+          </Box>
         </Box>
-      </Container>
+      </Box>
     </Box>
   );
 }

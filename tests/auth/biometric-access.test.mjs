@@ -136,7 +136,7 @@ test("integra la presentación en Login y Perfil sin alterar las credenciales tr
   const submitPosition = login.lastIndexOf("Ingresar\n");
   const recoveryPosition = login.lastIndexOf("¿Olvidaste tu contraseña?");
 
-  assert.ok(passwordPosition < biometricPosition);
-  assert.ok(biometricPosition < submitPosition);
-  assert.ok(submitPosition < recoveryPosition);
+  assert.ok(passwordPosition < recoveryPosition);
+  assert.ok(recoveryPosition < submitPosition);
+  assert.ok(submitPosition < biometricPosition);
 });
