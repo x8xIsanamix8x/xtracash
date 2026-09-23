@@ -10,6 +10,11 @@ export const themeTokens = {
     textSecondary: "#667085",
     focus: "#3C44D1",
     onDark: "#FFFFFF",
+    preLoginBackground: "#F0EFFF",
+    preLoginPrimary: "#4637F5",
+    preLoginNavy: "#00004B",
+    preLoginField: "#F2F2F2",
+    preLoginMuted: "#666666",
   },
   shape: {
     borderRadius: 12,

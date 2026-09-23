@@ -3,6 +3,7 @@
 import { FingerprintRounded } from "@mui/icons-material";
 import {
   Alert,
+  Box,
   Button,
   ButtonBase,
   CircularProgress,
@@ -85,27 +86,33 @@ export function BiometricActionControl({
             onClick={() => void start()}
             type="button"
             sx={{
-              width: "100%",
-              minHeight: 56,
+              alignSelf: "center",
+              minHeight: 44,
               borderRadius: 2,
               display: "flex",
-              justifyContent: "flex-end",
-              gap: 1.25,
-              px: 1.5,
-              color: "primary.main",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 1.5,
+              px: 2,
+              py: 1,
+              color: themeTokens.color.preLoginNavy,
               "&:focus-visible": {
-                outline: `3px solid ${themeTokens.color.focus}`,
+                outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
                 outlineOffset: 2,
               },
+              "&.Mui-disabled": { opacity: 0.5 },
             }}
           >
-            <Typography sx={{ fontWeight: 400 }}>
+            <Box
+              alt=""
+              aria-hidden="true"
+              component="img"
+              src="/entry/face-scan.svg"
+              sx={{ display: "block", width: 50, height: 50 }}
+            />
+            <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
               {actionLabel}
             </Typography>
-            <FingerprintRounded
-              aria-hidden="true"
-              sx={{ color: themeTokens.color.brandLogo, width: 32, height: 32 }}
-            />
           </ButtonBase>
         ) : (
           <Button

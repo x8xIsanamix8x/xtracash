@@ -24,6 +24,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { pillFieldSx } from "@/features/auth/shared/pillFieldSx";
 import { themeTokens } from "@/theme/tokens";
 
 import type {
@@ -61,6 +62,7 @@ export function ContactSecurityStep({
   onPhonePartsChange,
   phoneParts,
 }: ContactSecurityStepProps) {
+  const fieldSx = pillFieldSx("#F2F2F2");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const passwordsMatch = doPasswordsMatch(data.password, data.passwordConfirmation);
@@ -69,11 +71,13 @@ export function ContactSecurityStep({
   return (
     <Stack spacing={2.5}>
       <Stack spacing={2}>
-        <Typography component="h2" variant="subtitle1" sx={{ color: "secondary.main", fontWeight: 700 }}>
+        <Typography component="h2" variant="subtitle1" sx={{ color: themeTokens.color.preLoginNavy, fontWeight: 700 }}>
           Datos de contacto
         </Typography>
         <FormControl component="fieldset" fullWidth>
-          <FormLabel component="legend">Número de teléfono</FormLabel>
+          <FormLabel component="legend" sx={{ color: themeTokens.color.preLoginMuted }}>
+            Número de teléfono
+          </FormLabel>
           <Box
             sx={{
               display: "flex",
@@ -107,8 +111,9 @@ export function ContactSecurityStep({
                     typeof value === "string" && value ? value : "Selecciona",
                 },
               }}
-              sx={{ flex: { xs: "0 0 112px", sm: "0 0 128px" }, minWidth: 0 }}
+              sx={[fieldSx, { flex: { xs: "0 0 112px", sm: "0 0 128px" }, minWidth: 0 }]}
               value={phoneParts.operatorCode}
+              variant="filled"
             >
               <MenuItem disabled value="">
                 Selecciona
@@ -137,9 +142,10 @@ export function ContactSecurityStep({
                 formHelperText: errors.phoneLocalNumber ? { role: "alert" } : undefined,
                 htmlInput: { inputMode: "numeric", maxLength: PHONE_LENGTH },
               }}
-              sx={{ flex: "1 1 auto", minWidth: 0 }}
+              sx={[fieldSx, { flex: "1 1 auto", minWidth: 0 }]}
               type="tel"
               value={phoneParts.localNumber}
+              variant="filled"
             />
           </Box>
         </FormControl>
@@ -160,13 +166,15 @@ export function ContactSecurityStep({
           }}
           type="email"
           value={data.email}
+          variant="filled"
+          sx={fieldSx}
         />
       </Stack>
 
-      <Divider />
+      <Divider sx={{ borderColor: "rgba(0, 0, 75, 0.08)" }} />
 
       <Stack spacing={2}>
-        <Typography component="h2" variant="subtitle1" sx={{ color: "secondary.main", fontWeight: 700 }}>
+        <Typography component="h2" variant="subtitle1" sx={{ color: themeTokens.color.preLoginNavy, fontWeight: 700 }}>
           Seguridad de la cuenta
         </Typography>
         <TextField
@@ -195,7 +203,7 @@ export function ContactSecurityStep({
                     onClick={() => setShowPassword((current) => !current)}
                     onMouseDown={keepFocus}
                     type="button"
-                    sx={{ minWidth: 44, minHeight: 44, color: themeTokens.color.brandLogo }}
+                    sx={{ minWidth: 44, minHeight: 44, color: themeTokens.color.preLoginMuted }}
                   >
                     {showPassword ? <VisibilityOffRounded /> : <VisibilityRounded />}
                   </IconButton>
@@ -205,6 +213,8 @@ export function ContactSecurityStep({
           }}
           type={showPassword ? "text" : "password"}
           value={data.password}
+          variant="filled"
+          sx={fieldSx}
         />
         <TextField
           autoComplete="new-password"
@@ -235,7 +245,7 @@ export function ContactSecurityStep({
                     onClick={() => setShowConfirmation((current) => !current)}
                     onMouseDown={keepFocus}
                     type="button"
-                    sx={{ minWidth: 44, minHeight: 44, color: themeTokens.color.brandLogo }}
+                    sx={{ minWidth: 44, minHeight: 44, color: themeTokens.color.preLoginMuted }}
                   >
                     {showConfirmation ? <VisibilityOffRounded /> : <VisibilityRounded />}
                   </IconButton>
@@ -245,19 +255,21 @@ export function ContactSecurityStep({
           }}
           type={showConfirmation ? "text" : "password"}
           value={data.passwordConfirmation}
+          variant="filled"
+          sx={fieldSx}
         />
         <Box
           aria-live="polite"
           id="password-requirements"
           sx={{
             p: 2,
-            borderRadius: 2,
-            bgcolor: "background.default",
-            border: "1px solid",
-            borderColor: "divider",
+            borderRadius: 3,
+            bgcolor: "#F2F2F2",
           }}
         >
-          <Typography color="text.secondary" variant="body2">Tu contraseña debe incluir:</Typography>
+          <Typography sx={{ color: themeTokens.color.preLoginMuted, fontSize: "0.875rem" }}>
+            Tu contraseña debe incluir:
+          </Typography>
           <List dense disablePadding>
             {passwordRules.map((rule) => {
               const isMet = rule.test(data.password);

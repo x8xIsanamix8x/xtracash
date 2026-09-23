@@ -1,5 +1,6 @@
 import { TextField } from "@mui/material";
 
+import { pillFieldSx } from "../../shared/pillFieldSx";
 import { RECOVERY_IDENTIFIER_MAX_LENGTH } from "../validation";
 
 type RecoveryRequestStepProps = Readonly<{
@@ -40,6 +41,8 @@ export function RecoveryRequestStep({
       }}
       type="email"
       value={identifier}
+      variant="filled"
+      sx={pillFieldSx()}
     />
   );
 }
