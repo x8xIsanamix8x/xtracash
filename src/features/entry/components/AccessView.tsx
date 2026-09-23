@@ -16,6 +16,7 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
+import { darken, lighten } from "@mui/material/styles";
 
 import { SignInSheet } from "@/features/auth";
 import { PUBLIC_RECOVERY_SUCCESS_MESSAGE } from "@/features/auth/recovery/presentation";
@@ -31,6 +32,16 @@ type AccessViewProps = Readonly<{
   accessRequest: AccessNavigationRequest | null;
   onAccessRequestConsumed: () => void;
 }>;
+
+const pillButton = {
+  minHeight: 50,
+  borderRadius: "999px",
+  fontWeight: 400,
+  "&:focus-visible": {
+    outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
+    outlineOffset: 2,
+  },
+} as const;
 
 const accessNotificationContent: Readonly<
   Record<AccessNotification, Readonly<{ closeLabel: string; message: string; title: string }>>
@@ -109,10 +120,11 @@ export function AccessView({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          bgcolor: "background.default",
-          backgroundImage: "url('/entry/login-background.webp')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+          bgcolor: themeTokens.color.preLoginBackground,
+          backgroundImage:
+            "linear-gradient(to bottom, rgba(255, 255, 255, 0) 64%, #FFFFFF 91.6%), url('/entry/login-waves-background.webp')",
+          backgroundSize: "100% 100%, cover",
+          backgroundPosition: "center, center",
         }}
       >
         <Stack
@@ -133,40 +145,42 @@ export function AccessView({
             aria-label="Ayuda"
             component={Link}
             href="/help"
-            sx={{ color: "secondary.main" }}
+            sx={{ color: themeTokens.color.preLoginNavy }}
           >
             <HelpOutlineRounded />
           </IconButton>
         </Stack>
 
         <Stack
-          spacing={1.5}
+          spacing={2}
           sx={{
+            flex: 1,
             alignItems: "center",
+            justifyContent: "center",
             textAlign: "center",
-            pt: { xs: "clamp(80px, 16dvh, 164px)", sm: 10 },
+            pt: "clamp(0px, 10dvh, 96px)",
             px: 3,
           }}
         >
           <Box
-            alt="Impúlsate Móvil"
+            alt=""
             component="img"
-            src="/entry/isopulsa.png"
+            src="/entry/isotipo-impulsa.png"
             sx={{
-              width: "clamp(142px, 37vw, 164px)",
+              width: 74,
               height: "auto",
               display: "block",
-              "@media (min-width: 414px)": {
-                width: "clamp(164px, 43vw, 242px)",
+              "@media (max-height: 650px)": {
+                width: 56,
               },
             }}
           />
           <Typography
             component="h1"
             sx={{
-              color: themeTokens.color.brandLogo,
-              fontSize: { xs: "1.75rem", sm: "2.15rem" },
-              fontWeight: 800,
+              color: themeTokens.color.preLoginNavy,
+              fontSize: "1.75rem",
+              fontWeight: 400,
               letterSpacing: "0.02em",
             }}
           >
@@ -175,24 +189,32 @@ export function AccessView({
         </Stack>
 
         <Stack
-          spacing={1.5}
+          spacing="9px"
           sx={{
             width: "100%",
             maxWidth: 520,
             mx: "auto",
-            mt: "auto",
             pt: 3,
-            pr: "calc(24px + env(safe-area-inset-right))",
-            pb: "max(8px, env(safe-area-inset-bottom))",
-            pl: "calc(24px + env(safe-area-inset-left))",
+            pr: "calc(19px + env(safe-area-inset-right))",
+            pb: "calc(21px + env(safe-area-inset-bottom))",
+            pl: "calc(19px + env(safe-area-inset-left))",
             "@media (max-height: 650px)": {
-              gap: 1,
               pt: 2,
               pb: "calc(16px + env(safe-area-inset-bottom))",
             },
           }}
         >
-          <Button fullWidth onClick={openSignIn} variant="contained">
+          <Button
+            fullWidth
+            onClick={openSignIn}
+            variant="contained"
+            sx={{
+              ...pillButton,
+              bgcolor: themeTokens.color.preLoginPrimary,
+              "&:hover": { bgcolor: darken(themeTokens.color.preLoginPrimary, 0.12) },
+              "&:active": { bgcolor: darken(themeTokens.color.preLoginPrimary, 0.2) },
+            }}
+          >
             Iniciar sesión
           </Button>
           <Button
@@ -200,10 +222,12 @@ export function AccessView({
             color="secondary"
             component={Link}
             href="/register"
-            variant="outlined"
+            variant="contained"
             sx={{
-              bgcolor: "background.paper",
-              "&:hover": { borderColor: "primary.main", bgcolor: "background.paper" },
+              ...pillButton,
+              bgcolor: themeTokens.color.preLoginNavy,
+              "&:hover": { bgcolor: lighten(themeTokens.color.preLoginNavy, 0.12) },
+              "&:active": { bgcolor: lighten(themeTokens.color.preLoginNavy, 0.2) },
             }}
           >
             Registrarme

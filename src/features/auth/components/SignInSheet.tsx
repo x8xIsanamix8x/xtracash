@@ -4,7 +4,6 @@ import { FormEvent, MouseEvent, type ReactNode, useEffect, useRef, useState } fr
 import Link from "next/link";
 import {
   CloseRounded,
-  FingerprintRounded,
   VisibilityOffRounded,
   VisibilityRounded,
 } from "@mui/icons-material";
@@ -24,7 +23,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import type { SlideProps } from "@mui/material/Slide";
-import { alpha } from "@mui/material/styles";
+import { alpha, darken } from "@mui/material/styles";
 
 import { themeTokens } from "@/theme/tokens";
 import {
@@ -40,7 +39,7 @@ import {
 } from "../login/services/login";
 import type { LoginErrors } from "../login/types";
 import { validateLogin } from "../login/validation";
-import { SignInVisual } from "./SignInVisual";
+import { pillFieldSx } from "../shared/pillFieldSx";
 
 type SignInSheetProps = Readonly<{
   biometricEnabled?: boolean;
@@ -238,6 +237,7 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            bgcolor: themeTokens.color.preLoginBackground,
           },
         },
         transition: {
@@ -278,31 +278,19 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
             minWidth: 0,
             overflowX: "hidden",
             overflowY: "auto",
-            pt: { xs: "calc(12px + env(safe-area-inset-top))", sm: 3 },
-            pb: { xs: 1, sm: 2 },
-            pr: {
-              xs: "calc(16px + env(safe-area-inset-right))",
-              sm: "calc(24px + env(safe-area-inset-right))",
-            },
-            pl: {
-              xs: "calc(16px + env(safe-area-inset-left))",
-              sm: "calc(24px + env(safe-area-inset-left))",
-            },
-            "@media (min-width: 900px) and (max-height: 820px)": {
-              pt: 1.5,
-              pb: 1,
-            },
+            pt: "calc(12px + env(safe-area-inset-top))",
+            pb: "calc(24px + env(safe-area-inset-bottom))",
+            pr: "calc(19px + env(safe-area-inset-right))",
+            pl: "calc(19px + env(safe-area-inset-left))",
           }}
         >
           <Stack
-            spacing={2}
+            spacing="19px"
             sx={{
               boxSizing: "border-box",
               width: "100%",
               maxWidth: "100%",
               minWidth: 0,
-              "@media (max-height: 700px)": { gap: 1.5 },
-              "@media (min-width: 900px) and (max-height: 820px)": { gap: 1.25 },
             }}
           >
             {notification}
@@ -310,82 +298,59 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
             <Box
               sx={{
                 position: "relative",
-                boxSizing: "border-box",
-                width: "100%",
-                maxWidth: "100%",
-                minWidth: 0,
-                mb: 0.5,
-                "@media (max-height: 700px)": {
-                  mb: 0,
-                },
-                "@media (min-width: 900px) and (max-height: 820px)": {
-                  mb: 0,
-                },
-                "@media (max-height: 450px)": {
-                  minHeight: 52,
-                },
+                display: "flex",
+                justifyContent: "center",
+                pt: "clamp(40px, 9dvh, 92px)",
+                pb: "21px",
+                "@media (max-height: 700px)": { pt: "44px", pb: 0 },
               }}
             >
-              <SignInVisual />
               <IconButton
                 aria-label="Cerrar inicio de sesión"
                 onClick={requestClose}
                 type="button"
-                sx={(theme) => ({
+                sx={{
                   position: "absolute",
-                  top: 14,
-                  right: 14,
-                  zIndex: 2,
-                  minWidth: 44,
-                  minHeight: 44,
-                  backgroundColor: theme.palette.secondary.main,
-                  color: theme.palette.common.white,
-                  border: "1px solid",
-                  borderColor: alpha(theme.palette.common.white, 0.3),
-                  boxShadow: `0 6px 18px ${alpha(theme.palette.secondary.main, 0.42)}`,
-                  "@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))": {
-                    backgroundColor: alpha(theme.palette.secondary.main, 0.48),
-                    backdropFilter: "blur(12px) saturate(140%)",
-                    WebkitBackdropFilter: "blur(12px) saturate(140%)",
-                  },
-                  "&:hover": {
-                    backgroundColor: alpha(theme.palette.secondary.main, 0.62),
-                  },
-                  "&:active": {
-                    backgroundColor: alpha(theme.palette.secondary.main, 0.72),
-                  },
+                  top: 0,
+                  right: 0,
+                  color: themeTokens.color.preLoginNavy,
                   "&:focus-visible": {
-                    outline: `3px solid ${themeTokens.color.brandLogo}`,
+                    outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
                     outlineOffset: 2,
                   },
-                  "@media (prefers-reduced-transparency: reduce)": {
-                    backgroundColor: theme.palette.secondary.main,
-                    backdropFilter: "none",
-                    WebkitBackdropFilter: "none",
-                  },
-                })}
+                }}
               >
                 <CloseRounded />
               </IconButton>
+              <Box
+                alt=""
+                aria-hidden="true"
+                component="img"
+                src="/entry/isotipo-impulsa.png"
+                sx={{
+                  display: "block",
+                  width: 74,
+                  height: "auto",
+                  "@media (max-height: 700px)": { width: 48 },
+                }}
+              />
             </Box>
 
-            <Stack spacing={0.75} sx={{ maxWidth: "100%", minWidth: 0 }}>
-              <DialogTitle
-                component="h2"
-                id="sign-in-title"
-                sx={{
-                  p: 0,
-                  fontWeight: 700,
-                  fontSize: { xs: "1.375rem", sm: "1.625rem" },
-                  lineHeight: 1.2,
-                  letterSpacing: "-0.01em",
-                  textAlign: "left",
-                }}
-              >
-                Inicia sesión
-              </DialogTitle>
-
-            </Stack>
+            <DialogTitle
+              component="h2"
+              id="sign-in-title"
+              sx={{
+                p: 0,
+                pb: "17px",
+                color: themeTokens.color.preLoginNavy,
+                fontWeight: 600,
+                fontSize: "clamp(2rem, 10vw, 2.5rem)",
+                lineHeight: 1.2,
+                textAlign: "center",
+              }}
+            >
+              Inicia sesión
+            </DialogTitle>
 
             {formError && (
               <Alert
@@ -434,8 +399,8 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
               slotProps={{ htmlInput: { inputMode: "email" } }}
               type="email"
               value={identifier}
-              variant="outlined"
-              sx={{ boxSizing: "border-box", maxWidth: "100%", minWidth: 0 }}
+              variant="filled"
+              sx={pillFieldSx()}
             />
 
             <Stack spacing={0.5} sx={{ maxWidth: "100%", minWidth: 0 }}>
@@ -466,7 +431,7 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
                           onClick={() => setShowPassword((current) => !current)}
                           onMouseDown={keepPasswordFocus}
                           type="button"
-                          sx={{ color: themeTokens.color.primary }}
+                          sx={{ color: themeTokens.color.preLoginMuted }}
                         >
                           {showPassword ? <VisibilityOffRounded /> : <VisibilityRounded />}
                         </IconButton>
@@ -476,9 +441,71 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
                 }}
                 type={showPassword ? "text" : "password"}
                 value={password}
-                variant="outlined"
-                sx={{ boxSizing: "border-box", maxWidth: "100%", minWidth: 0 }}
+                variant="filled"
+                sx={pillFieldSx()}
               />
+              <Button
+                aria-disabled={isLoading}
+                component={Link}
+                disabled={isLoading}
+                href="/recover-password"
+                onClick={(event) => {
+                  if (isLoading) {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  requestClose();
+                }}
+                variant="text"
+                sx={{
+                  alignSelf: "flex-end",
+                  boxSizing: "border-box",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  minHeight: 44,
+                  px: 1,
+                  color: themeTokens.color.preLoginNavy,
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  "&:focus-visible": {
+                    outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
+                  },
+                }}
+              >
+                ¿Olvidaste tu contraseña?
+              </Button>
+            </Stack>
+
+            <Button
+              disabled={isLoading}
+              fullWidth
+              loading={isLoading}
+              sx={{
+                boxSizing: "border-box",
+                width: "100%",
+                maxWidth: "100%",
+                minWidth: 0,
+                minHeight: 50,
+                // Stack spacing sets margin-top on children; "&&" wins so the Figma gap applies.
+                "&&": { mt: "clamp(19px, 8dvh, 75px)" },
+                borderRadius: "999px",
+                fontWeight: 400,
+                bgcolor: themeTokens.color.preLoginPrimary,
+                "&:hover": { bgcolor: darken(themeTokens.color.preLoginPrimary, 0.12) },
+                "&:active": { bgcolor: darken(themeTokens.color.preLoginPrimary, 0.2) },
+                "&:focus-visible": {
+                  outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
+                  outlineOffset: 2,
+                },
+              }}
+              type="submit"
+              variant="contained"
+            >
+              Ingresar
+            </Button>
+
+            <Box sx={{ pt: "clamp(8px, 3dvh, 28px)" }}>
               {showBiometricAccess && (
                 <BiometricLoginAction
                   disabled={isLoading}
@@ -486,94 +513,22 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
                 />
               )}
               {!showBiometricAccess && (
-                <Stack
-                  direction="row"
-                  spacing={0.75}
-                  sx={{ alignItems: "center", justifyContent: "flex-end", pt: 0.5 }}
-                >
-                  <Typography color="text.secondary" sx={{ fontSize: "0.8125rem", textAlign: "right" }}>
+                <Stack spacing={1.5} sx={{ alignItems: "center", textAlign: "center" }}>
+                  <Box
+                    alt=""
+                    aria-hidden="true"
+                    component="img"
+                    src="/entry/face-scan.svg"
+                    sx={{ display: "block", width: 40, height: 40, opacity: 0.5 }}
+                  />
+                  <Typography sx={{ maxWidth: 320, color: themeTokens.color.preLoginMuted, fontSize: "0.8125rem" }}>
                     Ingresa con tu usuario y contraseña. Activa tu biometría desde tu Perfil para acceder más rápido.
                   </Typography>
-                  <FingerprintRounded
-                    aria-hidden="true"
-                    sx={{ flexShrink: 0, color: themeTokens.color.brandLogo, width: 25, height: 25 }}
-                  />
                 </Stack>
               )}
-            </Stack>
-
+            </Box>
           </Stack>
         </DialogContent>
-
-        <Box
-          component="footer"
-          sx={{
-            boxSizing: "border-box",
-            width: "100%",
-            maxWidth: "100%",
-            minWidth: 0,
-            flexShrink: 0,
-            bgcolor: "background.paper",
-            pt: { xs: 1.5, sm: 2 },
-            pr: {
-              xs: "calc(16px + env(safe-area-inset-right))",
-              sm: "calc(24px + env(safe-area-inset-right))",
-            },
-            pb: {
-              xs: "max(8px, env(safe-area-inset-bottom))",
-              sm: "calc(24px + env(safe-area-inset-bottom))",
-            },
-            pl: {
-              xs: "calc(16px + env(safe-area-inset-left))",
-              sm: "calc(24px + env(safe-area-inset-left))",
-            },
-            "@media (min-width: 900px) and (max-height: 820px)": {
-              pt: 1.25,
-              pb: "calc(16px + env(safe-area-inset-bottom))",
-            },
-          }}
-        >
-          <Stack spacing={1.5}>
-            <Button
-              disabled={isLoading}
-              fullWidth
-              loading={isLoading}
-              sx={{ boxSizing: "border-box", width: "100%", maxWidth: "100%", minWidth: 0 }}
-              type="submit"
-              variant="contained"
-            >
-              Ingresar
-            </Button>
-            <Button
-              aria-disabled={isLoading}
-              component={Link}
-              disabled={isLoading}
-              href="/recover-password"
-              onClick={(event) => {
-                if (isLoading) {
-                  event.preventDefault();
-                  return;
-                }
-
-                requestClose();
-              }}
-              variant="text"
-              sx={{
-                alignSelf: "center",
-                boxSizing: "border-box",
-                maxWidth: "100%",
-                minWidth: 0,
-                minHeight: 44,
-                color: themeTokens.color.brandLogo,
-                "&:focus-visible": {
-                  outlineColor: themeTokens.color.focus,
-                },
-              }}
-            >
-              ¿Olvidaste tu contraseña?
-            </Button>
-          </Stack>
-        </Box>
       </Box>
     </Dialog>
   );

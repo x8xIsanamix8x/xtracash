@@ -1,20 +1,23 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowBackRounded } from "@mui/icons-material";
 import {
   Alert,
   Box,
   Button,
+  IconButton,
   Stack,
   Typography,
 } from "@mui/material";
+import { darken } from "@mui/material/styles";
 
 import { recoveryRequestedUrl } from "@/lib/accessNotificationNavigation";
+import { themeTokens } from "@/theme/tokens";
 
-import { SecurityFlowShell } from "../shared/components/SecurityFlowShell";
 import { RecoveryRequestStep } from "./components/RecoveryRequestStep";
-import { RecoveryStepVisual } from "./components/RecoveryStepVisual";
 import {
   clearRecoveryCooldown,
   formatRecoveryCooldownTime,
@@ -170,65 +173,151 @@ export function RecoveryView() {
   };
 
   return (
-    <SecurityFlowShell
-      backHref="/"
-      backLabel="Volver a la pantalla de acceso"
-      contentCentered
-      visual={<RecoveryStepVisual />}
+    <Box
+      component="main"
+      sx={{
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        bgcolor: themeTokens.color.preLoginBackground,
+        overflowX: "hidden",
+      }}
     >
-      <Stack spacing={1}>
-        <Typography
-          component="h1"
-          ref={titleRef}
-          tabIndex={-1}
-          variant="h4"
-          sx={{ color: "secondary.main", fontWeight: 700 }}
+      <Stack
+        component="header"
+        direction="row"
+        sx={{
+          width: "100%",
+          maxWidth: 520,
+          minHeight: 48,
+          mx: "auto",
+          alignItems: "center",
+          justifyContent: "space-between",
+          pt: "calc(12px + env(safe-area-inset-top))",
+          pr: "calc(16px + env(safe-area-inset-right))",
+          pl: "calc(16px + env(safe-area-inset-left))",
+        }}
+      >
+        <IconButton
+          aria-label="Volver a la pantalla de acceso"
+          component={Link}
+          href="/"
+          sx={{ color: themeTokens.color.preLoginNavy }}
         >
-          Recupera tu acceso
-        </Typography>
-        <Typography color="text.secondary">
-          Ingresa el correo electrónico asociado a tu cuenta para recibir las instrucciones de recuperación.
+          <ArrowBackRounded />
+        </IconButton>
+        <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>
+          Impúlsate Móvil
         </Typography>
       </Stack>
 
       <Box
-        aria-busy={isSubmitting || isCooldownChecking}
-        component="form"
-        noValidate
-        onSubmit={submitRequest}
-        sx={{ display: "flex", flexDirection: "column", pt: 3 }}
+        sx={{
+          width: "100%",
+          maxWidth: 520,
+          mx: "auto",
+          pt: "clamp(8px, 4dvh, 44px)",
+          pr: "calc(19px + env(safe-area-inset-right))",
+          pb: "calc(24px + env(safe-area-inset-bottom))",
+          pl: "calc(19px + env(safe-area-inset-left))",
+        }}
       >
-        <RecoveryRequestStep
-          disabled={isSubmitting}
-          error={fieldError}
-          identifier={data.identifier}
-          inputRef={identifierRef}
-          onChange={updateIdentifier}
-        />
-
-        {requestError && (
-          <Alert role="alert" severity="error" sx={{ mt: 2 }}>
-            {requestError}
-          </Alert>
-        )}
-
-        {cooldownSecondsRemaining !== null && cooldownSecondsRemaining > 0 && (
-          <Typography aria-live="polite" role="status" sx={{ mt: 2, color: "text.secondary" }}>
-            Podrás solicitar otro enlace en {formatRecoveryCooldownTime(cooldownSecondsRemaining)}
+        <Stack sx={{ alignItems: "center", textAlign: "center" }}>
+          <Box
+            alt=""
+            aria-hidden="true"
+            component="img"
+            src="/entry/recovery-shield.svg"
+            sx={{
+              display: "block",
+              width: 142,
+              height: 142,
+              "@media (max-height: 700px)": { width: 104, height: 104 },
+            }}
+          />
+          <Typography
+            component="h1"
+            ref={titleRef}
+            tabIndex={-1}
+            sx={{
+              mt: "33px",
+              color: themeTokens.color.preLoginNavy,
+              fontSize: "clamp(1.75rem, 8vw, 2rem)",
+              fontWeight: 600,
+              lineHeight: 1.2,
+            }}
+          >
+            Recupera tu acceso
           </Typography>
-        )}
+          <Typography
+            sx={{
+              mt: 2,
+              maxWidth: 360,
+              color: themeTokens.color.preLoginNavy,
+              fontSize: "1rem",
+              fontWeight: 500,
+              lineHeight: 1.4,
+            }}
+          >
+            Ingresa el correo electrónico asociado a tu cuenta para recibir las instrucciones de recuperación.
+          </Typography>
+        </Stack>
 
-        <Button
-          disabled={isSubmitting || isCooldownChecking || isCooldownActive}
-          fullWidth
-          loading={isSubmitting}
-          sx={{ mt: 3 }}
-          type="submit"
-          variant="contained"
+        <Box
+          aria-busy={isSubmitting || isCooldownChecking}
+          component="form"
+          noValidate
+          onSubmit={submitRequest}
+          sx={{ display: "flex", flexDirection: "column", pt: "31px" }}
         >
-          Enviar enlace
-        </Button>
+          <RecoveryRequestStep
+            disabled={isSubmitting}
+            error={fieldError}
+            identifier={data.identifier}
+            inputRef={identifierRef}
+            onChange={updateIdentifier}
+          />
+
+          {requestError && (
+            <Alert role="alert" severity="error" sx={{ mt: 2 }}>
+              {requestError}
+            </Alert>
+          )}
+
+          {cooldownSecondsRemaining !== null && cooldownSecondsRemaining > 0 && (
+            <Typography
+              aria-live="polite"
+              role="status"
+              sx={{ mt: 2, color: themeTokens.color.preLoginMuted, fontSize: "0.875rem", textAlign: "center" }}
+            >
+              Podrás solicitar otro enlace en {formatRecoveryCooldownTime(cooldownSecondsRemaining)}
+            </Typography>
+          )}
+
+          <Button
+            disabled={isSubmitting || isCooldownChecking || isCooldownActive}
+            fullWidth
+            loading={isSubmitting}
+            sx={{
+              mt: "29px",
+              minHeight: 50,
+              borderRadius: "999px",
+              fontWeight: 400,
+              bgcolor: themeTokens.color.preLoginPrimary,
+              "&:hover": { bgcolor: darken(themeTokens.color.preLoginPrimary, 0.12) },
+              "&:active": { bgcolor: darken(themeTokens.color.preLoginPrimary, 0.2) },
+              "&:focus-visible": {
+                outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
+                outlineOffset: 2,
+              },
+            }}
+            type="submit"
+            variant="contained"
+          >
+            Enviar enlace
+          </Button>
+        </Box>
       </Box>
-    </SecurityFlowShell>
+    </Box>
   );
 }
