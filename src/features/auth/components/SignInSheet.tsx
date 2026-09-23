@@ -4,6 +4,7 @@ import { FormEvent, MouseEvent, type ReactNode, useEffect, useRef, useState } fr
 import Link from "next/link";
 import {
   CloseRounded,
+  FingerprintRounded,
   VisibilityOffRounded,
   VisibilityRounded,
 } from "@mui/icons-material";
@@ -39,6 +40,7 @@ import {
 } from "../login/services/login";
 import type { LoginErrors } from "../login/types";
 import { validateLogin } from "../login/validation";
+import { PreLoginIconBadge } from "../shared/components/PreLoginIconBadge";
 import { pillFieldSx } from "../shared/pillFieldSx";
 
 type SignInSheetProps = Readonly<{
@@ -513,14 +515,8 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
                 />
               )}
               {!showBiometricAccess && (
-                <Stack spacing={1.5} sx={{ alignItems: "center", textAlign: "center" }}>
-                  <Box
-                    alt=""
-                    aria-hidden="true"
-                    component="img"
-                    src="/entry/face-scan.svg"
-                    sx={{ display: "block", width: 40, height: 40, opacity: 0.5 }}
-                  />
+                <Stack spacing={1.5} sx={{ alignItems: "center", textAlign: "center", opacity: 0.6 }}>
+                  <PreLoginIconBadge icon={FingerprintRounded} size={48} />
                   <Typography sx={{ maxWidth: 320, color: themeTokens.color.preLoginMuted, fontSize: "0.8125rem" }}>
                     Ingresa con tu usuario y contraseña. Activa tu biometría desde tu Perfil para acceder más rápido.
                   </Typography>

@@ -1,8 +1,12 @@
 import { InfoOutlined } from "@mui/icons-material";
 import { Alert, MenuItem, Stack, TextField, Typography } from "@mui/material";
 
+import { pillFieldSx } from "@/features/auth/shared/pillFieldSx";
+
 import type { RegistrationData, RegistrationErrors, RegistrationInputRefs } from "../types";
 import { DOCUMENT_MAX_LENGTH, keepAsciiDigits } from "../validation";
+
+const fieldSx = pillFieldSx("#F2F2F2");
 
 const nationalityLabels = {
   V: "Venezolano",
@@ -52,6 +56,8 @@ export function IdentificationStep({
           },
         }}
         value={data.nationality}
+        variant="filled"
+        sx={fieldSx}
       >
         <MenuItem value="V">Venezolano</MenuItem>
         <MenuItem value="E">Extranjero</MenuItem>
@@ -77,6 +83,8 @@ export function IdentificationStep({
           htmlInput: { inputMode: "numeric", maxLength: DOCUMENT_MAX_LENGTH },
         }}
         value={data.documentNumber}
+        variant="filled"
+        sx={fieldSx}
       />
       <Typography color="text.secondary" id="registration-name-guidance" variant="body2">
         Escríbelos como aparecen en tu documento de identidad.
@@ -97,6 +105,8 @@ export function IdentificationStep({
           htmlInput: { autoCapitalize: "words", inputMode: "text", spellCheck: false },
         }}
         value={data.firstName}
+        variant="filled"
+        sx={fieldSx}
       />
       <TextField
         autoComplete="family-name"
@@ -114,6 +124,8 @@ export function IdentificationStep({
           htmlInput: { autoCapitalize: "words", inputMode: "text", spellCheck: false },
         }}
         value={data.lastName}
+        variant="filled"
+        sx={fieldSx}
       />
       <Alert icon={<InfoOutlined />} severity="info">
         Tus datos se utilizarán únicamente para validar tu registro.

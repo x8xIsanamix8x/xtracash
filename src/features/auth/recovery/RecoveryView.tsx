@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowBackRounded } from "@mui/icons-material";
+import { ArrowBackRounded, LockResetRounded } from "@mui/icons-material";
 import {
   Alert,
   Box,
@@ -17,6 +17,7 @@ import { darken } from "@mui/material/styles";
 import { recoveryRequestedUrl } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
+import { PreLoginIconBadge } from "../shared/components/PreLoginIconBadge";
 import { RecoveryRequestStep } from "./components/RecoveryRequestStep";
 import {
   clearRecoveryCooldown,
@@ -223,18 +224,9 @@ export function RecoveryView() {
         }}
       >
         <Stack sx={{ alignItems: "center", textAlign: "center" }}>
-          <Box
-            alt=""
-            aria-hidden="true"
-            component="img"
-            src="/entry/recovery-shield.svg"
-            sx={{
-              display: "block",
-              width: 142,
-              height: 142,
-              "@media (max-height: 700px)": { width: 104, height: 104 },
-            }}
-          />
+          <Box sx={{ "@media (max-height: 700px)": { transform: "scale(0.73)" } }}>
+            <PreLoginIconBadge icon={LockResetRounded} />
+          </Box>
           <Typography
             component="h1"
             ref={titleRef}
