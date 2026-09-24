@@ -6,6 +6,7 @@ import type {
   HomeAccountSummary,
   OnboardingMasterProgress,
 } from "./types";
+import { parseNewBusinessHomeData } from "./newBusinessValidation";
 
 const amountPattern = /^\d+(?:\.\d{1,2})?$/;
 const coreAmountPattern = /^(\d+)(?:\.(\d{1,4}))?$/;
@@ -256,6 +257,31 @@ export function parseCoreAccountSummary(value: unknown): HomeAccountSummary | nu
 
 export function parseHomeAccountSummary(value: unknown): HomeAccountSummary | null {
   if (!isRecord(value)) return null;
+  const newBusiness = parseNewBusinessHomeData(value);
+  if (newBusiness) {
+    const delinquencyStage = newBusiness.balance.status === "SUSPENDED"
+      ? "BLOQUEADA"
+      : newBusiness.balance.status === "PAYMENT_DUE"
+        ? "CON_MORA"
+        : "AL_DIA";
+    return {
+      name: newBusiness.fullName,
+      accountStatus: "ACTIVE",
+      product: {
+        limitBs: newBusiness.balance.totalCredit.bs,
+        availableBs: newBusiness.balance.available.bs,
+      },
+      payments: {
+        hasPendingPayment: newBusiness.balance.status !== "ACTIVE",
+        nextCutoffDate: null,
+        currentDebtBs: newBusiness.debt.total.bs,
+        minimumPaymentBs: null,
+        delinquencyStage,
+      },
+      movements: [],
+      onboardingMaster: null,
+    };
+  }
   if (typeof value.name !== "string" || !value.name.trim()) return null;
   if (typeof value.accountStatus !== "string" || !value.accountStatus.trim()) {
     return null;

@@ -2,8 +2,8 @@ import "server-only";
 
 import { getServerCoreApiBaseUrl } from "@/config/serverCoreApi";
 
-import { parseCoreAccountSummary } from "../accountSummaryValidation";
-import type { HomeAccountSummary } from "../types";
+import { parseNewBusinessHomeData } from "../newBusinessValidation";
+import type { NewBusinessHomeData } from "../newBusinessTypes";
 
 export type CoreAccountSummaryErrorType =
   | "configuration"
@@ -35,7 +35,7 @@ function getSummaryEndpoint(): string {
 export async function getAccountSummaryFromCore(
   accessToken: string,
   signal: AbortSignal,
-): Promise<HomeAccountSummary> {
+): Promise<NewBusinessHomeData> {
   let response: Response;
 
   try {
@@ -60,7 +60,7 @@ export async function getAccountSummaryFromCore(
     throw new CoreAccountSummaryError("protocol");
   }
 
-  const summary = parseCoreAccountSummary(body);
+  const summary = parseNewBusinessHomeData(body);
   if (summary === null) throw new CoreAccountSummaryError("protocol");
   return summary;
 }
