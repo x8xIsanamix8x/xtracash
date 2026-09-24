@@ -43,6 +43,7 @@ import {
   type DirectoryFocusDestination,
   type DirectoryFocusRequest,
 } from "./components/DirectoryDialog";
+import { AddRecipientDialog } from "./components/AddRecipientDialog";
 import { RecipientDetailsStep } from "./components/RecipientDetailsStep";
 import { ReviewStep } from "./components/ReviewStep";
 import { TransferResultView } from "./components/TransferResultView";
@@ -186,6 +187,7 @@ export function MobilePaymentView() {
   const [focusRequest, setFocusRequest] = useState(0);
   const [lineError, setLineError] = useState("");
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
+  const [isAddRecipientOpen, setIsAddRecipientOpen] = useState(false);
   const [suppressDirectoryFocusRestore, setSuppressDirectoryFocusRestore] =
     useState(false);
   const [directoryEntries, setDirectoryEntries] =
@@ -354,6 +356,25 @@ export function MobilePaymentView() {
   const openDirectory = () => {
     setIsDirectoryOpen(true);
     clearDetailsError("recipient");
+  };
+
+  const openAddRecipient = useCallback(() => {
+    if (recipientMode !== "manual") {
+      setManualRecipient(initialManualRecipient);
+      setSelectedContactId(null);
+    }
+    setLineError("");
+    setIsAddRecipientOpen(true);
+  }, [recipientMode]);
+
+  const closeAddRecipient = () => {
+    if (!isInitiating) setIsAddRecipientOpen(false);
+  };
+
+  const completeAddRecipient = () => {
+    setSelectedContactId(null);
+    setRecipientMode("manual");
+    closeAddRecipient();
   };
 
   const fillRecipientFromContact = (contactId: string) => {
@@ -759,6 +780,7 @@ export function MobilePaymentView() {
     setIsConfirming(false);
     setInitiatedPayment(null);
     setTransferResult(null);
+    setIsAddRecipientOpen(false);
   };
 
   const retryPaymentContext = () => {
@@ -884,6 +906,7 @@ export function MobilePaymentView() {
           onContinue={continueToReview}
           onManualChange={updateManualRecipient}
           onOpenDirectory={openDirectory}
+          onOpenAddRecipient={openAddRecipient}
           onSelectContact={selectVisibleContact}
           onSelectIcon={(iconId) => {
             setPurpose((current) => ({ ...current, iconId }));
@@ -1085,6 +1108,19 @@ export function MobilePaymentView() {
         status={directoryStatus}
         suppressFocusRestore={suppressDirectoryFocusRestore}
         suppressDeleteFocusRestore={suppressDeleteFocusRestore}
+      />
+
+      <AddRecipientDialog
+        banks={banks}
+        errors={detailsErrors}
+        focusField={focusField}
+        focusRequest={focusRequest}
+        isSubmitting={isInitiating}
+        manualRecipient={manualRecipient}
+        onClose={closeAddRecipient}
+        onDone={completeAddRecipient}
+        onManualChange={updateManualRecipient}
+        open={isAddRecipientOpen}
       />
 
       <Dialog

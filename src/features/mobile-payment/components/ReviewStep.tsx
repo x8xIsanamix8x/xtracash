@@ -272,8 +272,6 @@ export function ReviewStep({
                 <ReviewRow label="Monto solicitado" value={amountLabel} />
                 <ReviewRow label="Comisión" value={feeLabel} />
                 <ReviewRow label="Total a pagar" value={totalLabel} />
-                <ReviewRow label="Disponible" value={availableLabel} />
-                <ReviewRow label="Tasa aplicada" value={rateLabel} />
               </Box>
               {recipient.saveToDirectory && (
                 <Typography color="text.secondary" variant="body2">
@@ -303,14 +301,13 @@ export function ReviewStep({
                 sx={{
                   m: 0,
                   display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                   gap: 1,
                 }}
               >
                 {[
-                  ["Nivel", String(financing.level)],
                   ["Cuotas", String(financing.installmentCount)],
-                  ["Frecuencia", `${financing.paymentEveryDays} días`],
+                  ["Plazo", `${financing.paymentEveryDays} días`],
                 ].map(([itemLabel, value]) => (
                   <Box
                     key={itemLabel}
@@ -345,70 +342,16 @@ export function ReviewStep({
                   {formatDays(financing.interestFreeDays)} sin comisión por intereses
                 </Typography>
                 <Typography color="text.secondary" sx={{ mt: 0.25, fontSize: 12 }}>
-                  Durante este período no se generará comisión por intereses.
+                  Luego de este periodo, se comenzarán a generar los intereses correspondientes.
                 </Typography>
               </Box>
 
               <Box component="dl" sx={{ m: 0, display: "grid", gap: 1.25 }}>
                 <ReviewRow label="Deuda financiada" value={formatBsAmount(financing.debtBs)} />
                 <ReviewRow label="Plazo total" value={formatDays(financing.totalTermDays)} />
-                <ReviewRow label="Interés mensual" value={formatPercentage(financing.monthlyInterestRate)} />
                 <ReviewRow label="Interés diario" value={formatPercentage(financing.dailyInterestRate)} />
-                <ReviewRow label="Interés anual" value={formatPercentage(financing.annualInterestRate)} />
-                <ReviewRow label="Mora mensual" value={formatPercentage(financing.monthlyLateFeeRate)} />
-                <ReviewRow label="Mora diaria" value={formatPercentage(financing.dailyLateFeeRate)} />
-                <ReviewRow
-                  label="Comisión de reconexión"
-                  value={formatBsAmount(financing.reconnectionFeeBs)}
-                />
               </Box>
 
-              <Stack spacing={1}>
-                <Typography
-                  component="h3"
-                  sx={{ color: "secondary.main", fontWeight: 700 }}
-                >
-                  Cronograma de cuotas
-                </Typography>
-                {financing.installments.length > 0 ? (
-                  <Box
-                    component="ol"
-                    sx={{ m: 0, p: 0, display: "grid", gap: 1, listStyle: "none" }}
-                  >
-                    {financing.installments.map((installment) => (
-                      <Box
-                        component="li"
-                        key={installment.number}
-                        sx={(theme) => ({
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 2,
-                          p: 1.5,
-                          borderRadius: 2.5,
-                          bgcolor: alpha(theme.palette.primary.main, 0.05),
-                        })}
-                      >
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography sx={{ color: "secondary.main", fontWeight: 700 }}>
-                            Cuota {installment.number}
-                          </Typography>
-                          <Typography color="text.secondary" variant="body2">
-                            Vence el {formatDueDate(installment.dueDate)}
-                          </Typography>
-                        </Box>
-                        <Typography sx={{ flexShrink: 0, color: "secondary.main", fontWeight: 700 }}>
-                          {formatBsAmount(installment.amountBs)}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                ) : (
-                  <Typography color="text.secondary" variant="body2">
-                    No hay cuotas programadas.
-                  </Typography>
-                )}
-              </Stack>
             </Stack>
 
             {isSubmitting && (
