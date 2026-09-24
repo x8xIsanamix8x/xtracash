@@ -1,5 +1,6 @@
 const protectedRoutes = [
   "/home",
+  "/installments",
   "/movements",
   "/mobile-payment",
   "/profile",
