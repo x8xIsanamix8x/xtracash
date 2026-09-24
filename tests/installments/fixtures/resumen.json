@@ -1,0 +1,33 @@
+{
+  "fullName": "Leonardo Reveron",
+  "balance": {
+    "available": { "bs": "298851.84", "usd": "349.75" },
+    "totalCredit": { "bs": "427231.85", "usd": "500.00" },
+    "status": "AL_DIA"
+  },
+  "consumptions": [
+    {
+      "consumptionId": "01a0cb0e-8dcf-70d3-a1cf-bd74d4efaeb3",
+      "icon": "stethoscope-ico",
+      "label": "Clínica",
+      "amount": { "bs": "100000.00", "usd": "117.16" },
+      "installments": 3,
+      "paidInstallments": 0,
+      "nextPaymentDate": "2026-10-07",
+      "nextPaymentAmount": { "bs": "34372.09", "usd": "40.23" },
+      "status": "AL_DIA"
+    },
+    {
+      "consumptionId": "01a0cb15-9730-7ab0-beef-046eda7fdd7d",
+      "icon": "market-ico",
+      "label": "Mercado",
+      "amount": { "bs": "24500.00", "usd": "28.71" },
+      "installments": 1,
+      "paidInstallments": 0,
+      "nextPaymentDate": "2026-10-07",
+      "nextPaymentAmount": { "bs": "25263.59", "usd": "29.57" },
+      "status": "AL_DIA"
+    }
+  ],
+  "debt": { "total": { "bs": "128380.03", "usd": "150.25" } }
+}
