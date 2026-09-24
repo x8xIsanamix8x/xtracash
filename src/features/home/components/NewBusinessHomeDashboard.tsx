@@ -114,7 +114,8 @@ function HomeHeader({
             height={32}
             priority
             src="/entry/isotipo-impulsa.png"
-            width={34}
+            width={26}
+            style={{ objectFit: "contain" }}
           />
         </Box>
         <IconButton
