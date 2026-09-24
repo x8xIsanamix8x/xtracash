@@ -84,6 +84,7 @@ function useCopy() {
   return { copiedKey, message, clearMessage: () => setMessage(""), copy };
 }
 
+/** Filas compactas (etiqueta arriba, valor abajo) para que todo quepa sin scroll. */
 function InstructionRows({
   rows,
   copiedKey,
@@ -94,8 +95,16 @@ function InstructionRows({
   onCopy: (row: InstructionRow) => void;
 }>) {
   return (
-    <Stack component="dl" spacing={1} sx={{ m: 0 }}>
-      {rows.map((row) => {
+    <Box
+      component="dl"
+      sx={{
+        m: 0,
+        px: 1.5,
+        borderRadius: `${homeVisualTokens.radius.inset}px`,
+        bgcolor: color.neutralSurface,
+      }}
+    >
+      {rows.map((row, index) => {
         const copied = copiedKey === row.key;
         return (
           <Stack
@@ -103,21 +112,18 @@ function InstructionRows({
             key={row.key}
             spacing={1}
             sx={{
-              pl: 2,
-              pr: 0.5,
-              py: 0.75,
+              py: 0.5,
               alignItems: "center",
-              borderRadius: `${homeVisualTokens.radius.inset}px`,
-              bgcolor: color.neutralSurface,
+              borderTop: index === 0 ? 0 : `1px solid ${alpha(color.navy, 0.08)}`,
             }}
           >
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography component="dt" sx={{ color: color.neutral, fontSize: "0.75rem" }}>
+              <Typography component="dt" sx={{ color: color.neutral, fontSize: "0.6875rem", lineHeight: 1.3 }}>
                 {row.label}
               </Typography>
               <Typography
                 component="dd"
-                sx={{ m: 0, color: color.navy, fontWeight: 700, overflowWrap: "anywhere" }}
+                sx={{ m: 0, color: color.navy, fontSize: "0.875rem", fontWeight: 700, lineHeight: 1.35, overflowWrap: "anywhere" }}
               >
                 {row.displayValue}
               </Typography>
@@ -125,14 +131,15 @@ function InstructionRows({
             <IconButton
               aria-label={copied ? `${row.label} copiado` : `Copiar ${row.label.toLowerCase()}`}
               onClick={() => onCopy(row)}
-              sx={{ flexShrink: 0, color: copied ? color.positive : installmentsPrimary }}
+              size="small"
+              sx={{ flexShrink: 0, width: 40, height: 40, color: copied ? color.positive : installmentsPrimary }}
             >
-              {copied ? <CheckRounded /> : <ContentCopyRounded />}
+              {copied ? <CheckRounded fontSize="small" /> : <ContentCopyRounded fontSize="small" />}
             </IconButton>
           </Stack>
         );
       })}
-    </Stack>
+    </Box>
   );
 }
 
@@ -233,67 +240,61 @@ export function PaymentInstructionsView({
     const hasPaymentInReview = detail.data.installments.some((item) => item.status === "EN_REVISION");
 
     return (
-      <Stack spacing={2}>
+      <Stack spacing={1.5}>
         <Box
           component="section"
           aria-labelledby="payment-amount-title"
           sx={{
-            p: 2.5,
-            borderRadius: `${homeVisualTokens.radius.card}px`,
+            px: 2,
+            py: 1.5,
+            borderRadius: `${homeVisualTokens.radius.inset}px`,
             bgcolor: installmentsPrimary,
             color: color.white,
           }}
         >
-          <Typography id="payment-amount-title" sx={{ fontSize: "0.875rem", fontWeight: 700 }}>
-            Monto a pagar
-          </Typography>
-          <Typography
-            sx={{ fontSize: "clamp(1.75rem, 9vw, 2.25rem)", fontWeight: 800, lineHeight: 1.15 }}
-          >
-            {breakdown.total}
-          </Typography>
-          <Typography sx={{ mt: 0.5, fontSize: "0.8125rem", opacity: 0.9 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "baseline", justifyContent: "space-between" }}>
+            <Typography id="payment-amount-title" sx={{ fontSize: "0.8125rem", fontWeight: 700 }}>
+              Monto a pagar
+            </Typography>
+            <Typography sx={{ fontSize: "1.5rem", fontWeight: 800, lineHeight: 1.2 }}>
+              {breakdown.total}
+            </Typography>
+          </Stack>
+          <Typography sx={{ fontSize: "0.75rem", opacity: 0.9 }}>
             {detail.data.consumption.label} · {breakdown.description}
           </Typography>
+          <Stack direction="row" spacing={0.5} sx={{ mt: 0.75, alignItems: "flex-start" }}>
+            <InfoOutlined aria-hidden="true" sx={{ mt: "1px", fontSize: 14 }} />
+            <Typography sx={{ fontSize: "0.6875rem", lineHeight: 1.35, opacity: 0.9 }}>
+              Si pagas otro día, el monto puede cambiar. Al reportar usa la fecha real de tu pago.
+            </Typography>
+          </Stack>
         </Box>
-
-        <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
-          <InfoOutlined aria-hidden="true" sx={{ mt: 0.25, color: color.violet, fontSize: 20 }} />
-          <Typography sx={{ color: color.navy, fontSize: "0.8125rem" }}>
-            Si pagas otro día, el monto puede cambiar. Al reportar usa la fecha real de tu pago.
-          </Typography>
-        </Stack>
 
         <Card
           component="section"
-          aria-labelledby="payment-details-title"
+          aria-label="Datos para pagar"
           sx={{
             borderRadius: `${homeVisualTokens.radius.card}px`,
             bgcolor: color.white,
             boxShadow: `0 8px 24px ${alpha(color.navy, 0.08)}`,
           }}
         >
-          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-            <Stack spacing={1.5}>
-              <Typography
-                component="h2"
-                id="payment-details-title"
-                sx={{ color: color.navy, fontSize: "1.0625rem", fontWeight: 800 }}
-              >
-                Datos para pagar
-              </Typography>
-
+          <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1 } }}>
+            <Stack spacing={1}>
               {methods.length > 1 && (
                 <ToggleButtonGroup
                   aria-label="Forma de pago"
                   exclusive
                   fullWidth
                   onChange={(_, value: PaymentMethod | null) => value && setMethod(value)}
+                  size="small"
                   sx={{
                     p: 0.5,
                     borderRadius: 99,
                     bgcolor: color.neutralSurface,
                     "& .MuiToggleButtonGroup-grouped": {
+                      minHeight: 36,
                       border: 0,
                       borderRadius: "99px !important",
                       color: color.navy,
@@ -321,8 +322,9 @@ export function PaymentInstructionsView({
 
               <Button
                 onClick={() => void copy("all", createCopyAllText(rows), "Datos copiados")}
+                size="small"
                 startIcon={copiedKey === "all" ? <CheckRounded /> : <ContentCopyRounded />}
-                sx={{ alignSelf: "center", borderRadius: 99, color: installmentsPrimary, fontWeight: 700 }}
+                sx={{ alignSelf: "center", minHeight: 36, borderRadius: 99, color: installmentsPrimary, fontWeight: 700 }}
               >
                 Copiar todos los datos
               </Button>
@@ -345,14 +347,6 @@ export function PaymentInstructionsView({
             Ya pagué · Reportar pago
           </Button>
         )}
-        <Button
-          component={Link}
-          fullWidth
-          href={detailHref}
-          sx={{ minHeight: 48, borderRadius: 99, color: color.navy, fontWeight: 700 }}
-        >
-          Volver al detalle
-        </Button>
       </Stack>
     );
   })();

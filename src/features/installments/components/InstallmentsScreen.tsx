@@ -16,7 +16,7 @@ export function InstallmentsScreen({ children }: Readonly<{ children: ReactNode 
         minHeight: "100dvh",
         bgcolor: homeVisualTokens.color.surfaceTint,
         pt: "calc(16px + env(safe-area-inset-top))",
-        pb: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 40}px + env(safe-area-inset-bottom))`,
+        pb: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`,
       }}
     >
       <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 } }}>

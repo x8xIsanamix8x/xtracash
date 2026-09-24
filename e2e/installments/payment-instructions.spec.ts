@@ -57,6 +57,23 @@ test.describe("SPEC-05 · Instrucciones de pago", () => {
     ]);
   });
 
+  for (const viewport of [{ width: 390, height: 844 }, { width: 360, height: 800 }]) {
+    test(`con transferencia todo cabe sin scroll en ${viewport.width}×${viewport.height}`, async ({ page, bff }) => {
+      await page.setViewportSize(viewport);
+      await mockConsumption(bff);
+      await page.goto(`${instructionsUrl}?option=CUOTAS&count=2`);
+      await details(page).getByRole("button", { name: "Transferencia" }).click();
+      await expect(details(page).getByRole("definition")).toHaveCount(6);
+
+      const layout = await page.evaluate(() => ({
+        scrollHeight: document.documentElement.scrollHeight,
+        viewportHeight: window.innerHeight,
+      }));
+      expect(layout.scrollHeight).toBeLessThanOrEqual(layout.viewportHeight);
+      await expect(page.getByRole("link", { name: "Ya pagué · Reportar pago" })).toBeInViewport({ ratio: 1 });
+    });
+  }
+
   test("copia cada dato listo para pegar en el banco", async ({ page, bff, context, baseURL }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseURL });
     await mockConsumption(bff);
