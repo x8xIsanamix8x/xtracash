@@ -1,4 +1,5 @@
-import type { HomeConsumptionIconName, NewBusinessHomeData } from "./newBusinessTypes";
+import { normalizePaymentIconId } from "../mobile-payment/paymentPurpose";
+import type { NewBusinessHomeData } from "./newBusinessTypes";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -24,8 +25,6 @@ function normalizeConsumptionStatus(value: unknown): NewBusinessHomeData["consum
   return null;
 }
 
-const iconNames = new Set<HomeConsumptionIconName>(["health", "pets", "restaurant", "shopping", "services"]);
-
 export function parseNewBusinessHomeData(value: unknown): NewBusinessHomeData | null {
   if (!isRecord(value) || typeof value.fullName !== "string" || !isRecord(value.balance)) return null;
   const available = readMoney(value.balance.available);
@@ -42,7 +41,7 @@ export function parseNewBusinessHomeData(value: unknown): NewBusinessHomeData | 
     const installments = item.installments;
     const paidInstallments = item.paidInstallments;
     if (!amount || !status || typeof installments !== "number" || typeof paidInstallments !== "number" || !Number.isInteger(installments) || !Number.isInteger(paidInstallments)) return null;
-    const icon = iconNames.has(item.icon as HomeConsumptionIconName) ? item.icon as HomeConsumptionIconName : "services";
+    const icon = normalizePaymentIconId(item.icon ?? item.icono) ?? "receipt";
     return { consumptionId: item.consumptionId, icon, label: item.label, amount, installments, paidInstallments, nextPaymentDate: typeof item.nextPaymentDate === "string" ? item.nextPaymentDate : null, nextPaymentAmount: nextAmount, status };
   });
   if (consumptions.some((item) => item === null)) return null;

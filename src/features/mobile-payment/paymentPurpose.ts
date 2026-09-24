@@ -1,4 +1,4 @@
-import type { PaymentIconId } from "./types";
+import type { PaymentIconId } from "../payment-purpose/types";
 
 export const maxPaymentConceptLength = 40;
 
@@ -30,6 +30,14 @@ const paymentIconLabels: Readonly<Record<PaymentIconId, string>> = {
   shapes: "Otros",
 };
 
+const legacyHomeIconIds: Readonly<Record<string, PaymentIconId>> = {
+  health: "stethoscope",
+  pets: "paw-print",
+  restaurant: "shopping-cart",
+  shopping: "shopping-bag",
+  services: "receipt",
+};
+
 type PaymentPurpose = Readonly<{
   concept: string;
   iconId: PaymentIconId | null;
@@ -41,6 +49,12 @@ export function isPaymentIconId(value: unknown): value is PaymentIconId {
 
 export function getPaymentIconLabel(iconId: PaymentIconId): string {
   return paymentIconLabels[iconId];
+}
+
+export function normalizePaymentIconId(value: unknown): PaymentIconId | null {
+  if (isPaymentIconId(value)) return value;
+  if (typeof value !== "string") return null;
+  return legacyHomeIconIds[value] ?? null;
 }
 
 export function parsePaymentPurpose(value: unknown): PaymentPurpose | null {

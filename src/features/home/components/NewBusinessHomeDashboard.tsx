@@ -3,12 +3,7 @@ import Link from "next/link";
 import {
   CheckCircleRounded,
   LockRounded,
-  MedicalServicesOutlined,
   NotificationsNoneRounded,
-  PetsOutlined,
-  ReceiptLongOutlined,
-  RestaurantOutlined,
-  ShoppingBagOutlined,
   WarningAmberRounded,
 } from "@mui/icons-material";
 import {
@@ -23,8 +18,9 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
+import { PrimaryFinancialCard } from "@/components/PrimaryFinancialCard";
+import { PaymentPurposeIcon } from "@/features/payment-purpose/PaymentPurposeIcon";
 import type {
-  HomeConsumptionIconName,
   HomeDashboardViewModel,
   HomeStatusTone,
 } from "../newBusinessTypes";
@@ -36,14 +32,6 @@ type NewBusinessHomeDashboardProps = Readonly<{
   onNotifications: () => void;
   onReportInstallment: () => void;
 }>;
-
-const consumptionIcons = {
-  health: MedicalServicesOutlined,
-  pets: PetsOutlined,
-  restaurant: RestaurantOutlined,
-  shopping: ShoppingBagOutlined,
-  services: ReceiptLongOutlined,
-} as const satisfies Record<HomeConsumptionIconName, typeof ReceiptLongOutlined>;
 
 function StatusLabel({
   label,
@@ -171,79 +159,63 @@ function BalanceCard({
   } as const;
 
   return (
-    <Card
-      component="section"
-      aria-labelledby="home-balance-title"
-      sx={{
-        borderRadius: `${homeVisualTokens.radius.balance}px`,
-        bgcolor: homeVisualTokens.color.availableCard,
-        color: homeVisualTokens.color.navy,
-        boxShadow: `0 12px 32px ${alpha(homeVisualTokens.color.navy, 0.12)}`,
-      }}
-    >
-      <CardContent
-        sx={{
-          p: { xs: 2.5, sm: 3 },
-          "&:last-child": { pb: { xs: 2.5, sm: 3 } },
-        }}
-      >
-        <Stack spacing={2} sx={{ alignItems: "stretch" }}>
-          <Stack spacing={0.5} sx={{ textAlign: "left", alignItems: "flex-start" }}>
-            <Typography
-              component="div"
-              id="home-balance-title"
-              sx={{ color: homeVisualTokens.color.white, fontWeight: 700 }}
-            >
-              <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
-                {isReportAction && <LockRounded aria-hidden="true" sx={{ fontSize: 20 }} />}
-                <span>Disponible</span>
-              </Stack>
-            </Typography>
-            <Typography
-              sx={{
-                color: homeVisualTokens.color.white,
-                fontSize: "clamp(1.875rem, 9vw, 2.75rem)",
-                fontWeight: 800,
-                letterSpacing: "-0.035em",
-                lineHeight: 1.1,
-                overflowWrap: "anywhere",
-              }}
-            >
-              {balance.available}
-            </Typography>
-            <Typography
-              sx={{
-                color: homeVisualTokens.color.white,
-                fontSize: { xs: "0.875rem", sm: "1rem" },
-              }}
-            >
-              Línea total: {balance.totalCredit}
-            </Typography>
-          </Stack>
-          {isReportAction ? (
-            <Button
-              fullWidth
-              onClick={onReportInstallment}
-              sx={actionStyles}
-              type="button"
-              variant="contained"
-            >
-              {balance.primaryActionLabel}
-            </Button>
-          ) : (
-            <Button
-              component={Link}
-              fullWidth
-              href="/mobile-payment"
-              sx={actionStyles}
-              variant="contained"
-            >
-              {balance.primaryActionLabel}
-            </Button>
-          )}
+    <PrimaryFinancialCard labelledBy="home-balance-title">
+      <Stack spacing={2} sx={{ alignItems: "stretch" }}>
+        <Stack spacing={0.5} sx={{ textAlign: "left", alignItems: "flex-start" }}>
+          <Typography
+            component="div"
+            id="home-balance-title"
+            sx={{ color: homeVisualTokens.color.white, fontWeight: 700 }}
+          >
+            <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+              {isReportAction && <LockRounded aria-hidden="true" sx={{ fontSize: 20 }} />}
+              <span>Disponible</span>
+            </Stack>
+          </Typography>
+          <Typography
+            sx={{
+              color: homeVisualTokens.color.white,
+              fontSize: "clamp(1.875rem, 9vw, 2.75rem)",
+              fontWeight: 800,
+              letterSpacing: "-0.035em",
+              lineHeight: 1.1,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {balance.available}
+          </Typography>
+          <Typography
+            sx={{
+              color: homeVisualTokens.color.white,
+              fontSize: { xs: "0.875rem", sm: "1rem" },
+            }}
+          >
+            Línea total: {balance.totalCredit}
+          </Typography>
         </Stack>
-      </CardContent>
-    </Card>
+        {isReportAction ? (
+          <Button
+            fullWidth
+            onClick={onReportInstallment}
+            sx={actionStyles}
+            type="button"
+            variant="contained"
+          >
+            {balance.primaryActionLabel}
+          </Button>
+        ) : (
+          <Button
+            component={Link}
+            fullWidth
+            href="/mobile-payment"
+            sx={actionStyles}
+            variant="contained"
+          >
+            {balance.primaryActionLabel}
+          </Button>
+        )}
+      </Stack>
+    </PrimaryFinancialCard>
   );
 }
 
@@ -286,8 +258,6 @@ function AttentionNotice({ message, suspended }: Readonly<{ message: string; sus
 function ConsumptionCard({
   item,
 }: Readonly<{ item: HomeDashboardViewModel["consumptions"][number] }>) {
-  const ConsumptionIcon = consumptionIcons[item.icon] ?? ReceiptLongOutlined;
-
   return (
     <Card
       component="article"
@@ -319,7 +289,7 @@ function ConsumptionCard({
                 color: homeVisualTokens.color.violet,
               }}
             >
-              <ConsumptionIcon sx={{ fontSize: 28 }} />
+              <PaymentPurposeIcon iconId={item.icon} sx={{ fontSize: 28 }} />
             </Box>
             <Stack spacing={0.25} sx={{ minWidth: 0, flex: 1 }}>
               <Typography

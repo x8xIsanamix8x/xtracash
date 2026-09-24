@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
+import { PrimaryFinancialCard } from "@/components/PrimaryFinancialCard";
 import { getMobilePaymentRestrictionMessage } from "../accessStatus";
 import {
   formatAmountInput,
@@ -199,17 +200,16 @@ export function RecipientDetailsStep({
       }}
     >
       <Stack sx={{ gap: "2.1875rem", flex: 1 }}>
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            bgcolor: "secondary.main",
-            color: "common.white",
-          }}
-        >
-          <CardContent sx={{ px: 2, py: 2, "&:last-child": { pb: 2 } }}>
-            <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", gap: 1 }}>
-              <Typography sx={{ fontSize: 13, display: "flex", alignItems: "center", gap: 0.75 }}>
+        <PrimaryFinancialCard labelledBy="mobile-payment-available-title">
+          <Stack spacing={0.5} sx={{ alignItems: "flex-start", textAlign: "left" }}>
+            <Stack
+              direction="row"
+              sx={{ width: "100%", alignItems: "center", justifyContent: "space-between", gap: 1 }}
+            >
+              <Typography
+                id="mobile-payment-available-title"
+                sx={{ display: "flex", alignItems: "center", gap: 0.75, fontWeight: 700 }}
+              >
                 {accessCopy.label}
                 <Box
                   aria-hidden="true"
@@ -223,11 +223,19 @@ export function RecipientDetailsStep({
                 </Typography>
               )}
             </Stack>
-            <Typography sx={{ mt: 0.5, fontSize: { xs: 26, sm: 32 }, fontWeight: 700, lineHeight: 1.1 }}>
+            <Typography
+              sx={{
+                fontSize: "clamp(1.875rem, 9vw, 2.75rem)",
+                fontWeight: 800,
+                letterSpacing: "-0.035em",
+                lineHeight: 1.1,
+                overflowWrap: "anywhere",
+              }}
+            >
               {availableLabel}
             </Typography>
-          </CardContent>
-        </Card>
+          </Stack>
+        </PrimaryFinancialCard>
 
         {restrictionMessage && (
           <Alert
