@@ -25,10 +25,10 @@ const navigationItems: readonly Readonly<{
   icon: string;
   label: string;
 }>[] = [
-  { destination: "home", icon: "/navigation/home.png", label: "Inicio" },
-  { destination: "mobile-payment", icon: "/navigation/cuotas.png", label: "Cuotas" },
-  { destination: "movements", icon: "/navigation/movements.png", label: "Movimientos" },
-  { destination: "profile", icon: "/navigation/profile.png", label: "Perfil" },
+  { destination: "home", icon: "/navigation/home.svg", label: "Inicio" },
+  { destination: "mobile-payment", icon: "/navigation/cuotas.svg", label: "Cuotas" },
+  { destination: "movements", icon: "/navigation/movements.svg", label: "Movimientos" },
+  { destination: "profile", icon: "/navigation/profile.svg", label: "Perfil" },
 ];
 
 type AppBottomNavigationProps = Readonly<{
@@ -71,12 +71,13 @@ export function AppBottomNavigation({
       elevation={0}
       sx={{
         position: "fixed",
-        zIndex: 10,
-        left: "50%",
+        zIndex: (theme) => theme.zIndex.appBar,
+        right: 0,
+        left: 0,
         bottom: 0,
-        transform: "translateX(-50%)",
         width: "100%",
         maxWidth: 900,
+        mx: "auto",
         borderRadius: 0,
         borderTop: "1px solid rgba(255, 255, 255, 0.12)",
         bgcolor: themeTokens.color.brandDeep,
