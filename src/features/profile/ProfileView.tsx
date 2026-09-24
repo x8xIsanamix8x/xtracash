@@ -1,10 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowBackRounded } from "@mui/icons-material";
-import { Box, Container, IconButton, Snackbar, Stack, Typography } from "@mui/material";
+import { ChevronLeftRounded } from "@mui/icons-material";
+import {
+  Box,
+  Container,
+  IconButton,
+  Snackbar,
+  Stack,
+  Tab,
+  Tabs,
+  Typography,
+} from "@mui/material";
 
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
 import {
@@ -31,6 +41,17 @@ import {
 } from "./services/profile";
 import type { ProfilePersonalInfo, ProfileStatus } from "./types";
 
+type ProfileTab = "information" | "security" | "install";
+
+const profileTabs: readonly Readonly<{
+  id: ProfileTab;
+  label: string;
+}>[] = [
+  { id: "information", label: "Información" },
+  { id: "security", label: "Seguridad" },
+  { id: "install", label: "Instalar" },
+];
+
 export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEnabled?: boolean }>) {
   const router = useRouter();
   const showBiometricAccess = biometricEnabled;
@@ -39,6 +60,7 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
     null,
   );
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("active");
+  const [activeProfileTab, setActiveProfileTab] = useState<ProfileTab>("information");
   const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [announcement, setAnnouncement] = useState("");
@@ -181,26 +203,37 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
           <Stack
             component="header"
             direction="row"
-            spacing={1}
-            sx={{ minHeight: 48, alignItems: "center" }}
+            sx={{ minHeight: 48, alignItems: "center", justifyContent: "space-between" }}
           >
-            <IconButton
-              aria-label="Volver al inicio"
-              color="primary"
-              component={Link}
-              href="/home"
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                flexShrink: 0,
+                display: "grid",
+                placeItems: "center",
+                borderRadius: "50%",
+                bgcolor: "#ECEBFF",
+              }}
             >
-              <ArrowBackRounded />
-            </IconButton>
+              <Image
+                alt=""
+                aria-hidden="true"
+                height={32}
+                priority
+                src="/entry/isotipo-impulsa.png"
+                style={{ objectFit: "contain" }}
+                width={26}
+              />
+            </Box>
             <Typography
               component="h1"
               ref={titleRef}
               tabIndex={-1}
-              variant="h4"
               sx={{
-                flex: 1,
                 color: "secondary.main",
-                fontWeight: 700,
+                fontSize: "1rem",
+                fontWeight: 600,
                 outline: "none",
                 borderRadius: 1,
                 "&:focus-visible": {
@@ -211,56 +244,119 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
             >
               Perfil
             </Typography>
-            <Typography
-              noWrap
+            <IconButton
+              aria-label="Volver al inicio"
+              component={Link}
+              href="/home"
               sx={{
-                color: themeTokens.color.brandLogo,
-                fontSize: { xs: "0.875rem", sm: "1rem" },
-                fontWeight: 800,
-                letterSpacing: "-0.03em",
+                width: 44,
+                minWidth: 44,
+                minHeight: 44,
+                color: "#FF7900",
+                "& .MuiSvgIcon-root": {
+                  bgcolor: "#FF7900",
+                  color: "common.white",
+                  borderRadius: 1,
+                  fontSize: "1.75rem",
+                },
               }}
             >
-              Impúlsate Móvil
-            </Typography>
+              <ChevronLeftRounded />
+            </IconButton>
           </Stack>
 
           {status === "ready" && user ? (
-            <Box
-              sx={{
-                display: "grid",
-                gap: 3,
-                gridTemplateAreas: {
-                  xs: '"summary" "information" "onboarding" "security" "session"',
-                  md: '"summary information" "onboarding information" "security information" "session information"',
-                },
-                gridTemplateColumns: {
-                  xs: "minmax(0, 1fr)",
-                  md: "minmax(0, 0.9fr) minmax(0, 1.1fr)",
-                },
-                alignItems: "start",
-              }}
-            >
-              <Box sx={{ gridArea: "summary", minWidth: 0 }}>
-                <ProfileSummary user={user} />
-              </Box>
-              <Box sx={{ gridArea: "information", minWidth: 0 }}>
-                <PersonalInformation user={user} />
-              </Box>
-              {masterOnboardingProgress && <Box sx={{ gridArea: "onboarding", minWidth: 0 }}>
-                <MasterOnboardingProfileCard progress={masterOnboardingProgress} />
-              </Box>}
-              <Box sx={{ gridArea: "security", minWidth: 0 }}>
-                <SecurityCard
-                  biometricEnabled={showBiometricAccess}
-                />
-              </Box>
-              <Box sx={{ gridArea: "session", minWidth: 0 }}>
-                <Stack spacing={3}>
-                  <PwaInstallCard />
-                  <SessionCard onSignOut={openSignOut} />
+            <Stack spacing={3}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 3,
+                  gridTemplateColumns: {
+                    xs: "minmax(0, 1fr)",
+                    md: "minmax(0, 0.9fr) minmax(0, 1.1fr)",
+                  },
+                  alignItems: "start",
+                }}
+              >
+                <Stack spacing={3} sx={{ minWidth: 0 }}>
+                  <ProfileSummary user={user} />
+                  {masterOnboardingProgress && (
+                    <MasterOnboardingProfileCard progress={masterOnboardingProgress} />
+                  )}
                 </Stack>
+
+                <Box sx={{ minWidth: 0 }}>
+                  <Tabs
+                    aria-label="Secciones del perfil"
+                    onChange={(_event, value: ProfileTab) => setActiveProfileTab(value)}
+                    value={activeProfileTab}
+                    variant="fullWidth"
+                    sx={{
+                      minHeight: 48,
+                      p: 0.5,
+                      borderRadius: 2.5,
+                      bgcolor: "#E9EAF2",
+                      "& .MuiTabs-indicator": { display: "none" },
+                      "& .MuiTab-root": {
+                        minWidth: 0,
+                        minHeight: 44,
+                        px: { xs: 0.75, sm: 1.5 },
+                        borderRadius: 2,
+                        color: "text.secondary",
+                        fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                        fontWeight: 700,
+                        textTransform: "none",
+                      },
+                      "& .MuiTab-root.Mui-selected": {
+                        bgcolor: "background.paper",
+                        color: "secondary.main",
+                        boxShadow: "0 3px 10px rgba(2, 0, 77, 0.1)",
+                      },
+                    }}
+                  >
+                    {profileTabs.map((tab) => (
+                      <Tab
+                        aria-controls={`profile-panel-${tab.id}`}
+                        id={`profile-tab-${tab.id}`}
+                        key={tab.id}
+                        label={tab.label}
+                        value={tab.id}
+                      />
+                    ))}
+                  </Tabs>
+
+                  <Box
+                    aria-labelledby="profile-tab-information"
+                    hidden={activeProfileTab !== "information"}
+                    id="profile-panel-information"
+                    role="tabpanel"
+                    sx={{ mt: 2 }}
+                  >
+                    <PersonalInformation user={user} />
+                  </Box>
+                  <Box
+                    aria-labelledby="profile-tab-security"
+                    hidden={activeProfileTab !== "security"}
+                    id="profile-panel-security"
+                    role="tabpanel"
+                    sx={{ mt: 2 }}
+                  >
+                    <SecurityCard biometricEnabled={showBiometricAccess} />
+                  </Box>
+                  <Box
+                    aria-labelledby="profile-tab-install"
+                    hidden={activeProfileTab !== "install"}
+                    id="profile-panel-install"
+                    role="tabpanel"
+                    sx={{ mt: 2 }}
+                  >
+                    <PwaInstallCard />
+                  </Box>
+                </Box>
               </Box>
-            </Box>
+
+              <SessionCard onSignOut={openSignOut} />
+            </Stack>
           ) : (
             <ProfileState
               onRetry={retryProfile}

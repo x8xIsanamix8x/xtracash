@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -101,4 +102,24 @@ test("crea exclusivamente la presentación derivada", () => {
     email: "lmelo@impulsatechs.com",
     phone: "0422 285 5007",
   });
+});
+
+test("agrupa información, seguridad e instalación en una navegación por tabs", async () => {
+  const [profileView, sessionCard] = await Promise.all([
+    readFile(new URL("../../src/features/profile/ProfileView.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../../src/features/profile/components/SessionCard.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(profileView, /<Tabs/);
+  assert.match(profileView, /aria-label="Secciones del perfil"/);
+  assert.match(profileView, /src="\/entry\/isotipo-impulsa\.png"/);
+  assert.match(profileView, /aria-label="Volver al inicio"/);
+  assert.match(profileView, /<ChevronLeftRounded \/>/);
+  assert.match(profileView, /label: "Información"/);
+  assert.match(profileView, /label: "Seguridad"/);
+  assert.match(profileView, /label: "Instalar"/);
+  assert.match(profileView, /role="tabpanel"/);
+  assert.match(profileView, /<SessionCard onSignOut=\{openSignOut\} \/>/);
+  assert.doesNotMatch(sessionCard, /<Card/);
+  assert.match(sessionCard, /Cerrar sesión/);
 });

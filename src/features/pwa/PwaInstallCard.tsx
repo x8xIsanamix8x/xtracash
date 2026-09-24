@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { InstallMobileRounded, IosShareRounded } from "@mui/icons-material";
+import {
+  CheckCircleOutlineRounded,
+  InfoOutlined,
+  InstallMobileRounded,
+  IosShareRounded,
+} from "@mui/icons-material";
 import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
@@ -10,10 +15,6 @@ import { usePwaInstall } from "./PwaProvider";
 export function PwaInstallCard() {
   const { installAvailability, requestInstall } = usePwaInstall();
   const [isPrompting, setIsPrompting] = useState(false);
-
-  if (installAvailability === "installed" || installAvailability === "unavailable") {
-    return null;
-  }
 
   const install = async () => {
     if (isPrompting) return;
@@ -25,7 +26,13 @@ export function PwaInstallCard() {
     }
   };
 
-  const Icon = installAvailability === "ios" ? IosShareRounded : InstallMobileRounded;
+  const Icon = installAvailability === "installed"
+    ? CheckCircleOutlineRounded
+    : installAvailability === "ios"
+      ? IosShareRounded
+      : installAvailability === "unavailable"
+        ? InfoOutlined
+        : InstallMobileRounded;
 
   return (
     <Card component="section" variant="outlined" sx={{ boxShadow: "none" }}>
@@ -37,7 +44,7 @@ export function PwaInstallCard() {
       >
         <Stack spacing={2}>
           <Typography component="h2" variant="h6" sx={{ color: "secondary.main", fontWeight: 700 }}>
-            Instalar aplicación
+            {installAvailability === "installed" ? "Aplicación instalada" : "Instalar aplicación"}
           </Typography>
           <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
             <Box
@@ -55,7 +62,16 @@ export function PwaInstallCard() {
             >
               <Icon />
             </Box>
-            {installAvailability === "ios" ? (
+            {installAvailability === "installed" ? (
+              <Typography color="text.secondary" variant="body2">
+                Impúlsate Móvil ya está instalada en este dispositivo.
+              </Typography>
+            ) : installAvailability === "unavailable" ? (
+              <Typography color="text.secondary" variant="body2">
+                La instalación directa no está disponible en este navegador.
+                Puedes seguir usando la aplicación desde aquí.
+              </Typography>
+            ) : installAvailability === "ios" ? (
               <Stack spacing={0.5}>
                 <Typography color="text.secondary" variant="body2">
                   Para agregar Impúlsate a tu pantalla de inicio:
