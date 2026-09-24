@@ -112,7 +112,7 @@ function InstructionRows({
             key={row.key}
             spacing={1}
             sx={{
-              py: 0.5,
+              py: "1px",
               alignItems: "center",
               borderTop: index === 0 ? 0 : `1px solid ${alpha(color.navy, 0.08)}`,
             }}
@@ -132,7 +132,7 @@ function InstructionRows({
               aria-label={copied ? `${row.label} copiado` : `Copiar ${row.label.toLowerCase()}`}
               onClick={() => onCopy(row)}
               size="small"
-              sx={{ flexShrink: 0, width: 40, height: 40, color: copied ? color.positive : installmentsPrimary }}
+              sx={{ flexShrink: 0, width: 36, height: 36, color: copied ? color.positive : installmentsPrimary }}
             >
               {copied ? <CheckRounded fontSize="small" /> : <ContentCopyRounded fontSize="small" />}
             </IconButton>
@@ -240,36 +240,36 @@ export function PaymentInstructionsView({
     const hasPaymentInReview = detail.data.installments.some((item) => item.status === "EN_REVISION");
 
     return (
-      <Stack spacing={1.5}>
+      <Stack spacing={1.25}>
         <Box
           component="section"
           aria-labelledby="payment-amount-title"
           sx={{
-            px: 2,
-            py: 1.5,
-            borderRadius: `${homeVisualTokens.radius.inset}px`,
+            p: 2.5,
+            borderRadius: `${homeVisualTokens.radius.card}px`,
             bgcolor: installmentsPrimary,
             color: color.white,
           }}
         >
-          <Stack direction="row" spacing={1} sx={{ alignItems: "baseline", justifyContent: "space-between" }}>
-            <Typography id="payment-amount-title" sx={{ fontSize: "0.8125rem", fontWeight: 700 }}>
-              Monto a pagar
-            </Typography>
-            <Typography sx={{ fontSize: "1.5rem", fontWeight: 800, lineHeight: 1.2 }}>
-              {breakdown.total}
-            </Typography>
-          </Stack>
-          <Typography sx={{ fontSize: "0.75rem", opacity: 0.9 }}>
+          <Typography id="payment-amount-title" sx={{ fontSize: "0.875rem", fontWeight: 700 }}>
+            Monto a pagar
+          </Typography>
+          <Typography
+            sx={{ fontSize: "1.5rem", fontWeight: 800, lineHeight: 1.15 }}
+          >
+            {breakdown.total}
+          </Typography>
+          <Typography sx={{ mt: 0.5, fontSize: "0.8125rem", opacity: 0.9 }}>
             {detail.data.consumption.label} · {breakdown.description}
           </Typography>
-          <Stack direction="row" spacing={0.5} sx={{ mt: 0.75, alignItems: "flex-start" }}>
-            <InfoOutlined aria-hidden="true" sx={{ mt: "1px", fontSize: 14 }} />
-            <Typography sx={{ fontSize: "0.6875rem", lineHeight: 1.35, opacity: 0.9 }}>
-              Si pagas otro día, el monto puede cambiar. Al reportar usa la fecha real de tu pago.
-            </Typography>
-          </Stack>
         </Box>
+
+        <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
+          <InfoOutlined aria-hidden="true" sx={{ mt: 0.25, color: color.violet, fontSize: 20 }} />
+          <Typography sx={{ color: color.navy, fontSize: "0.8125rem" }}>
+            Si pagas otro día, el monto puede cambiar. Al reportar usa la fecha real de tu pago.
+          </Typography>
+        </Stack>
 
         <Card
           component="section"
@@ -280,7 +280,7 @@ export function PaymentInstructionsView({
             boxShadow: `0 8px 24px ${alpha(color.navy, 0.08)}`,
           }}
         >
-          <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1 } }}>
+          <CardContent sx={{ p: 1.5, "&:last-child": { pb: 0.5 } }}>
             <Stack spacing={1}>
               {methods.length > 1 && (
                 <ToggleButtonGroup
@@ -353,7 +353,7 @@ export function PaymentInstructionsView({
 
   return (
     <InstallmentsScreen>
-      <Stack spacing={2.5}>
+      <Stack spacing={2}>
         <InstallmentsHeader backHref={detailHref} backLabel="Volver al detalle" title="Instrucciones de pago" />
         <Box>{content}</Box>
       </Stack>
