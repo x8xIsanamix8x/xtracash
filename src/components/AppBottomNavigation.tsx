@@ -1,12 +1,9 @@
 import type { MouseEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import {
-  HistoryRounded,
-  HomeRounded,
-  PaymentsOutlined,
-  PersonOutlineRounded,
-} from "@mui/icons-material";
 import { BottomNavigation, BottomNavigationAction, Paper } from "@mui/material";
+
+import { themeTokens } from "@/theme/tokens";
 
 export type AppDestination =
   | "home"
@@ -14,7 +11,7 @@ export type AppDestination =
   | "mobile-payment"
   | "profile";
 
-export const APP_BOTTOM_NAVIGATION_HEIGHT = 56;
+export const APP_BOTTOM_NAVIGATION_HEIGHT = 64;
 
 export const appDestinationHref: Readonly<Record<AppDestination, string>> = {
   home: "/home",
@@ -23,11 +20,35 @@ export const appDestinationHref: Readonly<Record<AppDestination, string>> = {
   profile: "/profile",
 };
 
+const navigationItems: readonly Readonly<{
+  destination: AppDestination;
+  icon: string;
+  label: string;
+}>[] = [
+  { destination: "home", icon: "/navigation/home.png", label: "Inicio" },
+  { destination: "mobile-payment", icon: "/navigation/cuotas.png", label: "Cuotas" },
+  { destination: "movements", icon: "/navigation/movements.png", label: "Movimientos" },
+  { destination: "profile", icon: "/navigation/profile.png", label: "Perfil" },
+];
+
 type AppBottomNavigationProps = Readonly<{
   activeItem: AppDestination;
   disabled?: boolean;
   onNavigate?: (destination: AppDestination) => boolean;
 }>;
+
+function NavigationIcon({ src }: Readonly<{ src: string }>) {
+  return (
+    <Image
+      alt=""
+      aria-hidden="true"
+      height={48}
+      src={src}
+      style={{ width: 24, height: 24, objectFit: "contain" }}
+      width={48}
+    />
+  );
+}
 
 export function AppBottomNavigation({
   activeItem,
@@ -47,7 +68,7 @@ export function AppBottomNavigation({
     <Paper
       component="nav"
       aria-label="Navegación principal"
-      elevation={2}
+      elevation={0}
       sx={{
         position: "fixed",
         zIndex: 10,
@@ -56,51 +77,67 @@ export function AppBottomNavigation({
         transform: "translateX(-50%)",
         width: "100%",
         maxWidth: 900,
-        borderRadius: { xs: 0, md: "16px 16px 0 0" },
+        borderRadius: 0,
+        borderTop: "1px solid rgba(255, 255, 255, 0.12)",
+        bgcolor: themeTokens.color.brandDeep,
         pb: "env(safe-area-inset-bottom)",
+        overflow: "hidden",
       }}
     >
-      <BottomNavigation showLabels value={activeItem}>
-        <BottomNavigationAction
-          aria-current={activeItem === "home" ? "page" : undefined}
-          component={Link}
-          disabled={disabled}
-          href={appDestinationHref.home}
-          icon={<HomeRounded />}
-          label="Inicio"
-          onClick={(event) => handleNavigation(event, "home")}
-          value="home"
-        />
-        <BottomNavigationAction
-          aria-current={activeItem === "movements" ? "page" : undefined}
-          component={Link}
-          disabled={disabled}
-          href={appDestinationHref.movements}
-          icon={<HistoryRounded />}
-          label="Movimientos"
-          onClick={(event) => handleNavigation(event, "movements")}
-          value="movements"
-        />
-        <BottomNavigationAction
-          aria-current={activeItem === "mobile-payment" ? "page" : undefined}
-          component={Link}
-          disabled={disabled}
-          href={appDestinationHref["mobile-payment"]}
-          icon={<PaymentsOutlined />}
-          label="Pago Móvil"
-          onClick={(event) => handleNavigation(event, "mobile-payment")}
-          value="mobile-payment"
-        />
-        <BottomNavigationAction
-          aria-current={activeItem === "profile" ? "page" : undefined}
-          component={Link}
-          disabled={disabled}
-          href={appDestinationHref.profile}
-          icon={<PersonOutlineRounded />}
-          label="Perfil"
-          onClick={(event) => handleNavigation(event, "profile")}
-          value="profile"
-        />
+      <BottomNavigation
+        showLabels
+        value={activeItem}
+        sx={{
+          height: APP_BOTTOM_NAVIGATION_HEIGHT,
+          bgcolor: themeTokens.color.brandDeep,
+        }}
+      >
+        {navigationItems.map((item) => (
+          <BottomNavigationAction
+            aria-current={activeItem === item.destination ? "page" : undefined}
+            component={Link}
+            disabled={disabled}
+            href={appDestinationHref[item.destination]}
+            icon={<NavigationIcon src={item.icon} />}
+            key={item.destination}
+            label={item.label}
+            onClick={(event) => handleNavigation(event, item.destination)}
+            sx={{
+              minWidth: 0,
+              maxWidth: "none",
+              minHeight: APP_BOTTOM_NAVIGATION_HEIGHT,
+              p: "0.45rem 0.25rem 0.35rem",
+              color: "common.white",
+              opacity: 0.72,
+              "&:hover": { bgcolor: "rgba(255, 255, 255, 0.06)" },
+              "&:active": { bgcolor: "rgba(255, 255, 255, 0.1)" },
+              "&:focus-visible": {
+                outline: "3px solid #FFFFFF",
+                outlineOffset: -4,
+              },
+              "&.Mui-selected": {
+                color: "common.white",
+                opacity: 1,
+              },
+              "&.Mui-disabled": {
+                color: "common.white",
+                opacity: 0.35,
+              },
+              "& .MuiBottomNavigationAction-label": {
+                mt: 0.25,
+                fontSize: "0.625rem",
+                fontWeight: 500,
+                lineHeight: 1.1,
+                whiteSpace: "nowrap",
+              },
+              "& .MuiBottomNavigationAction-label.Mui-selected": {
+                fontSize: "0.625rem",
+                fontWeight: 700,
+              },
+            }}
+            value={item.destination}
+          />
+        ))}
       </BottomNavigation>
     </Paper>
   );
