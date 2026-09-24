@@ -2,21 +2,25 @@ export type MobilePaymentStep = "details" | "review" | "result";
 
 export type TransferResultStatus = "success" | "processing" | "rejected";
 
+export type MobilePaymentAccessStatus =
+  | "active"
+  | "suspended"
+  | "blocked";
+
 export type RecipientMode = "choice" | "manual" | "directory";
 
 export type PaymentIconId =
-  | "education"
-  | "health"
-  | "pets"
-  | "notes"
-  | "food"
-  | "transport"
-  | "home"
-  | "shopping"
-  | "work"
-  | "other";
+  | "school"
+  | "stethoscope"
+  | "paw-print"
+  | "receipt"
+  | "shopping-cart"
+  | "car"
+  | "house"
+  | "shopping-bag"
+  | "briefcase"
+  | "shapes";
 
-// Local draft until the next Core payment contract defines these fields.
 export type PaymentPurposeDraft = Readonly<{
   concept: string;
   iconId: PaymentIconId | null;
@@ -69,6 +73,28 @@ export type ResolvedRecipient = Readonly<{
   saveToDirectory: boolean;
 }>;
 
+export type FinancingInstallment = Readonly<{
+  number: number;
+  dueDate: string;
+  amountBs: string;
+}>;
+
+export type FinancingPlan = Readonly<{
+  level: number;
+  installmentCount: number;
+  debtBs: string;
+  paymentEveryDays: number;
+  totalTermDays: number;
+  interestFreeDays: number;
+  monthlyInterestRate: string;
+  dailyInterestRate: string;
+  annualInterestRate: string;
+  monthlyLateFeeRate: string;
+  dailyLateFeeRate: string;
+  reconnectionFeeBs: string;
+  installments: readonly FinancingInstallment[];
+}>;
+
 export type InitiatedPayment = Readonly<{
   operationId: string;
   status: string;
@@ -82,15 +108,31 @@ export type InitiatedPayment = Readonly<{
   rateSource: string;
   expiresAt: string;
   availableBs: string;
+  label: string;
+  iconId: PaymentIconId | null;
+  recipientBankName: string;
+  financing: FinancingPlan;
   recipient: ResolvedRecipient;
+}>;
+
+export type ConfirmedRecipient = Readonly<{
+  name: string;
+  bankCode: string;
+  phone: string;
 }>;
 
 export type ConfirmedPayment = Readonly<{
   operationId: string;
   status: string;
+  isPending: boolean;
+  label: string;
   bankReference: string | null;
   amountBs: string;
   totalBs: string;
+  feeBs: string;
+  feePercentage: string;
+  recipientBankName: string;
+  recipient: ConfirmedRecipient;
   resolvedAt: string | null;
   message: string | null;
 }>;
@@ -98,6 +140,10 @@ export type ConfirmedPayment = Readonly<{
 export type TransferResult = Readonly<{
   status: TransferResultStatus;
   amountMinorUnits: number;
+  totalMinorUnits: number;
+  feeMinorUnits: number;
+  feePercentage: string;
+  label: string;
   beneficiaryName: string;
   bankCode: string;
   bankName: string;
@@ -111,10 +157,17 @@ export type TransferResult = Readonly<{
 
 export type InitiatePaymentRequest = Readonly<{
   amountMinorUnits: number;
+  concept: string;
+  iconId: PaymentIconId | null;
   recipient: ResolvedRecipient;
 }>;
 
 export type MobilePaymentOptions = Readonly<{
   banks: readonly Bank[];
   contacts: readonly DirectoryContact[];
+}>;
+
+export type MobilePaymentContext = MobilePaymentOptions & Readonly<{
+  availableBs: string;
+  accessStatus: MobilePaymentAccessStatus;
 }>;

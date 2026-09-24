@@ -4,7 +4,7 @@ import { handleConfirmMobilePayment } from "@/features/mobile-payment/server/con
 
 export async function POST(
   request: NextRequest,
-  context: RouteContext<"/api/mobile-payment/operations/[operationId]/confirmation">,
+  context: Readonly<{ params: Promise<{ operationId: string }> }>,
 ) {
   const { operationId } = await context.params;
   return handleConfirmMobilePayment(request, operationId);

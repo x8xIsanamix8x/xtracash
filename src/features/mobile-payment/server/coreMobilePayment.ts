@@ -7,19 +7,23 @@ import {
   isRecord,
   isUuid,
 } from "../contractValidation";
+import { buildCoreInitiatePaymentRequest } from "../coreInitiatePaymentRequest";
 import type {
   Bank,
   ConfirmedPayment,
   DirectoryContact,
   InitiatePaymentRequest,
   InitiatedPayment,
+  MobilePaymentAccessStatus,
+  MobilePaymentContext,
   MobilePaymentOptions,
-  ResolvedRecipient,
 } from "../types";
+import { parseCoreConfirmedPayment } from "./coreConfirmedPaymentValidation";
+import { parseCoreInitiatedPayment } from "./coreInitiatedPaymentValidation";
 import {
-  parseCoreConfirmedPayment,
-  readCoreMoney,
-} from "./coreConfirmedPaymentValidation";
+  parseCoreMobilePaymentBalance,
+  parseCoreMobilePaymentSummary,
+} from "./coreMobilePaymentContextValidation";
 
 export type CoreMobilePaymentErrorType =
   | "configuration"
@@ -30,12 +34,28 @@ export type CoreMobilePaymentErrorType =
 export class CoreMobilePaymentError extends Error {
   readonly type: CoreMobilePaymentErrorType;
   readonly status: number | null;
+  readonly detail: string | null;
 
-  constructor(type: CoreMobilePaymentErrorType, status: number | null = null) {
+  constructor(
+    type: CoreMobilePaymentErrorType,
+    status: number | null = null,
+    detail: string | null = null,
+  ) {
     super(type);
     this.name = "CoreMobilePaymentError";
     this.type = type;
     this.status = status;
+    this.detail = detail;
+  }
+}
+
+export class MobilePaymentAccessRestrictedError extends Error {
+  readonly accessStatus: Exclude<MobilePaymentAccessStatus, "active">;
+
+  constructor(accessStatus: Exclude<MobilePaymentAccessStatus, "active">) {
+    super(accessStatus);
+    this.name = "MobilePaymentAccessRestrictedError";
+    this.accessStatus = accessStatus;
   }
 }
 
@@ -50,6 +70,24 @@ function getCoreEndpoint(pathname: string): string {
   const configuration = getServerCoreApiBaseUrl();
   if (!configuration.ok) throw new CoreMobilePaymentError("configuration");
   return `${configuration.baseUrl}${pathname}`;
+}
+
+async function readCoreErrorDetail(response: Response): Promise<string | null> {
+  try {
+    const value: unknown = await response.json();
+    if (!isRecord(value)) return null;
+
+    for (const field of ["mensaje", "message", "detail", "detalle"]) {
+      const candidate = value[field];
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim().slice(0, 300);
+      }
+    }
+  } catch {
+    // A malformed Core error keeps the safe generic message.
+  }
+
+  return null;
 }
 
 async function requestCore(
@@ -70,7 +108,11 @@ async function requestCore(
     });
 
     if (!response.ok) {
-      throw new CoreMobilePaymentError("http", response.status);
+      throw new CoreMobilePaymentError(
+        "http",
+        response.status,
+        await readCoreErrorDetail(response),
+      );
     }
 
     return response;
@@ -139,87 +181,6 @@ function parseDirectory(value: unknown): readonly DirectoryContact[] | null {
     : contacts as readonly DirectoryContact[];
 }
 
-function parseCoreRecipient(
-  value: unknown,
-  requestRecipient: ResolvedRecipient,
-): ResolvedRecipient | null {
-  if (!isRecord(value) || !isRecord(value.banco)) return null;
-  if (
-    !isNonEmptyString(value.nombre)
-    || !isNonEmptyString(value.banco.codigo)
-    || !isNonEmptyString(value.telefono)
-    || (value.nacionalidad !== "V" && value.nacionalidad !== "J")
-    || !isNonEmptyString(value.documento)
-  ) {
-    return null;
-  }
-
-  return {
-    id: requestRecipient.id,
-    name: value.nombre.trim(),
-    bankCode: value.banco.codigo.trim(),
-    documentType: value.nacionalidad,
-    documentNumber: value.documento.trim(),
-    phone: value.telefono.trim(),
-    saveToDirectory: requestRecipient.saveToDirectory,
-  };
-}
-
-function parseInitiatedResponse(
-  value: unknown,
-  requestRecipient: ResolvedRecipient,
-): InitiatedPayment | null {
-  if (
-    !isRecord(value)
-    || !isRecord(value.comision)
-    || !isRecord(value.tasa)
-    || !isRecord(value.data)
-  ) {
-    return null;
-  }
-
-  const amountBs = readCoreMoney(value.monto);
-  const feeBs = readCoreMoney(value.comision);
-  const totalBs = readCoreMoney(value.total);
-  const availableBs = readCoreMoney(value.data.disponible);
-  const recipient = parseCoreRecipient(value.data.beneficiario, requestRecipient);
-
-  if (
-    !isUuid(value.operacionId)
-    || !isNonEmptyString(value.estado)
-    || (value.canal !== "MISMO_BANCO" && value.canal !== "OTRA_ENTIDAD")
-    || amountBs === null
-    || feeBs === null
-    || totalBs === null
-    || availableBs === null
-    || !isNonEmptyString(value.comision.porcentaje)
-    || !isNonEmptyString(value.tasa.valor)
-    || !isNonEmptyString(value.tasa.fecha)
-    || !isNonEmptyString(value.tasa.fuente)
-    || !isNonEmptyString(value.expiraEn)
-    || Number.isNaN(Date.parse(value.expiraEn))
-    || recipient === null
-  ) {
-    return null;
-  }
-
-  return {
-    operationId: value.operacionId,
-    status: value.estado.trim(),
-    channel: value.canal,
-    amountBs,
-    feeBs,
-    feePercentage: value.comision.porcentaje.trim(),
-    totalBs,
-    rateValue: value.tasa.valor.trim(),
-    rateDate: value.tasa.fecha.trim(),
-    rateSource: value.tasa.fuente.trim(),
-    expiresAt: value.expiraEn,
-    availableBs,
-    recipient,
-  };
-}
-
 export async function getMobilePaymentOptionsFromCore(
   accessToken: string,
   signal: AbortSignal,
@@ -242,33 +203,77 @@ export async function getMobilePaymentOptionsFromCore(
   return { banks, contacts };
 }
 
+export async function getMobilePaymentAccessStatusFromCore(
+  accessToken: string,
+  signal: AbortSignal,
+): Promise<MobilePaymentAccessStatus> {
+  const response = await requestCore("/api/impulsate-movil/resumen", {
+    accessToken,
+    signal,
+  });
+  const summary = parseCoreMobilePaymentSummary(await readJson(response));
+
+  if (summary === null) throw new CoreMobilePaymentError("protocol");
+  return summary.accessStatus;
+}
+
+export async function getMobilePaymentContextFromCore(
+  accessToken: string,
+  signal: AbortSignal,
+): Promise<MobilePaymentContext> {
+  const [options, balanceResponse, summaryResponse] = await Promise.all([
+    getMobilePaymentOptionsFromCore(accessToken, signal),
+    requestCore("/api/impulsate-movil/balance", { accessToken, signal }),
+    requestCore("/api/impulsate-movil/resumen", { accessToken, signal }),
+  ]);
+  const [balanceBody, summaryBody] = await Promise.all([
+    readJson(balanceResponse),
+    readJson(summaryResponse),
+  ]);
+  const balance = parseCoreMobilePaymentBalance(balanceBody);
+  const summary = parseCoreMobilePaymentSummary(summaryBody);
+
+  if (balance === null || summary === null) {
+    throw new CoreMobilePaymentError("protocol");
+  }
+
+  return {
+    ...options,
+    availableBs: balance.availableBs,
+    accessStatus: summary.accessStatus,
+  };
+}
+
+export async function assertMobilePaymentAccessWithCore(
+  accessToken: string,
+  signal: AbortSignal,
+): Promise<void> {
+  const accessStatus = await getMobilePaymentAccessStatusFromCore(
+    accessToken,
+    signal,
+  );
+
+  if (accessStatus !== "active") {
+    throw new MobilePaymentAccessRestrictedError(accessStatus);
+  }
+}
+
 export async function initiateMobilePaymentWithCore(
   accessToken: string,
   request: InitiatePaymentRequest,
   signal: AbortSignal,
 ): Promise<InitiatedPayment> {
-  const beneficiary = request.recipient.id
-    ? { beneficiarioId: request.recipient.id }
-    : {
-        beneficiarioNuevo: {
-          name: request.recipient.name,
-          documentType: request.recipient.documentType,
-          documentNumber: request.recipient.documentNumber,
-          bankCode: request.recipient.bankCode,
-          phone: request.recipient.phone,
-          guardarEnDirectorio: request.recipient.saveToDirectory,
-        },
-      };
   const response = await requestCore("/api/pagos-salientes", {
     accessToken,
     method: "POST",
-    body: {
-      ...beneficiary,
-      montoBs: request.amountMinorUnits / 100,
-    },
+    body: buildCoreInitiatePaymentRequest(request),
     signal,
   });
-  const result = parseInitiatedResponse(await readJson(response), request.recipient);
+  const result = parseCoreInitiatedPayment(
+    await readJson(response),
+    request.recipient,
+    request.iconId,
+  );
   if (result === null) throw new CoreMobilePaymentError("protocol");
   return result;
 }
@@ -282,7 +287,10 @@ export async function confirmMobilePaymentWithCore(
     `/api/pagos-salientes/${encodeURIComponent(operationId)}/confirmacion`,
     { accessToken, method: "POST", signal },
   );
-  const result = parseCoreConfirmedPayment(await readJson(response));
+  const result = parseCoreConfirmedPayment(
+    await readJson(response),
+    response.status === 202,
+  );
   if (result === null) throw new CoreMobilePaymentError("protocol");
   return result;
 }

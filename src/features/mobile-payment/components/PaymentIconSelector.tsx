@@ -35,16 +35,16 @@ const iconOptions: readonly Readonly<{
   label: string;
   Icon: SvgIconComponent;
 }>[] = [
-  { id: "education", label: "Educación", Icon: SchoolOutlined },
-  { id: "health", label: "Salud", Icon: MedicalServicesOutlined },
-  { id: "pets", label: "Mascotas", Icon: PetsOutlined },
-  { id: "notes", label: "Facturas", Icon: ReceiptLongOutlined },
-  { id: "food", label: "Alimentos", Icon: LocalGroceryStoreOutlined },
-  { id: "transport", label: "Transporte", Icon: DirectionsCarOutlined },
-  { id: "home", label: "Hogar", Icon: HomeOutlined },
-  { id: "shopping", label: "Compras", Icon: ShoppingBagOutlined },
-  { id: "work", label: "Trabajo", Icon: WorkOutlineRounded },
-  { id: "other", label: "Otros", Icon: CategoryOutlined },
+  { id: "school", label: "Educación", Icon: SchoolOutlined },
+  { id: "stethoscope", label: "Salud", Icon: MedicalServicesOutlined },
+  { id: "paw-print", label: "Mascotas", Icon: PetsOutlined },
+  { id: "receipt", label: "Facturas", Icon: ReceiptLongOutlined },
+  { id: "shopping-cart", label: "Alimentos", Icon: LocalGroceryStoreOutlined },
+  { id: "car", label: "Transporte", Icon: DirectionsCarOutlined },
+  { id: "house", label: "Hogar", Icon: HomeOutlined },
+  { id: "shopping-bag", label: "Compras", Icon: ShoppingBagOutlined },
+  { id: "briefcase", label: "Trabajo", Icon: WorkOutlineRounded },
+  { id: "shapes", label: "Otros", Icon: CategoryOutlined },
 ];
 
 const iconSize = "4.25rem";

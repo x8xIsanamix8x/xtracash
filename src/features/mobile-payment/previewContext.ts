@@ -16,4 +16,3 @@ export const previewContacts: readonly DirectoryContact[] = [
 ];
 
 export const previewAvailableBs = "143963.72";
-export const previewLimitBs = "5000000.00";

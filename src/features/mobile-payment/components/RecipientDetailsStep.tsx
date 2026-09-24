@@ -9,6 +9,7 @@ import {
   SearchRounded,
 } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -23,18 +24,21 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
+import { getMobilePaymentRestrictionMessage } from "../accessStatus";
 import {
   formatAmountInput,
   formatAmountOnBlur,
   getBank,
   parseAmountToMinorUnits,
 } from "../format";
+import { maxPaymentConceptLength } from "../paymentPurpose";
 import type {
   Bank,
   DetailsErrors,
   DetailsField,
   DirectoryContact,
   ManualRecipientData,
+  MobilePaymentAccessStatus,
   PaymentIconId,
   RecipientMode,
 } from "../types";
@@ -44,6 +48,7 @@ import { paymentFieldSx } from "./paymentFieldStyle";
 
 type RecipientDetailsStepProps = Readonly<{
   amount: string;
+  accessStatus: MobilePaymentAccessStatus;
   availableLabel: string;
   banks: readonly Bank[];
   concept: string;
@@ -53,11 +58,11 @@ type RecipientDetailsStepProps = Readonly<{
   focusRequest: number;
   isSubmitting: boolean;
   isPreview: boolean;
-  limitLabel: string;
   manualRecipient: ManualRecipientData;
   recipientMode: RecipientMode;
   selectedContact: DirectoryContact | null;
   selectedIcon: PaymentIconId | null;
+  submitError: string;
   onAmountChange: (
     value: string,
     minorUnits: number | null,
@@ -76,6 +81,7 @@ type RecipientDetailsStepProps = Readonly<{
 
 export function RecipientDetailsStep({
   amount,
+  accessStatus,
   availableLabel,
   banks,
   concept,
@@ -85,11 +91,11 @@ export function RecipientDetailsStep({
   focusRequest,
   isSubmitting,
   isPreview,
-  limitLabel,
   manualRecipient,
   recipientMode,
   selectedContact,
   selectedIcon,
+  submitError,
   onAmountChange,
   onChangeRecipient,
   onConceptChange,
@@ -108,6 +114,21 @@ export function RecipientDetailsStep({
   const hasRecipientData = recipientMode !== "choice"
     || Boolean(manualRecipient.bankCode || manualRecipient.documentNumber
       || manualRecipient.phone || manualRecipient.name);
+  const accessCopy = accessStatus === "active"
+    ? {
+      label: "Disponible",
+      indicatorColor: "#32D74B",
+    }
+    : accessStatus === "suspended"
+      ? {
+        label: "Suspendido",
+        indicatorColor: "#FFD60A",
+      }
+      : {
+        label: "Bloqueado",
+        indicatorColor: "#FF453A",
+      };
+  const restrictionMessage = getMobilePaymentRestrictionMessage(accessStatus);
 
   useEffect(() => {
     const fieldRefs = {
@@ -126,6 +147,11 @@ export function RecipientDetailsStep({
 
   const submitDetails = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (accessStatus !== "active") {
+      return;
+    }
+
     onContinue();
   };
 
@@ -184,11 +210,11 @@ export function RecipientDetailsStep({
           <CardContent sx={{ px: 2, py: 2, "&:last-child": { pb: 2 } }}>
             <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", gap: 1 }}>
               <Typography sx={{ fontSize: 13, display: "flex", alignItems: "center", gap: 0.75 }}>
-                Disponible
+                {accessCopy.label}
                 <Box
                   aria-hidden="true"
                   component="span"
-                  sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#32D74B" }}
+                  sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: accessCopy.indicatorColor }}
                 />
               </Typography>
               {isPreview && (
@@ -200,11 +226,18 @@ export function RecipientDetailsStep({
             <Typography sx={{ mt: 0.5, fontSize: { xs: 26, sm: 32 }, fontWeight: 700, lineHeight: 1.1 }}>
               {availableLabel}
             </Typography>
-            <Typography sx={{ mt: 0.25, color: alpha("#fff", 0.76), fontSize: 12 }}>
-              Línea total: {limitLabel}
-            </Typography>
           </CardContent>
         </Card>
+
+        {restrictionMessage && (
+          <Alert
+            aria-live="assertive"
+            role="alert"
+            severity={accessStatus === "blocked" ? "error" : "warning"}
+          >
+            {restrictionMessage}
+          </Alert>
+        )}
 
         <Box>
           <Typography component="h2" sx={{ px: 2, color: "secondary.main", fontSize: 15, fontWeight: 600 }}>
@@ -625,7 +658,10 @@ export function RecipientDetailsStep({
                 name="concept"
                 onChange={(event) => onConceptChange(event.target.value)}
                 size="small"
-                slotProps={{ inputLabel: { shrink: true } }}
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  htmlInput: { maxLength: maxPaymentConceptLength },
+                }}
                 sx={paymentFieldSx}
                 value={concept}
               />
@@ -634,8 +670,13 @@ export function RecipientDetailsStep({
                 onSelect={onSelectIcon}
                 selectedIcon={selectedIcon}
               />
+              {submitError && (
+                <Alert aria-live="assertive" role="alert" severity="error">
+                  {submitError}
+                </Alert>
+              )}
               <Button
-                disabled={isSubmitting}
+                disabled={isSubmitting || accessStatus !== "active"}
                 fullWidth
                 sx={{ borderRadius: 8, minHeight: 48 }}
                 type="submit"
