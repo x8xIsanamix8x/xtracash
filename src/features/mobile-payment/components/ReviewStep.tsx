@@ -1,4 +1,3 @@
-import type { Ref } from "react";
 import {
   AccountBalanceRounded,
   EditRounded,
@@ -9,6 +8,7 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  Divider,
   Stack,
   Typography,
 } from "@mui/material";
@@ -17,21 +17,31 @@ import { alpha } from "@mui/material/styles";
 import { APP_BOTTOM_NAVIGATION_HEIGHT } from "@/components/AppBottomNavigation";
 
 import {
+  formatBsAmount,
   formatDocument,
+  formatPercentage,
   formatPhone,
 } from "../format";
-import type { Bank, ResolvedRecipient } from "../types";
+import { getPaymentIconLabel } from "../paymentPurpose";
+import type {
+  Bank,
+  FinancingPlan,
+  PaymentIconId,
+  ResolvedRecipient,
+} from "../types";
 
 type ReviewStepProps = Readonly<{
   amountLabel: string;
   availableLabel: string;
   bank: Bank;
   feeLabel: string;
+  financing: FinancingPlan;
+  iconId: PaymentIconId | null;
   isSubmitting: boolean;
+  label: string;
   rateLabel: string;
   recipient: ResolvedRecipient;
   totalLabel: string;
-  titleRef: Ref<HTMLHeadingElement>;
   onBack: () => void;
   onConfirm: () => void;
 }>;
@@ -43,15 +53,62 @@ type ReviewItemProps = Readonly<{
 
 function ReviewItem({ label, value }: ReviewItemProps) {
   return (
-    <Box>
-      <Typography component="dt" color="text.secondary" variant="body2">
+    <Box sx={{ minWidth: 0 }}>
+      <Typography
+        component="dt"
+        color="text.secondary"
+        sx={{ fontSize: 12, lineHeight: 1.35 }}
+      >
         {label}
       </Typography>
-      <Typography component="dd" sx={{ m: 0, fontWeight: 700 }}>
+      <Typography
+        component="dd"
+        sx={{ m: 0, mt: 0.25, color: "secondary.main", fontWeight: 700 }}
+      >
         {value}
       </Typography>
     </Box>
   );
+}
+
+function ReviewRow({ label, value }: ReviewItemProps) {
+  return (
+    <Stack
+      component="div"
+      direction="row"
+      sx={{ alignItems: "baseline", justifyContent: "space-between", gap: 2 }}
+    >
+      <Typography component="dt" color="text.secondary" variant="body2">
+        {label}
+      </Typography>
+      <Typography
+        component="dd"
+        sx={{ m: 0, color: "secondary.main", fontWeight: 700, textAlign: "right" }}
+      >
+        {value}
+      </Typography>
+    </Stack>
+  );
+}
+
+const dueDateFormatter = new Intl.DateTimeFormat("es-VE", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function formatDueDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return value;
+
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return Number.isNaN(date.getTime()) ? value : dueDateFormatter.format(date);
+}
+
+function formatDays(value: number) {
+  return `${value} ${value === 1 ? "día" : "días"}`;
 }
 
 export function ReviewStep({
@@ -59,115 +116,145 @@ export function ReviewStep({
   availableLabel,
   bank,
   feeLabel,
+  financing,
+  iconId,
   isSubmitting,
+  label,
   rateLabel,
   recipient,
   totalLabel,
-  titleRef,
   onBack,
   onConfirm,
 }: ReviewStepProps) {
+  const recipientInitial = recipient.name.trim().charAt(0).toLocaleUpperCase("es");
+
   return (
     <Box
       aria-busy={isSubmitting}
-      component="section"
-      aria-labelledby="mobile-payment-review-title"
-      sx={{
-        minHeight: 0,
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-      }}
+      sx={{ flex: 1, display: "flex", flexDirection: "column" }}
     >
-      <Stack spacing={{ xs: 2, sm: 2.5 }}>
-        <Stack spacing={1}>
-          <Typography color="text.secondary" variant="body2">
-            Paso 2 de 2
-          </Typography>
-          <Typography
-            component="h1"
-            id="mobile-payment-review-title"
-            ref={titleRef}
-            tabIndex={-1}
-            sx={{
-              color: "secondary.main",
-              fontSize: { xs: "clamp(1.875rem, 9vw, 2rem)", sm: "2.25rem" },
-              fontWeight: 700,
-              lineHeight: 1.12,
-            }}
-          >
-            Revisa el pago
-          </Typography>
-          <Typography color="text.secondary">
-            Verifica los datos antes de confirmar.
-          </Typography>
-        </Stack>
+      <Stack sx={{ flex: 1, gap: "2.1875rem" }}>
+        <Card
+          elevation={0}
+          sx={{ borderRadius: 3, bgcolor: "secondary.main", color: "common.white" }}
+        >
+          <CardContent sx={{ px: 2, py: 2, "&:last-child": { pb: 2 } }}>
+            <Typography sx={{ fontSize: 13 }}>Total a pagar</Typography>
+            <Typography
+              sx={{ mt: 0.5, fontSize: { xs: 26, sm: 32 }, fontWeight: 700, lineHeight: 1.1 }}
+            >
+              {totalLabel}
+            </Typography>
+            <Stack
+              direction="row"
+              sx={{ mt: 1.25, alignItems: "center", justifyContent: "space-between", gap: 2 }}
+            >
+              <Typography sx={{ color: alpha("#fff", 0.76), fontSize: 12 }}>
+                {label}
+              </Typography>
+              {iconId && (
+                <Typography sx={{ color: "#FFD4AA", fontSize: 12, fontWeight: 600 }}>
+                  {getPaymentIconLabel(iconId)}
+                </Typography>
+              )}
+            </Stack>
+          </CardContent>
+        </Card>
 
-        <Card variant="outlined">
-          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-            <Stack spacing={1.5}>
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{ alignItems: "center", justifyContent: "space-between" }}
-              >
+        <Box
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            borderRadius: "2rem 2rem 0 0",
+            bgcolor: "common.white",
+            boxShadow: "0 0 1.25rem rgba(2, 0, 77, 0.08)",
+          }}
+        >
+          <Stack spacing={2.5} sx={{ p: 2, pb: 1 }}>
+            <Stack
+              direction="row"
+              sx={{ alignItems: "center", justifyContent: "space-between", gap: 1 }}
+            >
+              <Box>
                 <Typography
                   component="h2"
                   variant="h6"
                   sx={{ color: "secondary.main", fontWeight: 700 }}
                 >
-                  Destinatario
+                  Revisa los datos
                 </Typography>
-                <Button
-                  disabled={isSubmitting}
-                  onClick={onBack}
-                  startIcon={<EditRounded />}
-                  type="button"
-                  variant="text"
+                <Typography color="text.secondary" variant="body2">
+                  Confirma que todo esté correcto.
+                </Typography>
+              </Box>
+              <Button
+                disabled={isSubmitting}
+                onClick={onBack}
+                startIcon={<EditRounded />}
+                type="button"
+                variant="text"
+              >
+                Editar
+              </Button>
+            </Stack>
+
+            <Box
+              sx={(theme) => ({
+                p: 1.5,
+                borderRadius: 3,
+                bgcolor: alpha(theme.palette.primary.main, 0.06),
+              })}
+            >
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                <Box
+                  aria-hidden="true"
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    flexShrink: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    borderRadius: "50%",
+                    bgcolor: "primary.main",
+                    color: "common.white",
+                    fontSize: 17,
+                    fontWeight: 700,
+                  }}
                 >
-                  Editar
-                </Button>
+                  {recipientInitial}
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ color: "secondary.main", fontWeight: 700 }}>
+                    {recipient.name}
+                  </Typography>
+                  <Typography color="text.secondary" variant="body2">
+                    {bank.code} · {bank.name}
+                  </Typography>
+                </Box>
               </Stack>
               <Box
                 component="dl"
                 sx={{
                   m: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1.25,
+                  mt: 1.5,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: 1.5,
                 }}
               >
-                <ReviewItem label="Beneficiario" value={recipient.name} />
                 <ReviewItem
-                  label="Cédula"
-                  value={formatDocument(
-                    recipient.documentType,
-                    recipient.documentNumber,
-                  )}
+                  label="Documento"
+                  value={formatDocument(recipient.documentType, recipient.documentNumber)}
                 />
-                <ReviewItem
-                  label="Teléfono"
-                  value={formatPhone(recipient.phone)}
-                />
-                <ReviewItem label="Banco receptor" value={bank.name} />
+                <ReviewItem label="Teléfono" value={formatPhone(recipient.phone)} />
               </Box>
-            </Stack>
-          </CardContent>
-        </Card>
+            </Box>
 
-        <Card
-          variant="outlined"
-          sx={(theme) => ({
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
-          })}
-        >
-          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+            <Divider />
+
             <Stack spacing={1.5}>
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{ alignItems: "center" }}
-              >
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <AccountBalanceRounded color="primary" />
                 <Typography
                   component="h2"
@@ -177,98 +264,195 @@ export function ReviewStep({
                   Detalle del pago
                 </Typography>
               </Stack>
+              <Box component="dl" sx={{ m: 0, display: "grid", gap: 1.25 }}>
+                <ReviewRow label="Monto solicitado" value={amountLabel} />
+                <ReviewRow label="Comisión" value={feeLabel} />
+                <ReviewRow label="Total a pagar" value={totalLabel} />
+                <ReviewRow label="Disponible" value={availableLabel} />
+                <ReviewRow label="Tasa aplicada" value={rateLabel} />
+              </Box>
+              {recipient.saveToDirectory && (
+                <Typography color="text.secondary" variant="body2">
+                  Se guardará en tu directorio como “{recipient.name}” después de una operación exitosa.
+                </Typography>
+              )}
+            </Stack>
+
+            <Divider />
+
+            <Stack spacing={2}>
+              <Box>
+                <Typography
+                  component="h2"
+                  variant="h6"
+                  sx={{ color: "secondary.main", fontWeight: 700 }}
+                >
+                  Plan de financiamiento
+                </Typography>
+                <Typography color="text.secondary" variant="body2">
+                  Resumen de las condiciones de tu pago.
+                </Typography>
+              </Box>
+
               <Box
                 component="dl"
                 sx={{
                   m: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1.25,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: 1,
                 }}
               >
-                <Box
-                  sx={(theme) => ({
-                    p: 1.5,
-                    borderRadius: 2,
-                    bgcolor: alpha(theme.palette.primary.main, 0.08),
-                  })}
-                >
-                  <Typography component="dt" color="text.secondary" variant="body2">
-                    Monto solicitado
-                  </Typography>
-                  <Typography
-                    component="dd"
-                    sx={{ m: 0, color: "secondary.main", fontWeight: 800 }}
-                    variant="h5"
+                {[
+                  ["Nivel", String(financing.level)],
+                  ["Cuotas", String(financing.installmentCount)],
+                  ["Frecuencia", `${financing.paymentEveryDays} días`],
+                ].map(([itemLabel, value]) => (
+                  <Box
+                    key={itemLabel}
+                    sx={(theme) => ({
+                      minWidth: 0,
+                      p: 1.25,
+                      borderRadius: 2.5,
+                      bgcolor: alpha(theme.palette.primary.main, 0.06),
+                      textAlign: "center",
+                    })}
                   >
-                    {amountLabel}
-                  </Typography>
-                </Box>
-                <ReviewItem label="Comisión" value={feeLabel} />
-                <ReviewItem label="Resultado de la operación" value={totalLabel} />
-                <ReviewItem
-                  label="Disponible actual"
-                  value={availableLabel}
-                />
-                <ReviewItem label="Tasa aplicada" value={rateLabel} />
+                    <Typography color="text.secondary" sx={{ fontSize: 11 }}>
+                      {itemLabel}
+                    </Typography>
+                    <Typography sx={{ color: "secondary.main", fontWeight: 800 }}>
+                      {value}
+                    </Typography>
+                  </Box>
+                ))}
               </Box>
-              {recipient.saveToDirectory && (
-                <Typography color="text.secondary" variant="body2">
-                  Se guardará en tu directorio como “{recipient.name}”
-                  únicamente después de una operación exitosa.
+
+              <Box
+                sx={{
+                  px: 1.5,
+                  py: 1.25,
+                  borderRadius: 2.5,
+                  bgcolor: "#FFF3E8",
+                  color: "secondary.main",
+                }}
+              >
+                <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+                  {formatDays(financing.interestFreeDays)} sin comisión por intereses
                 </Typography>
-              )}
+                <Typography color="text.secondary" sx={{ mt: 0.25, fontSize: 12 }}>
+                  Durante este período no se generará comisión por intereses.
+                </Typography>
+              </Box>
+
+              <Box component="dl" sx={{ m: 0, display: "grid", gap: 1.25 }}>
+                <ReviewRow label="Deuda financiada" value={formatBsAmount(financing.debtBs)} />
+                <ReviewRow label="Plazo total" value={formatDays(financing.totalTermDays)} />
+                <ReviewRow label="Interés mensual" value={formatPercentage(financing.monthlyInterestRate)} />
+                <ReviewRow label="Interés diario" value={formatPercentage(financing.dailyInterestRate)} />
+                <ReviewRow label="Interés anual" value={formatPercentage(financing.annualInterestRate)} />
+                <ReviewRow label="Mora mensual" value={formatPercentage(financing.monthlyLateFeeRate)} />
+                <ReviewRow label="Mora diaria" value={formatPercentage(financing.dailyLateFeeRate)} />
+                <ReviewRow
+                  label="Comisión de reconexión"
+                  value={formatBsAmount(financing.reconnectionFeeBs)}
+                />
+              </Box>
+
+              <Stack spacing={1}>
+                <Typography
+                  component="h3"
+                  sx={{ color: "secondary.main", fontWeight: 700 }}
+                >
+                  Cronograma de cuotas
+                </Typography>
+                {financing.installments.length > 0 ? (
+                  <Box
+                    component="ol"
+                    sx={{ m: 0, p: 0, display: "grid", gap: 1, listStyle: "none" }}
+                  >
+                    {financing.installments.map((installment) => (
+                      <Box
+                        component="li"
+                        key={installment.number}
+                        sx={(theme) => ({
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 2,
+                          p: 1.5,
+                          borderRadius: 2.5,
+                          bgcolor: alpha(theme.palette.primary.main, 0.05),
+                        })}
+                      >
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ color: "secondary.main", fontWeight: 700 }}>
+                            Cuota {installment.number}
+                          </Typography>
+                          <Typography color="text.secondary" variant="body2">
+                            Vence el {formatDueDate(installment.dueDate)}
+                          </Typography>
+                        </Box>
+                        <Typography sx={{ flexShrink: 0, color: "secondary.main", fontWeight: 700 }}>
+                          {formatBsAmount(installment.amountBs)}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography color="text.secondary" variant="body2">
+                    No hay cuotas programadas.
+                  </Typography>
+                )}
+              </Stack>
             </Stack>
-          </CardContent>
-        </Card>
 
-        {isSubmitting && (
-          <Stack
-            aria-live="polite"
-            role="status"
-            direction="row"
-            spacing={1}
-            sx={(theme) => ({
-              alignItems: "flex-start",
-              p: 1.5,
-              borderRadius: 2,
-              bgcolor: alpha(theme.palette.primary.main, 0.08),
-            })}
-          >
-            <CircularProgress aria-hidden="true" size={22} />
-            <Typography>
-              Confirmando transferencia…
-            </Typography>
+            {isSubmitting && (
+              <Stack
+                aria-live="polite"
+                role="status"
+                direction="row"
+                spacing={1}
+                sx={(theme) => ({
+                  alignItems: "center",
+                  p: 1.5,
+                  borderRadius: 2.5,
+                  bgcolor: alpha(theme.palette.primary.main, 0.08),
+                })}
+              >
+                <CircularProgress aria-hidden="true" size={22} />
+                <Typography>Confirmando transferencia…</Typography>
+              </Stack>
+            )}
           </Stack>
-        )}
-      </Stack>
 
-      <Box
-        sx={{
-          position: { xs: "sticky", md: "static" },
-          zIndex: 2,
-          bottom: {
-            xs: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`,
-            md: "auto",
-          },
-          mt: "auto",
-          pt: 3,
-          pb: 1.5,
-          bgcolor: "background.default",
-        }}
-      >
-        <Button
-          disabled={isSubmitting}
-          fullWidth
-          onClick={onConfirm}
-          type="button"
-          variant="contained"
-        >
-          {isSubmitting
-            ? "Confirmando transferencia…"
-            : "Confirmar Pago Móvil"}
-        </Button>
-      </Box>
+          <Box
+            sx={{
+              position: { xs: "sticky", md: "static" },
+              zIndex: 2,
+              bottom: {
+                xs: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`,
+                md: "auto",
+              },
+              mt: "auto",
+              p: 2,
+              pt: 1.5,
+              bgcolor: "common.white",
+            }}
+          >
+            <Button
+              disabled={isSubmitting}
+              fullWidth
+              onClick={onConfirm}
+              sx={{ borderRadius: 8, minHeight: 48 }}
+              type="button"
+              variant="contained"
+            >
+              {isSubmitting ? "Confirmando transferencia…" : "Confirmar Pago Móvil"}
+            </Button>
+          </Box>
+        </Box>
+      </Stack>
     </Box>
   );
 }

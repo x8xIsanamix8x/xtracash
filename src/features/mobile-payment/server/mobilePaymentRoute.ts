@@ -11,12 +11,39 @@ import {
   setAuthSessionCookies,
 } from "@/features/auth/session/server/sessionCookies";
 
-import { CoreMobilePaymentError } from "./coreMobilePayment";
+import {
+  CoreMobilePaymentError,
+  MobilePaymentAccessRestrictedError,
+} from "./coreMobilePayment";
 
 type AuthenticatedOperation<T> = (
   accessToken: string,
   signal: AbortSignal,
-) => Promise<T>;
+) => Promise<T | MobilePaymentOperationResponse<T>>;
+
+const operationResponseMarker = Symbol("mobile-payment-operation-response");
+
+type MobilePaymentOperationResponse<T> = Readonly<{
+  [operationResponseMarker]: true;
+  body: T;
+  status: number;
+}>;
+
+export function mobilePaymentOperationResponse<T>(body: T, status: number) {
+  return {
+    [operationResponseMarker]: true,
+    body,
+    status,
+  } as const;
+}
+
+function isMobilePaymentOperationResponse<T>(
+  value: T | MobilePaymentOperationResponse<T>,
+): value is MobilePaymentOperationResponse<T> {
+  return typeof value === "object"
+    && value !== null
+    && operationResponseMarker in value;
+}
 
 function unauthenticatedResponse() {
   const response = authJson({ error: "unauthenticated" }, 401);
@@ -33,25 +60,38 @@ function coreFailureResponse(error: CoreMobilePaymentError) {
     return serviceUnavailableResponse();
   }
   if (error.type === "protocol") {
-    return authJson({ error: "upstream_error" }, 502);
+    return authJson({ error: "invalid_upstream_response" }, 502);
   }
 
   switch (error.status) {
     case 400:
-      return authJson({ error: "invalid_request" }, 400);
+      return authJson({ error: "invalid_request", message: error.detail }, 400);
     case 403:
-      return authJson({ error: "business_rule" }, 403);
+      return authJson({ error: "business_rule", message: error.detail }, 403);
     case 404:
-      return authJson({ error: "not_found" }, 404);
+      return authJson({ error: "not_found", message: error.detail }, 404);
     case 409:
-      return authJson({ error: "conflict" }, 409);
+      return authJson({ error: "conflict", message: error.detail }, 409);
     case 422:
-      return authJson({ error: "business_rule" }, 422);
+      return authJson({ error: "business_rule", message: error.detail }, 422);
     case 429:
       return serviceUnavailableResponse();
     default:
       return authJson({ error: "upstream_error" }, 502);
   }
+}
+
+function operationFailureResponse(error: unknown) {
+  if (error instanceof MobilePaymentAccessRestrictedError) {
+    return authJson({
+      error: "business_rule",
+      accessStatus: error.accessStatus,
+    }, 403);
+  }
+
+  return error instanceof CoreMobilePaymentError
+    ? coreFailureResponse(error)
+    : serviceUnavailableResponse();
 }
 
 async function withRotatedSession(
@@ -99,7 +139,9 @@ export async function runAuthenticatedMobilePaymentOperation<T>(
 
   const execute = async (token: string) => {
     const result = await operation(token, request.signal);
-    return authJson(result);
+    return isMobilePaymentOperationResponse(result)
+      ? authJson(result.body, result.status)
+      : authJson(result);
   };
 
   try {
@@ -110,9 +152,7 @@ export async function runAuthenticatedMobilePaymentOperation<T>(
       || error.type !== "http"
       || error.status !== 401
     ) {
-      const response = error instanceof CoreMobilePaymentError
-        ? coreFailureResponse(error)
-        : serviceUnavailableResponse();
+      const response = operationFailureResponse(error);
       return withRotatedSession(response, rotatedTokens);
     }
 
@@ -140,9 +180,7 @@ export async function runAuthenticatedMobilePaymentOperation<T>(
         return unauthenticatedResponse();
       }
 
-      const response = retryError instanceof CoreMobilePaymentError
-        ? coreFailureResponse(retryError)
-        : serviceUnavailableResponse();
+      const response = operationFailureResponse(retryError);
       return withRotatedSession(response, rotatedTokens);
     }
   }

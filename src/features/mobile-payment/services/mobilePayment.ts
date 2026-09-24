@@ -1,12 +1,17 @@
 import {
   parseConfirmedPayment,
   parseInitiatedPayment,
+  parseMobilePaymentContext,
   parseMobilePaymentOptions,
+  parseMobilePaymentRestriction,
 } from "../contractValidation";
+import { buildCoreInitiatePaymentRequest } from "../coreInitiatePaymentRequest";
 import type {
   ConfirmedPayment,
   InitiatePaymentRequest,
   InitiatedPayment,
+  MobilePaymentContext,
+  MobilePaymentAccessStatus,
   MobilePaymentOptions,
 } from "../types";
 
@@ -22,11 +27,19 @@ export type MobilePaymentServiceErrorType =
 
 export class MobilePaymentServiceError extends Error {
   readonly type: MobilePaymentServiceErrorType;
+  readonly accessStatus: MobilePaymentAccessStatus | null;
+  readonly detail: string | null;
 
-  constructor(type: MobilePaymentServiceErrorType) {
+  constructor(
+    type: MobilePaymentServiceErrorType,
+    accessStatus: MobilePaymentAccessStatus | null = null,
+    detail: string | null = null,
+  ) {
     super(type);
     this.name = "MobilePaymentServiceError";
     this.type = type;
+    this.accessStatus = accessStatus;
+    this.detail = detail;
   }
 }
 
@@ -38,6 +51,28 @@ function mapStatus(status: number): MobilePaymentServiceErrorType {
   if (status === 409) return "conflict";
   if (status === 422) return "business";
   return "server";
+}
+
+async function readServiceError(response: Response) {
+  try {
+    const body: unknown = await response.json();
+    const detail = typeof body === "object"
+      && body !== null
+      && "message" in body
+      && typeof body.message === "string"
+      && body.message.trim()
+      ? body.message.trim()
+      : null;
+
+    return {
+      accessStatus: response.status === 403
+        ? parseMobilePaymentRestriction(body)
+        : null,
+      detail,
+    };
+  } catch {
+    return { accessStatus: null, detail: null };
+  }
 }
 
 async function request(
@@ -62,7 +97,12 @@ async function request(
   }
 
   if (!response.ok) {
-    throw new MobilePaymentServiceError(mapStatus(response.status));
+    const error = await readServiceError(response);
+    throw new MobilePaymentServiceError(
+      mapStatus(response.status),
+      error.accessStatus,
+      error.detail,
+    );
   }
 
   return response;
@@ -85,16 +125,25 @@ export async function getMobilePaymentOptions(
   return options;
 }
 
+export async function getMobilePaymentContext(
+  signal: AbortSignal,
+): Promise<MobilePaymentContext> {
+  const response = await request("/api/mobile-payment/context", {}, signal);
+  const context = parseMobilePaymentContext(await readJson(response));
+  if (context === null) throw new MobilePaymentServiceError("invalid");
+  return context;
+}
+
 export async function initiateMobilePayment(
   payment: InitiatePaymentRequest,
   signal: AbortSignal,
 ): Promise<InitiatedPayment> {
   const response = await request(
-    "/api/mobile-payment/operations",
+    "/api/pagos-salientes",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payment),
+      body: JSON.stringify(buildCoreInitiatePaymentRequest(payment)),
     },
     signal,
   );
@@ -108,7 +157,7 @@ export async function confirmMobilePayment(
   signal: AbortSignal,
 ): Promise<ConfirmedPayment> {
   const response = await request(
-    `/api/mobile-payment/operations/${encodeURIComponent(operationId)}/confirmation`,
+    `/api/pagos-salientes/${encodeURIComponent(operationId)}/confirmacion`,
     { method: "POST" },
     signal,
   );

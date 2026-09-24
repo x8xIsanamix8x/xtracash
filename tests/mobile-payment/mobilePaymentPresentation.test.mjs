@@ -5,6 +5,7 @@ import {
   formatBank,
   formatBsAmount,
   formatDocument,
+  formatPercentage,
   formatPhone,
   formatRateLabel,
 } from "../../src/features/mobile-payment/format.ts";
@@ -35,6 +36,13 @@ test("mapea únicamente fuentes de tasa conocidas y no muestra enums técnicos",
     "Bs. 36,50 · Banco Activo",
   );
   assert.equal(formatRateLabel("36.50", "FUENTE_NUEVA"), "Bs. 36,50");
+  assert.equal(formatRateLabel("37.00", "BCV"), "Bs. 37,00 · BCV");
+  assert.equal(
+    formatRateLabel("853.49930000", "BANCO_ACTIVO"),
+    "Bs. 853,50 · Banco Activo",
+  );
+  assert.equal(formatPercentage("0.0333"), "0,03%");
+  assert.equal(formatPercentage("0.1000"), "0,10%");
 });
 
 test("protege la salida del pago cuando ya existen datos", () => {
@@ -52,6 +60,24 @@ test("protege la salida del pago cuando ya existen datos", () => {
     isTransactionPending: false,
     step: "details",
   }), "confirm");
+
+  assert.equal(hasMobilePaymentProgress({
+    amount: "",
+    concept: "Medicinas",
+    recipientMode: "choice",
+    selectedContactId: null,
+    selectedIcon: null,
+    step: "details",
+  }), true);
+
+  assert.equal(hasMobilePaymentProgress({
+    amount: "",
+    concept: "",
+    recipientMode: "choice",
+    selectedContactId: null,
+    selectedIcon: "stethoscope",
+    step: "details",
+  }), true);
 });
 
 test("bloquea la navegación transaccional y libera las pantallas de resultado", () => {
