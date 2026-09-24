@@ -174,10 +174,14 @@ test("mantiene iconos seguros, rutas existentes y flujo visual de reporte", asyn
   assert.doesNotMatch(home, /createNewBusinessHomeViewModel\(summary/);
   assert.match(navigation, /label: "Movimientos"/);
   assert.match(navigation, /label: "Cuotas"/);
-  assert.match(navigation, /\/navigation\/home\.png/);
-  assert.match(navigation, /\/navigation\/cuotas\.png/);
-  assert.match(navigation, /\/navigation\/movements\.png/);
-  assert.match(navigation, /\/navigation\/profile\.png/);
+  assert.match(navigation, /\/navigation\/home\.svg/);
+  assert.match(navigation, /\/navigation\/cuotas\.svg/);
+  assert.match(navigation, /\/navigation\/movements\.svg/);
+  assert.match(navigation, /\/navigation\/profile\.svg/);
   assert.match(navigation, /height=\{48\}/);
   assert.match(navigation, /width=\{48\}/);
+  assert.match(navigation, /position: "fixed"/);
+  assert.match(navigation, /right: 0/);
+  assert.match(navigation, /left: 0/);
+  assert.match(navigation, /bottom: 0/);
 });
