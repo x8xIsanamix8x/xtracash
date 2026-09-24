@@ -10,7 +10,7 @@ import type { BffMock, Page } from "../support/app";
 
 const clinicaId = "01a0cb0e-8dcf-70d3-a1cf-bd74d4efaeb3";
 const detailUrl = `/installments/${clinicaId}`;
-const reportUrl = `/installments/${clinicaId}/report`;
+const instructionsUrl = `/installments/${clinicaId}/payment`;
 
 async function openDetail(
   page: Page,
@@ -27,7 +27,7 @@ async function openDetail(
 }
 
 const optionsSection = (page: Page) => page.getByRole("region", { name: /¿Quieres adelantar\?|Paga el total pendiente/ });
-const reportButton = (page: Page) => page.getByRole("link", { name: "Ya pagué · Reportar pago" });
+const instructionsButton = (page: Page) => page.getByRole("link", { name: "Ver instrucciones de pago" });
 
 test.describe("SPEC-04 · Opciones de pago y desglose", () => {
   test("por defecto la próxima cuota, con su desglose", async ({ page, bff }) => {
@@ -42,7 +42,7 @@ test.describe("SPEC-04 · Opciones de pago y desglose", () => {
     await expect(section).toContainText("Sin intereses: estás dentro de los primeros 15 días.");
     await expect(section).toContainText("Consulta el monto final antes de pagar.");
     await expect(section).not.toContainText("Tasa BCV");
-    await expect(reportButton(page)).toHaveAttribute("href", `${reportUrl}?option=PROXIMA`);
+    await expect(instructionsButton(page)).toHaveAttribute("href", `${instructionsUrl}?option=PROXIMA`);
   });
 
   test("elegir todas las pendientes recalcula el total al instante", async ({ page, bff }) => {
@@ -53,7 +53,7 @@ test.describe("SPEC-04 · Opciones de pago y desglose", () => {
     await section.getByRole("radio", { name: /Todas las pendientes/ }).check();
 
     await expect(section.getByRole("definition").last()).toHaveText("Bs. 103.116,44");
-    await expect(reportButton(page)).toHaveAttribute("href", `${reportUrl}?option=TODAS`);
+    await expect(instructionsButton(page)).toHaveAttribute("href", `${instructionsUrl}?option=TODAS`);
     expect(bff.calls(`/api/installments/${clinicaId}/payment-data`)).toBe(quoteCalls);
   });
 
@@ -76,7 +76,7 @@ test.describe("SPEC-04 · Opciones de pago y desglose", () => {
     await expect(section.getByText("4 cuotas", { exact: true })).toBeVisible();
     await expect(section.getByRole("button", { name: "Una cuota más" })).toBeDisabled();
     await expect(section.getByRole("definition").last()).toHaveText("Bs. 40.000,00");
-    await expect(reportButton(page)).toHaveAttribute("href", `${reportUrl}?option=CUOTAS&count=4`);
+    await expect(instructionsButton(page)).toHaveAttribute("href", `${instructionsUrl}?option=CUOTAS&count=4`);
   });
 
   test("en mora solo se puede pagar todo", async ({ page, bff }) => {
@@ -97,7 +97,7 @@ test.describe("SPEC-04 · Opciones de pago y desglose", () => {
     await expect(section).toContainText("Tu plazo venció: para reactivar debes pagar el total pendiente.");
     await expect(section.getByRole("radio")).toHaveCount(1);
     await expect(section.getByRole("radio", { name: /Todas las pendientes/ })).toBeChecked();
-    await expect(reportButton(page)).toHaveAttribute("href", `${reportUrl}?option=TODAS`);
+    await expect(instructionsButton(page)).toHaveAttribute("href", `${instructionsUrl}?option=TODAS`);
   });
 
   test("tocar una cuota por pagar vuelve a la próxima y baja a las opciones", async ({ page, bff }) => {
@@ -121,7 +121,8 @@ test.describe("SPEC-04 · Opciones de pago y desglose", () => {
     });
 
     await expect(optionsSection(page)).toContainText("Ya tienes un pago en validación para este consumo.");
-    await expect(page.getByRole("button", { name: "Ya pagué · Reportar pago" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Ver instrucciones de pago" })).toBeDisabled();
+    await expect(page.getByText("Ya pagué")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Pagar$/ })).toHaveCount(0);
   });
 

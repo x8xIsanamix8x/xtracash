@@ -44,7 +44,6 @@ type PaymentOptionsProps = Readonly<{
   interestFreeDays: number | null;
   /** Hay un pago de este consumo en validación: no se puede reportar otro. */
   hasPaymentInReview: boolean;
-  onShowInstructions?: () => void;
 }>;
 
 function CountStepper({
@@ -102,7 +101,6 @@ export function PaymentOptions({
   onSelectionChange,
   interestFreeDays,
   hasPaymentInReview,
-  onShowInstructions,
 }: PaymentOptionsProps) {
   const selected = getSelectedOption(quote, selection);
   const breakdown = selected ? createAmountBreakdown(selected) : null;
@@ -267,32 +265,23 @@ export function PaymentOptions({
         </Alert>
       )}
 
-      <Stack spacing={1} sx={{ mt: 2 }}>
+      <Box sx={{ mt: 2 }}>
         {hasPaymentInReview ? (
           <Button disabled fullWidth sx={pillButton} variant="contained">
-            Ya pagué · Reportar pago
+            Ver instrucciones de pago
           </Button>
         ) : (
           <Button
             component={Link}
             fullWidth
-            href={`/installments/${consumptionId}/report?${paymentSelectionToQuery(selection)}`}
+            href={`/installments/${consumptionId}/payment?${paymentSelectionToQuery(selection)}`}
             sx={pillButton}
             variant="contained"
-          >
-            Ya pagué · Reportar pago
-          </Button>
-        )}
-        {onShowInstructions && (
-          <Button
-            fullWidth
-            onClick={onShowInstructions}
-            sx={{ minHeight: 48, borderRadius: 99, color: color.navy, fontWeight: 700 }}
           >
             Ver instrucciones de pago
           </Button>
         )}
-      </Stack>
+      </Box>
     </Box>
   );
 }
