@@ -1,178 +1,133 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Container, Snackbar, Stack } from "@mui/material";
+import { Box, Container, Snackbar } from "@mui/material";
 
-import { AppBottomNavigation } from "@/components/AppBottomNavigation";
-import { CreditLineStatusNotice } from "@/features/credit-line";
+import {
+  APP_BOTTOM_NAVIGATION_HEIGHT,
+  AppBottomNavigation,
+} from "@/components/AppBottomNavigation";
 import { PaymentReportFlow } from "@/features/payment-report";
-import { MasterOnboardingPrompt, consumeMasterOnboardingPrompt } from "@/features/master-onboarding";
+import {
+  MasterOnboardingPrompt,
+  consumeMasterOnboardingPrompt,
+} from "@/features/master-onboarding";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 
-import { AppHeader } from "./components/AppHeader";
-import {
-  CreditOverviewState,
-  type CreditOverviewStatus,
-} from "./components/CreditOverviewState";
-import { CreditSummary } from "./components/CreditSummary";
-import { RecentActivity } from "./components/RecentActivity";
-import {
-  createFinancingSummary,
-  createRecentActivity,
-  getFirstName,
-} from "./presentation";
+import { NewBusinessHomeDashboard } from "./components/NewBusinessHomeDashboard";
+import { newBusinessHomeMocks } from "./data/newBusinessHomeMocks";
+import { homeVisualTokens } from "./homeVisualTokens";
+import { createNewBusinessHomeViewModel } from "./newBusinessViewModel";
+import type { HomeDashboardViewModel } from "./newBusinessTypes";
+import { getNewBusinessHomeData } from "./services/newBusinessHome";
+import { getTimeGreeting } from "./timeGreeting";
 import {
   AccountSummaryServiceError,
   getAccountSummary,
 } from "./services/accountSummary";
-import type { HomeAccountSummary, OnboardingMasterProgress } from "./types";
+import type { OnboardingMasterProgress } from "./types";
 
 export function HomeView() {
   const router = useRouter();
   const [notice, setNotice] = useState("");
-  const [overviewStatus, setOverviewStatus] = useState<CreditOverviewStatus>(
-    "loading",
-  );
-  const [summary, setSummary] = useState<HomeAccountSummary | null>(null);
+  const [homeViewModel, setHomeViewModel] = useState<HomeDashboardViewModel | null>(null);
+  const [greeting, setGreeting] = useState("Buenos días");
   const [isPaymentReportOpen, setIsPaymentReportOpen] = useState(false);
-  const [masterOnboardingProgress, setMasterOnboardingProgress] = useState<OnboardingMasterProgress | null>(null);
-  const requestRef = useRef<{
-    controller: AbortController;
-    id: number;
-  } | null>(null);
-  const requestIdRef = useRef(0);
-
-  const loadSummary = useCallback(() => {
-    requestRef.current?.controller.abort();
-
-    const controller = new AbortController();
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-    requestRef.current = { controller, id: requestId };
-
-    void getAccountSummary(controller.signal)
-      .then((nextSummary) => {
-        if (requestRef.current?.id !== requestId) return;
-
-        setSummary(nextSummary);
-        if (nextSummary.onboardingMaster
-          && nextSummary.onboardingMaster.completedPhases <= 2
-          && consumeMasterOnboardingPrompt()) {
-          setMasterOnboardingProgress(nextSummary.onboardingMaster);
-        }
-        setOverviewStatus(
-          nextSummary.accountStatus !== "ACTIVE"
-            ? "unavailable"
-            : nextSummary.product === null
-              ? "empty"
-              : "ready",
-        );
-      })
-      .catch((error: unknown) => {
-        if (requestRef.current?.id !== requestId) return;
-        if (
-          error instanceof AccountSummaryServiceError
-          && error.type === "aborted"
-        ) {
-          return;
-        }
-
-        setSummary(null);
-        if (
-          error instanceof AccountSummaryServiceError
-          && error.type === "unauthenticated"
-        ) {
-          router.replace(sessionExpiredUrl);
-          return;
-        }
-
-        setOverviewStatus("error");
-      })
-      .finally(() => {
-        if (requestRef.current?.id === requestId) {
-          requestRef.current = null;
-        }
-      });
-  }, [router]);
-
-  useEffect(() => {
-    void loadSummary();
-
-    return () => {
-      requestRef.current?.controller.abort();
-      requestRef.current = null;
-    };
-  }, [loadSummary]);
-
-  const openPaymentReport = () => setIsPaymentReportOpen(true);
+  const [masterOnboardingProgress, setMasterOnboardingProgress] = useState<
+    OnboardingMasterProgress | null
+  >(null);
   const closePaymentReport = useCallback(
     () => setIsPaymentReportOpen(false),
     [],
   );
 
-  const retryCreditOverview = () => {
-    setOverviewStatus("loading");
-    void loadSummary();
-  };
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const financing = summary?.product
-    ? createFinancingSummary(summary.product, summary.payments)
-    : null;
-  const recentActivity = summary
-    ? createRecentActivity(summary.movements)
-    : [];
+    void getAccountSummary(controller.signal)
+      .then((summary) => {
+        if (controller.signal.aborted) return;
+        if (
+          summary.onboardingMaster
+          && summary.onboardingMaster.completedPhases <= 2
+          && consumeMasterOnboardingPrompt()
+        ) {
+          setMasterOnboardingProgress(summary.onboardingMaster);
+        }
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (
+          error instanceof AccountSummaryServiceError
+          && error.type === "unauthenticated"
+        ) {
+          router.replace(sessionExpiredUrl);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [router]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const scenario = new URLSearchParams(window.location.search).get("scenario");
+    const mockScenario = scenario && scenario in newBusinessHomeMocks
+      ? scenario as keyof typeof newBusinessHomeMocks
+      : null;
+
+    if (process.env.NODE_ENV !== "production" && mockScenario) {
+      queueMicrotask(() => {
+        if (!controller.signal.aborted) {
+          setHomeViewModel(
+            createNewBusinessHomeViewModel(newBusinessHomeMocks[mockScenario]),
+          );
+        }
+      });
+      return () => controller.abort();
+    }
+
+    void getNewBusinessHomeData(controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) setHomeViewModel(createNewBusinessHomeViewModel(data));
+      })
+      .catch(() => {
+        // Keep the static state available while the session/backend is unavailable.
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const animationFrame = window.requestAnimationFrame(() => {
+      setGreeting(getTimeGreeting(new Date().getHours()));
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, []);
 
   return (
     <Box
       component="main"
       sx={{
         minHeight: "100dvh",
-        pt: "calc(24px + env(safe-area-inset-top))",
-        pb: "calc(104px + env(safe-area-inset-bottom))",
+        bgcolor: homeVisualTokens.color.surfaceTint,
+        pt: "calc(16px + env(safe-area-inset-top))",
+        pb: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 40}px + env(safe-area-inset-bottom))`,
       }}
     >
-      <Container maxWidth="md">
-        <Stack spacing={3}>
-          <AppHeader
-            firstName={summary ? getFirstName(summary.name) : null}
+      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 } }}>
+        {homeViewModel && (
+          <NewBusinessHomeDashboard
+            greeting={greeting}
             onNotifications={() => setNotice(
               "Las notificaciones estarán disponibles en la siguiente etapa.",
             )}
+            onReportInstallment={() => setIsPaymentReportOpen(true)}
+            viewModel={homeViewModel}
           />
-
-          {overviewStatus === "ready" && financing ? (
-            <>
-              <CreditLineStatusNotice
-                onReportPayment={openPaymentReport}
-                showReportPaymentAction={financing.hasPendingPayment}
-                status={financing.status}
-              />
-              <Box
-                sx={{
-                  display: "grid",
-                  gap: 3,
-                  alignItems: "stretch",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    md: "minmax(0, 1fr) minmax(0, 1fr)",
-                  },
-                }}
-              >
-                <CreditSummary
-                  financing={financing}
-                  onReportPayment={openPaymentReport}
-                />
-                <RecentActivity items={recentActivity} />
-              </Box>
-            </>
-          ) : (
-            <CreditOverviewState
-              onRetry={retryCreditOverview}
-              status={overviewStatus === "ready" ? "error" : overviewStatus}
-            />
-          )}
-        </Stack>
+        )}
       </Container>
 
       <AppBottomNavigation activeItem="home" />
@@ -180,22 +135,24 @@ export function HomeView() {
         onClose={closePaymentReport}
         open={isPaymentReportOpen}
       />
-      {masterOnboardingProgress && <MasterOnboardingPrompt
-        onClose={() => setMasterOnboardingProgress(null)}
-        open
-        progress={masterOnboardingProgress}
-      />}
+      {masterOnboardingProgress && (
+        <MasterOnboardingPrompt
+          onClose={() => setMasterOnboardingProgress(null)}
+          open
+          progress={masterOnboardingProgress}
+        />
+      )}
       <Snackbar
         autoHideDuration={2800}
-        message={
+        message={(
           <Box component="span" role="status" aria-live="polite">
             {notice}
           </Box>
-        }
+        )}
         onClose={() => setNotice("")}
         open={Boolean(notice)}
         sx={{
-          bottom: "calc(72px + env(safe-area-inset-bottom)) !important",
+          bottom: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 16}px + env(safe-area-inset-bottom)) !important`,
         }}
       />
     </Box>

@@ -1,0 +1,25 @@
+export const homeVisualTokens = {
+  color: {
+    navy: "#00004B",
+    availableCard: "#4637F5",
+    logoSurface: "#ffffff",
+    violet: "#25259A",
+    orange: "#FF7800",
+    danger: "#D32F2F",
+    positive: "#0AED81",
+    positiveBright: "#61FF17",
+    lavender: "#BEB8FF",
+    lavenderAlt: "#C1BCFF",
+    surfaceTint: "#F0EFFF",
+    neutralSurface: "#F2F2F2",
+    neutral: "#747474",
+    neutralAlt: "#7E7E7E",
+    white: "#FFFFFF",
+    black: "#000000",
+  },
+  radius: {
+    balance: 28,
+    card: 20,
+    inset: 16,
+  },
+} as const;
