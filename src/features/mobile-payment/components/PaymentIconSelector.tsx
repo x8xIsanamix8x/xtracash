@@ -1,20 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { SvgIconComponent } from "@mui/icons-material";
 import {
-  CategoryOutlined,
   CloseRounded,
-  DirectionsCarOutlined,
-  HomeOutlined,
-  LocalGroceryStoreOutlined,
-  MedicalServicesOutlined,
   MoreHorizRounded,
-  PetsOutlined,
-  ReceiptLongOutlined,
-  SchoolOutlined,
-  ShoppingBagOutlined,
-  WorkOutlineRounded,
 } from "@mui/icons-material";
 import {
   Box,
@@ -28,24 +17,20 @@ import {
 } from "@mui/material";
 import type { SlideProps } from "@mui/material/Slide";
 
+import {
+  paymentIconComponents,
+} from "@/features/payment-purpose/PaymentPurposeIcon";
+import {
+  getPaymentIconLabel,
+  paymentIconIds,
+} from "../paymentPurpose";
 import type { PaymentIconId } from "../types";
 
-const iconOptions: readonly Readonly<{
-  id: PaymentIconId;
-  label: string;
-  Icon: SvgIconComponent;
-}>[] = [
-  { id: "school", label: "Educación", Icon: SchoolOutlined },
-  { id: "stethoscope", label: "Salud", Icon: MedicalServicesOutlined },
-  { id: "paw-print", label: "Mascotas", Icon: PetsOutlined },
-  { id: "receipt", label: "Facturas", Icon: ReceiptLongOutlined },
-  { id: "shopping-cart", label: "Alimentos", Icon: LocalGroceryStoreOutlined },
-  { id: "car", label: "Transporte", Icon: DirectionsCarOutlined },
-  { id: "house", label: "Hogar", Icon: HomeOutlined },
-  { id: "shopping-bag", label: "Compras", Icon: ShoppingBagOutlined },
-  { id: "briefcase", label: "Trabajo", Icon: WorkOutlineRounded },
-  { id: "shapes", label: "Otros", Icon: CategoryOutlined },
-];
+const iconOptions = paymentIconIds.map((id) => ({
+  id,
+  label: getPaymentIconLabel(id),
+  Icon: paymentIconComponents[id],
+}));
 
 const iconSize = "4.25rem";
 

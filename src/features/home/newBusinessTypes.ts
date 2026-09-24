@@ -1,3 +1,5 @@
+import type { PaymentIconId } from "../payment-purpose/types";
+
 export type HomeMoney = Readonly<{
   bs: string;
   usd: string;
@@ -10,12 +12,7 @@ export type HomeConsumptionStatus =
   | "PAYMENT_DUE"
   | "OVERDUE";
 
-export type HomeConsumptionIconName =
-  | "health"
-  | "pets"
-  | "restaurant"
-  | "shopping"
-  | "services";
+export type HomeConsumptionIconName = PaymentIconId;
 
 /**
  * Modelo de presentación preparado para el contrato futuro del Home.
