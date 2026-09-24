@@ -179,3 +179,16 @@ export function paymentSelectionToQuery(selection: PaymentSelection): string {
   }
   return query.toString();
 }
+
+/** Lee `?option=&count=` (sin validar contra el consumo: eso lo hace `normalizePaymentSelection`). */
+export function parsePaymentSelectionQuery(
+  option: string | null | undefined,
+  count: string | null | undefined,
+): PaymentSelection | null {
+  if (option === "PROXIMA" || option === "TODAS") return { option };
+  if (option !== "CUOTAS") return null;
+  const installmentCount = Number(count);
+  return Number.isInteger(installmentCount) && installmentCount > 0
+    ? { option, installmentCount }
+    : { option };
+}
