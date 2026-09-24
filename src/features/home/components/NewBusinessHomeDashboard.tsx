@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  CheckCircleRounded,
   LockRounded,
   NotificationsNoneRounded,
   WarningAmberRounded,
@@ -12,19 +11,15 @@ import {
   Card,
   CardContent,
   IconButton,
-  LinearProgress,
   Stack,
   Typography,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
 import { PrimaryFinancialCard } from "@/components/PrimaryFinancialCard";
-import { PaymentPurposeIcon } from "@/features/payment-purpose/PaymentPurposeIcon";
-import type {
-  HomeDashboardViewModel,
-  HomeStatusTone,
-} from "../newBusinessTypes";
+import type { HomeDashboardViewModel } from "../newBusinessTypes";
 import { homeVisualTokens } from "../homeVisualTokens";
+import { ConsumptionCard } from "./ConsumptionCard";
 
 type NewBusinessHomeDashboardProps = Readonly<{
   greeting: string;
@@ -32,46 +27,6 @@ type NewBusinessHomeDashboardProps = Readonly<{
   onNotifications: () => void;
   onReportInstallment: () => void;
 }>;
-
-function StatusLabel({
-  label,
-  tone,
-}: Readonly<{ label: string; tone: HomeStatusTone }>) {
-  const positive = tone === "positive";
-  const danger = label === "En mora";
-
-  return (
-    <Stack
-      component="span"
-      direction="row"
-      spacing={0.5}
-      sx={{
-        minHeight: 28,
-        width: "fit-content",
-        maxWidth: "100%",
-        px: 1,
-        alignItems: "center",
-        borderRadius: 99,
-        bgcolor: positive
-          ? alpha(homeVisualTokens.color.positive, 0.24)
-          : danger
-            ? alpha(homeVisualTokens.color.danger, 0.14)
-            : alpha(homeVisualTokens.color.orange, 0.14),
-        color: danger ? homeVisualTokens.color.danger : homeVisualTokens.color.navy,
-      }}
-    >
-      {positive
-        ? <CheckCircleRounded aria-hidden="true" sx={{ fontSize: 18 }} />
-        : <WarningAmberRounded aria-hidden="true" sx={{ color: danger ? homeVisualTokens.color.danger : homeVisualTokens.color.orange, fontSize: 18 }} />}
-      <Typography
-        component="span"
-        sx={{ fontSize: "0.8125rem", fontWeight: 700, lineHeight: 1.2 }}
-      >
-        {label}
-      </Typography>
-    </Stack>
-  );
-}
 
 function HomeHeader({
   greeting,
@@ -249,119 +204,6 @@ function AttentionNotice({ message, suspended }: Readonly<{ message: string; sus
           <Typography sx={{ color: homeVisualTokens.color.navy, fontWeight: 700 }}>
             {message}
           </Typography>
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ConsumptionCard({
-  item,
-}: Readonly<{ item: HomeDashboardViewModel["consumptions"][number] }>) {
-  return (
-    <Card
-      component="article"
-      variant="outlined"
-      sx={{
-        borderColor: alpha(homeVisualTokens.color.violet, 0.12),
-        borderRadius: `${homeVisualTokens.radius.card}px`,
-        bgcolor: homeVisualTokens.color.white,
-        boxShadow: `0 8px 22px ${alpha(homeVisualTokens.color.black, 0.06)}`,
-      }}
-    >
-      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-        <Stack spacing={1.5}>
-          <Stack
-            direction="row"
-            spacing={1.25}
-            sx={{ alignItems: "flex-start" }}
-          >
-            <Box
-              aria-hidden="true"
-              sx={{
-                width: 48,
-                height: 48,
-                flexShrink: 0,
-                display: "grid",
-                placeItems: "center",
-                borderRadius: 2,
-                bgcolor: homeVisualTokens.color.neutralSurface,
-                color: homeVisualTokens.color.violet,
-              }}
-            >
-              <PaymentPurposeIcon iconId={item.icon} sx={{ fontSize: 28 }} />
-            </Box>
-            <Stack spacing={0.25} sx={{ minWidth: 0, flex: 1 }}>
-              <Typography
-                component="h3"
-                sx={{
-                  color: homeVisualTokens.color.navy,
-                  fontWeight: 800,
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {item.label}
-              </Typography>
-              <Typography
-                sx={{ color: homeVisualTokens.color.neutral, fontSize: "0.875rem" }}
-              >
-                {item.amount}
-              </Typography>
-            </Stack>
-            <StatusLabel label={item.statusLabel} tone={item.tone} />
-          </Stack>
-
-          <Stack spacing={0.75}>
-            <LinearProgress
-              aria-label={`Progreso de cuotas de ${item.label}: ${item.installmentProgress}`}
-              value={item.progress}
-              variant="determinate"
-              sx={{
-                height: 7,
-                borderRadius: 99,
-                bgcolor: homeVisualTokens.color.lavender,
-                "& .MuiLinearProgress-bar": {
-                  borderRadius: 99,
-                  bgcolor: item.tone === "positive"
-                    ? homeVisualTokens.color.violet
-                    : item.statusLabel === "En mora"
-                      ? homeVisualTokens.color.danger
-                      : homeVisualTokens.color.orange,
-                },
-              }}
-            />
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-              }}
-            >
-              <Typography
-                sx={{
-                  color: homeVisualTokens.color.neutral,
-                  fontSize: "0.8125rem",
-                }}
-              >
-                {item.installmentProgress}
-              </Typography>
-              {(item.nextPaymentDate || item.nextPaymentAmount) && (
-                <Stack spacing={0.25} sx={{ alignItems: "flex-end", textAlign: "right" }}>
-                  {item.nextPaymentAmount && (
-                    <Typography sx={{ color: homeVisualTokens.color.navy, fontSize: "0.8125rem", fontWeight: 800 }}>
-                      {item.nextPaymentAmount}
-                    </Typography>
-                  )}
-                  {item.nextPaymentDate && (
-                    <Typography sx={{ color: homeVisualTokens.color.navy, fontSize: "0.8125rem", fontWeight: 800 }}>
-                      {item.nextPaymentDate}
-                    </Typography>
-                  )}
-                </Stack>
-              )}
-            </Stack>
-          </Stack>
         </Stack>
       </CardContent>
     </Card>

@@ -14,7 +14,7 @@ const statusPresentation = {
   Readonly<{ label: string; tone: "positive" | "attention" }>
 >;
 
-function formatShortDate(value: string): string {
+export function formatShortDate(value: string): string {
   const [year, month, day] = value.split("-").map(Number);
   const formatter = new Intl.DateTimeFormat("es-VE", {
     day: "numeric",

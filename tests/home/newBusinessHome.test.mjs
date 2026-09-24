@@ -135,12 +135,16 @@ test("normaliza los iconos históricos sin ocultar el icono recibido por Home", 
 });
 
 test("mantiene iconos seguros, rutas existentes y flujo visual de reporte", async () => {
-  const [dashboard, home, navigation, details, review] = await Promise.all([
+  const [dashboard, consumptionCard, home, navigation, details, review] = await Promise.all([
     readFile(
       new URL(
         "src/features/home/components/NewBusinessHomeDashboard.tsx",
         projectUrl,
       ),
+      "utf8",
+    ),
+    readFile(
+      new URL("src/features/home/components/ConsumptionCard.tsx", projectUrl),
       "utf8",
     ),
     readFile(new URL("src/features/home/HomeView.tsx", projectUrl), "utf8"),
@@ -164,7 +168,8 @@ test("mantiene iconos seguros, rutas existentes y flujo visual de reporte", asyn
     ),
   ]);
 
-  assert.match(dashboard, /PaymentPurposeIcon/);
+  assert.match(dashboard, /<ConsumptionCard /);
+  assert.match(consumptionCard, /PaymentPurposeIcon/);
   assert.match(dashboard, /PrimaryFinancialCard/);
   assert.match(details, /PrimaryFinancialCard/);
   assert.match(review, /PrimaryFinancialCard/);
