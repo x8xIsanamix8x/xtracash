@@ -5,8 +5,6 @@ import {
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   CircularProgress,
   Divider,
   Stack,
@@ -15,6 +13,7 @@ import {
 import { alpha } from "@mui/material/styles";
 
 import { APP_BOTTOM_NAVIGATION_HEIGHT } from "@/components/AppBottomNavigation";
+import { PrimaryFinancialCard } from "@/components/PrimaryFinancialCard";
 
 import {
   formatBsAmount,
@@ -134,20 +133,25 @@ export function ReviewStep({
       sx={{ flex: 1, display: "flex", flexDirection: "column" }}
     >
       <Stack sx={{ flex: 1, gap: "2.1875rem" }}>
-        <Card
-          elevation={0}
-          sx={{ borderRadius: 3, bgcolor: "secondary.main", color: "common.white" }}
-        >
-          <CardContent sx={{ px: 2, py: 2, "&:last-child": { pb: 2 } }}>
-            <Typography sx={{ fontSize: 13 }}>Total a pagar</Typography>
+        <PrimaryFinancialCard labelledBy="mobile-payment-total-title">
+          <Stack spacing={0.5} sx={{ alignItems: "flex-start", textAlign: "left" }}>
+            <Typography id="mobile-payment-total-title" sx={{ fontWeight: 700 }}>
+              Total a pagar
+            </Typography>
             <Typography
-              sx={{ mt: 0.5, fontSize: { xs: 26, sm: 32 }, fontWeight: 700, lineHeight: 1.1 }}
+              sx={{
+                fontSize: "clamp(1.875rem, 9vw, 2.75rem)",
+                fontWeight: 800,
+                letterSpacing: "-0.035em",
+                lineHeight: 1.1,
+                overflowWrap: "anywhere",
+              }}
             >
               {totalLabel}
             </Typography>
             <Stack
               direction="row"
-              sx={{ mt: 1.25, alignItems: "center", justifyContent: "space-between", gap: 2 }}
+              sx={{ width: "100%", pt: 0.75, alignItems: "center", justifyContent: "space-between", gap: 2 }}
             >
               <Typography sx={{ color: alpha("#fff", 0.76), fontSize: 12 }}>
                 {label}
@@ -158,8 +162,8 @@ export function ReviewStep({
                 </Typography>
               )}
             </Stack>
-          </CardContent>
-        </Card>
+          </Stack>
+        </PrimaryFinancialCard>
 
         <Box
           sx={{

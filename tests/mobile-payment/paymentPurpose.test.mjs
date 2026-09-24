@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   getPaymentIconLabel,
   maxPaymentConceptLength,
+  normalizePaymentIconId,
   parsePaymentPurpose,
   paymentIconIds,
 } from "../../src/features/mobile-payment/paymentPurpose.ts";
@@ -19,6 +20,13 @@ test("acepta el concepto y los identificadores estables del pool de iconos", () 
     iconId: "stethoscope",
   });
   assert.equal(getPaymentIconLabel("stethoscope"), "Salud");
+});
+
+test("normaliza iconos históricos del Home al catálogo de Pago Móvil", () => {
+  assert.equal(normalizePaymentIconId("stethoscope"), "stethoscope");
+  assert.equal(normalizePaymentIconId("health"), "stethoscope");
+  assert.equal(normalizePaymentIconId("pets"), "paw-print");
+  assert.equal(normalizePaymentIconId("unknown"), null);
 });
 
 test("permite propósito vacío y rechaza conceptos largos o iconos ajenos", () => {

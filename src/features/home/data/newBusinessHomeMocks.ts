@@ -6,7 +6,7 @@ import type {
 const activeConsumptions: NewBusinessHomeData["consumptions"] = [
   {
     consumptionId: "mock-health-001",
-    icon: "health",
+    icon: "stethoscope",
     label: "Clínica",
     amount: { bs: "75000.00", usd: "0.00" },
     installments: 4,
@@ -17,7 +17,7 @@ const activeConsumptions: NewBusinessHomeData["consumptions"] = [
   },
   {
     consumptionId: "mock-pets-001",
-    icon: "pets",
+    icon: "paw-print",
     label: "Veterinario",
     amount: { bs: "48000.00", usd: "0.00" },
     installments: 3,
@@ -28,7 +28,7 @@ const activeConsumptions: NewBusinessHomeData["consumptions"] = [
   },
   {
     consumptionId: "mock-restaurant-001",
-    icon: "restaurant",
+    icon: "shopping-cart",
     label: "Restaurante",
     amount: { bs: "30000.00", usd: "0.00" },
     installments: 2,

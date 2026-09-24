@@ -12,6 +12,12 @@ const { homeVisualTokens } = await import(
 const { createNewBusinessHomeViewModel } = await import(
   "../../src/features/home/newBusinessViewModel.ts"
 );
+const { parseNewBusinessHomeData } = await import(
+  "../../src/features/home/newBusinessValidation.ts"
+);
+const { paymentIconIds } = await import(
+  "../../src/features/mobile-payment/paymentPurpose.ts"
+);
 const { getTimeGreeting } = await import(
   "../../src/features/home/timeGreeting.ts"
 );
@@ -88,8 +94,48 @@ test("varía el saludo con la hora local del dispositivo", () => {
   assert.equal(getTimeGreeting(19), "Buenas noches");
 });
 
+test("conserva en el Home todos los iconos elegibles de Pago Móvil", () => {
+  const source = {
+    ...newBusinessHomeMocks.newcomer,
+    consumptions: paymentIconIds.map((icon, index) => ({
+      consumptionId: `payment-${index}`,
+      icon,
+      label: `Consumo ${index}`,
+      amount: { bs: "100.00", usd: "0.00" },
+      installments: 2,
+      paidInstallments: 0,
+      nextPaymentDate: null,
+      nextPaymentAmount: null,
+      status: "UP_TO_DATE",
+    })),
+  };
+
+  const parsed = parseNewBusinessHomeData(source);
+
+  assert.deepEqual(parsed?.consumptions.map(({ icon }) => icon), paymentIconIds);
+});
+
+test("normaliza los iconos históricos sin ocultar el icono recibido por Home", () => {
+  const source = {
+    ...newBusinessHomeMocks.newcomer,
+    consumptions: [{
+      consumptionId: "legacy-health",
+      icon: "health",
+      label: "Clínica",
+      amount: { bs: "100.00", usd: "0.00" },
+      installments: 2,
+      paidInstallments: 0,
+      nextPaymentDate: null,
+      nextPaymentAmount: null,
+      status: "UP_TO_DATE",
+    }],
+  };
+
+  assert.equal(parseNewBusinessHomeData(source)?.consumptions[0].icon, "stethoscope");
+});
+
 test("mantiene iconos seguros, rutas existentes y flujo visual de reporte", async () => {
-  const [dashboard, home, navigation] = await Promise.all([
+  const [dashboard, home, navigation, details, review] = await Promise.all([
     readFile(
       new URL(
         "src/features/home/components/NewBusinessHomeDashboard.tsx",
@@ -102,10 +148,26 @@ test("mantiene iconos seguros, rutas existentes y flujo visual de reporte", asyn
       new URL("src/components/AppBottomNavigation.tsx", projectUrl),
       "utf8",
     ),
+    readFile(
+      new URL(
+        "src/features/mobile-payment/components/RecipientDetailsStep.tsx",
+        projectUrl,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "src/features/mobile-payment/components/ReviewStep.tsx",
+        projectUrl,
+      ),
+      "utf8",
+    ),
   ]);
 
-  assert.match(dashboard, /const consumptionIcons =/);
-  assert.match(dashboard, /\?\? ReceiptLongOutlined/);
+  assert.match(dashboard, /PaymentPurposeIcon/);
+  assert.match(dashboard, /PrimaryFinancialCard/);
+  assert.match(details, /PrimaryFinancialCard/);
+  assert.match(review, /PrimaryFinancialCard/);
   assert.match(dashboard, /href="\/mobile-payment"/);
   assert.match(dashboard, /href="\/movements"/);
   assert.match(home, /PaymentReportFlow/);

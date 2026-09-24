@@ -1,3 +1,5 @@
+import type { PaymentIconId } from "../payment-purpose/types";
+
 export type MobilePaymentStep = "details" | "review" | "result";
 
 export type TransferResultStatus = "success" | "processing" | "rejected";
@@ -9,17 +11,7 @@ export type MobilePaymentAccessStatus =
 
 export type RecipientMode = "choice" | "manual" | "directory";
 
-export type PaymentIconId =
-  | "school"
-  | "stethoscope"
-  | "paw-print"
-  | "receipt"
-  | "shopping-cart"
-  | "car"
-  | "house"
-  | "shopping-bag"
-  | "briefcase"
-  | "shapes";
+export type { PaymentIconId } from "../payment-purpose/types";
 
 export type PaymentPurposeDraft = Readonly<{
   concept: string;
