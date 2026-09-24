@@ -113,7 +113,7 @@ function HomeHeader({
             aria-hidden="true"
             height={32}
             priority
-            src="/entry/isopulsa.png"
+            src="/entry/isotipo-impulsa.png"
             width={34}
           />
         </Box>
