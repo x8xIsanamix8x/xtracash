@@ -113,8 +113,9 @@ function HomeHeader({
             aria-hidden="true"
             height={32}
             priority
-            src="/entry/isopulsa.png"
-            width={34}
+            src="/entry/isotipo-impulsa.png"
+            width={26}
+            style={{ objectFit: "contain" }}
           />
         </Box>
         <IconButton
