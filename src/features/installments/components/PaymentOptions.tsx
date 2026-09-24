@@ -26,7 +26,6 @@ import { homeVisualTokens } from "@/features/home/homeVisualTokens";
 import type { PaymentChoices, PaymentSelection } from "../paymentOptions";
 import {
   createAmountBreakdown,
-  formatRateNote,
   getSelectedOption,
   paymentSelectionToQuery,
 } from "../paymentOptions";
@@ -259,7 +258,7 @@ export function PaymentOptions({
       )}
 
       <Typography sx={{ mt: 1.25, color: color.neutral, fontSize: "0.75rem", textAlign: "center" }}>
-        Consulta el monto final antes de pagar. {formatRateNote(quote)}.
+        Consulta el monto final antes de pagar.
       </Typography>
 
       {hasPaymentInReview && (

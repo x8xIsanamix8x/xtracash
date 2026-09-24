@@ -9,7 +9,6 @@ const { parseCorePaymentData } = await import(
 const {
   createAmountBreakdown,
   createPaymentChoices,
-  formatRateNote,
   getSelectedOption,
   normalizePaymentSelection,
   paymentSelectionToQuery,
@@ -156,9 +155,7 @@ test("el desglose muestra solo los cargos que aplican", () => {
   assert.equal(withCharges.interestFree, false);
 });
 
-test("nota de la tasa y query del reporte", async () => {
-  const quote = await quoteWith(() => {});
-  assert.match(formatRateNote(quote), /^Tasa BCV del 23 sep.*: Bs\. 854,46 por USD$/);
+test("query del reporte", () => {
   assert.equal(paymentSelectionToQuery({ option: "PROXIMA" }), "option=PROXIMA");
   assert.equal(
     paymentSelectionToQuery({ option: "CUOTAS", installmentCount: 3 }),

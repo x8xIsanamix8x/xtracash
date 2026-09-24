@@ -1,6 +1,5 @@
 import { formatShortDate } from "../home/newBusinessViewModel";
 import { formatBolivars } from "../home/presentation";
-import { normalizeAmount } from "./contractValidation";
 import { formatInstallmentNumber } from "./presentation";
 import type { PaymentOption, PaymentOptionKind, PaymentQuote } from "./types";
 
@@ -171,12 +170,6 @@ export function createAmountBreakdown(option: PaymentOption): AmountBreakdown {
     interestFree: option.interestFree,
     description: describeOption(option),
   };
-}
-
-/** "Tasa BCV del 23 sept.: Bs. 854,46 por USD" */
-export function formatRateNote(quote: PaymentQuote): string {
-  const rate = normalizeAmount(quote.rate.bolivaresPerUsd) ?? quote.rate.bolivaresPerUsd;
-  return `Tasa BCV del ${formatShortDate(quote.rate.effectiveDate)}: ${formatBolivars(rate)} por USD`;
 }
 
 export function paymentSelectionToQuery(selection: PaymentSelection): string {

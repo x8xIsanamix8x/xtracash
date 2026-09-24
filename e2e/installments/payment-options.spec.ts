@@ -30,7 +30,7 @@ const optionsSection = (page: Page) => page.getByRole("region", { name: /¿Quier
 const reportButton = (page: Page) => page.getByRole("link", { name: "Ya pagué · Reportar pago" });
 
 test.describe("SPEC-04 · Opciones de pago y desglose", () => {
-  test("por defecto la próxima cuota, con su desglose y la tasa", async ({ page, bff }) => {
+  test("por defecto la próxima cuota, con su desglose", async ({ page, bff }) => {
     await openDetail(page, bff);
     const section = optionsSection(page);
 
@@ -40,7 +40,8 @@ test.describe("SPEC-04 · Opciones de pago y desglose", () => {
     await expect(section).toContainText("Capital");
     await expect(section).toContainText("Total a pagar");
     await expect(section).toContainText("Sin intereses: estás dentro de los primeros 15 días.");
-    await expect(section).toContainText("Bs. 854,46 por USD");
+    await expect(section).toContainText("Consulta el monto final antes de pagar.");
+    await expect(section).not.toContainText("Tasa BCV");
     await expect(reportButton(page)).toHaveAttribute("href", `${reportUrl}?option=PROXIMA`);
   });
 
