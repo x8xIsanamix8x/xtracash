@@ -100,6 +100,8 @@ type JsonResponse = Readonly<{ status?: number; body: unknown }>;
 export type BffMock = Readonly<{
   /** Responde una ruta del BFF (patrón glob de Playwright) con JSON. */
   respond: (pattern: string, response: JsonResponse | (() => JsonResponse)) => Promise<void>;
+  /** Simula que se cae la conexión al pedir esa ruta. */
+  disconnect: (pattern: string) => Promise<void>;
   /** Cuántas veces el navegador pidió una ruta del BFF. */
   calls: (pathname: string) => number;
 }>;
@@ -139,6 +141,9 @@ export const test = base.extend<{ bff: BffMock }>({
           const { status = 200, body } = typeof response === "function" ? response() : response;
           return route.fulfill({ status, json: body });
         });
+      },
+      disconnect: async (pattern) => {
+        await context.route(pattern, (route) => route.abort("internetdisconnected"));
       },
       calls: (pathname) => counts.get(pathname) ?? 0,
     });
