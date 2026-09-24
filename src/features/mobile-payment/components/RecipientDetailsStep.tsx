@@ -2,21 +2,17 @@
 
 import {
   FormEvent,
-  Ref,
   useEffect,
   useRef,
 } from "react";
 import {
-  AccountBalanceRounded,
-  ChevronRightRounded,
-  ContactsRounded,
-  PersonAddAltRounded,
+  SearchRounded,
 } from "@mui/icons-material";
 import {
+  Alert,
   Box,
   Button,
   Card,
-  CardActionArea,
   CardContent,
   Checkbox,
   FormControlLabel,
@@ -28,82 +24,115 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
-import { APP_BOTTOM_NAVIGATION_HEIGHT } from "@/components/AppBottomNavigation";
-
+import { getMobilePaymentRestrictionMessage } from "../accessStatus";
 import {
   formatAmountInput,
   formatAmountOnBlur,
-  formatBank,
-  formatDocument,
-  formatPhone,
   getBank,
   parseAmountToMinorUnits,
 } from "../format";
+import { maxPaymentConceptLength } from "../paymentPurpose";
 import type {
   Bank,
   DetailsErrors,
   DetailsField,
   DirectoryContact,
   ManualRecipientData,
+  MobilePaymentAccessStatus,
+  PaymentIconId,
   RecipientMode,
 } from "../types";
 import { BankOptionLabel } from "./BankOptionLabel";
+import { PaymentIconSelector } from "./PaymentIconSelector";
+import { paymentFieldSx } from "./paymentFieldStyle";
 
 type RecipientDetailsStepProps = Readonly<{
   amount: string;
+  accessStatus: MobilePaymentAccessStatus;
   availableLabel: string;
   banks: readonly Bank[];
+  concept: string;
+  contacts: readonly DirectoryContact[];
   errors: DetailsErrors;
   focusField: DetailsField | null;
   focusRequest: number;
   isSubmitting: boolean;
+  isPreview: boolean;
   manualRecipient: ManualRecipientData;
   recipientMode: RecipientMode;
   selectedContact: DirectoryContact | null;
-  titleRef: Ref<HTMLHeadingElement>;
+  selectedIcon: PaymentIconId | null;
+  submitError: string;
   onAmountChange: (
     value: string,
     minorUnits: number | null,
   ) => void;
-  onChooseManual: () => void;
   onChangeRecipient: () => void;
+  onConceptChange: (value: string) => void;
   onContinue: () => void;
   onManualChange: (
     field: keyof ManualRecipientData,
     value: string | boolean,
   ) => void;
   onOpenDirectory: () => void;
+  onSelectContact: (contactId: string) => void;
+  onSelectIcon: (icon: PaymentIconId | null) => void;
 }>;
 
 export function RecipientDetailsStep({
   amount,
+  accessStatus,
   availableLabel,
   banks,
+  concept,
+  contacts,
   errors,
   focusField,
   focusRequest,
   isSubmitting,
+  isPreview,
   manualRecipient,
   recipientMode,
   selectedContact,
-  titleRef,
+  selectedIcon,
+  submitError,
   onAmountChange,
-  onChooseManual,
   onChangeRecipient,
+  onConceptChange,
   onContinue,
   onManualChange,
   onOpenDirectory,
+  onSelectContact,
+  onSelectIcon,
 }: RecipientDetailsStepProps) {
-  const manualChoiceRef = useRef<HTMLButtonElement>(null);
+  const recipientListRef = useRef<HTMLDivElement>(null);
   const bankRef = useRef<HTMLInputElement>(null);
   const documentRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
+  const hasRecipientData = recipientMode !== "choice"
+    || Boolean(manualRecipient.bankCode || manualRecipient.documentNumber
+      || manualRecipient.phone || manualRecipient.name);
+  const accessCopy = accessStatus === "active"
+    ? {
+      label: "Disponible",
+      indicatorColor: "#32D74B",
+    }
+    : accessStatus === "suspended"
+      ? {
+        label: "Suspendido",
+        indicatorColor: "#FFD60A",
+      }
+      : {
+        label: "Bloqueado",
+        indicatorColor: "#FF453A",
+      };
+  const restrictionMessage = getMobilePaymentRestrictionMessage(accessStatus);
 
   useEffect(() => {
     const fieldRefs = {
-      recipient: manualChoiceRef,
+      recipient: recipientListRef,
       bankCode: bankRef,
       documentNumber: documentRef,
       phone: phoneRef,
@@ -118,6 +147,11 @@ export function RecipientDetailsStep({
 
   const submitDetails = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (accessStatus !== "active") {
+      return;
+    }
+
     onContinue();
   };
 
@@ -153,150 +187,202 @@ export function RecipientDetailsStep({
     );
   };
 
-  const selectedBank = selectedContact
-    ? getBank(banks, selectedContact.bankCode)
-    : undefined;
-
   return (
     <Box
       component="form"
       noValidate
       onSubmit={submitDetails}
       sx={{
-        minHeight: 0,
         flex: 1,
         display: "flex",
         flexDirection: "column",
       }}
     >
-      <Stack spacing={{ xs: 2, sm: 3 }}>
-        <Stack spacing={1}>
-          {recipientMode !== "choice" && (
-            <Typography color="text.secondary" variant="body2">
-              Paso 1 de 2
+      <Stack sx={{ gap: "2.1875rem", flex: 1 }}>
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            bgcolor: "secondary.main",
+            color: "common.white",
+          }}
+        >
+          <CardContent sx={{ px: 2, py: 2, "&:last-child": { pb: 2 } }}>
+            <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+              <Typography sx={{ fontSize: 13, display: "flex", alignItems: "center", gap: 0.75 }}>
+                {accessCopy.label}
+                <Box
+                  aria-hidden="true"
+                  component="span"
+                  sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: accessCopy.indicatorColor }}
+                />
+              </Typography>
+              {isPreview && (
+                <Typography sx={{ color: "#FFD4AA", fontSize: 11, fontWeight: 600 }}>
+                  Datos de ejemplo
+                </Typography>
+              )}
+            </Stack>
+            <Typography sx={{ mt: 0.5, fontSize: { xs: 26, sm: 32 }, fontWeight: 700, lineHeight: 1.1 }}>
+              {availableLabel}
             </Typography>
-          )}
-          <Typography
-            component="h1"
-            id="mobile-payment-details-title"
-            ref={titleRef}
+          </CardContent>
+        </Card>
+
+        {restrictionMessage && (
+          <Alert
+            aria-live="assertive"
+            role="alert"
+            severity={accessStatus === "blocked" ? "error" : "warning"}
+          >
+            {restrictionMessage}
+          </Alert>
+        )}
+
+        <Box>
+          <Typography component="h2" sx={{ px: 2, color: "secondary.main", fontSize: 15, fontWeight: 600 }}>
+            Selecciona un beneficiario
+          </Typography>
+          <Box
+            aria-describedby={errors.recipient ? "recipient-choice-error" : undefined}
+            aria-label="Beneficiarios guardados"
+            ref={recipientListRef}
+            role="group"
             tabIndex={-1}
             sx={{
-              color: "secondary.main",
-              fontSize: recipientMode === "choice"
-                ? { xs: "clamp(1.25rem, 6vw, 1.75rem)", sm: "2rem" }
-                : { xs: "clamp(1.875rem, 9vw, 2rem)", sm: "2.25rem" },
-              fontWeight: 700,
-              letterSpacing: recipientMode === "choice" ? "-0.025em" : undefined,
-              lineHeight: 1.12,
-              whiteSpace: recipientMode === "choice" ? "nowrap" : "normal",
-            }}
-          >
-            {recipientMode === "choice"
-              ? "¿A quién enviarás el pago?"
-              : "Datos del destinatario"}
-          </Typography>
-          <Typography color="text.secondary">
-            {recipientMode === "choice"
-              ? "Elige cómo agregar al destinatario."
-              : "Completa sus datos y define el monto."}
-          </Typography>
-        </Stack>
-
-        {recipientMode === "choice" && (
-          <Box
-            aria-describedby={
-              errors.recipient ? "recipient-choice-error" : undefined
-            }
-            sx={{
-              display: "grid",
+              display: "flex",
               gap: 1.5,
-              gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" },
+              mt: 1,
+              px: 2,
+              pt: "0.5rem",
+              pb: "0.75rem",
+              overflowX: "auto",
+              overscrollBehaviorX: "contain",
+              scrollSnapType: "x proximity",
+              WebkitOverflowScrolling: "touch",
+              scrollbarWidth: "thin",
             }}
           >
-            <Card variant="outlined">
-              <CardActionArea
-                onClick={onChooseManual}
-                ref={manualChoiceRef}
-                sx={{ minHeight: 112, height: "100%", p: 2 }}
+            <Button
+              aria-label="Buscar beneficiarios"
+              disabled={isSubmitting}
+              onClick={onOpenDirectory}
+              sx={{
+                flex: "0 0 64px",
+                minWidth: 64,
+                minHeight: 70,
+                p: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: 0.75,
+                color: "secondary.main",
+                scrollSnapAlign: "start",
+              }}
+              type="button"
+              variant="text"
+            >
+              <Box
+                aria-hidden="true"
+                sx={{
+                  width: 44,
+                  height: 44,
+                  display: "grid",
+                  placeItems: "center",
+                  borderRadius: "50%",
+                  bgcolor: "primary.main",
+                  color: "common.white",
+                }}
               >
-                <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                <SearchRounded fontSize="small" />
+              </Box>
+              <Typography component="span" sx={{ fontSize: 11, lineHeight: 1.2, textTransform: "none" }}>
+                Buscar
+              </Typography>
+            </Button>
+            {contacts.map((contact) => {
+              const selected = recipientMode === "directory" && selectedContact?.id === contact.id;
+              const firstName = contact.name.trim().split(/\s+/)[0] || contact.name;
+              return (
+                <Button
+                  aria-label={`Seleccionar a ${contact.name}`}
+                  aria-pressed={selected}
+                  disabled={isSubmitting}
+                  key={contact.id}
+                  onClick={() => onSelectContact(contact.id)}
+                  sx={{
+                    flex: "0 0 64px",
+                    minWidth: 64,
+                    minHeight: 70,
+                    p: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0.75,
+                    color: "secondary.main",
+                    scrollSnapAlign: "start",
+                  }}
+                  type="button"
+                  variant="text"
+                >
                   <Box
                     aria-hidden="true"
-                    sx={(theme) => ({
+                    sx={{
                       width: 44,
                       height: 44,
-                      flexShrink: 0,
                       display: "grid",
                       placeItems: "center",
-                      borderRadius: 1.5,
-                      color: "primary.main",
-                      bgcolor: alpha(theme.palette.primary.main, 0.08),
-                    })}
+                      borderRadius: "50%",
+                      bgcolor: selected ? "#FF7900" : "primary.main",
+                      color: "common.white",
+                      fontSize: 17,
+                      fontWeight: 700,
+                      boxShadow: selected ? "0 0 0 3px #fff, 0 0 0 5px #FF7900" : "none",
+                    }}
                   >
-                    <PersonAddAltRounded />
+                    {firstName.charAt(0).toLocaleUpperCase("es")}
                   </Box>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ fontWeight: 700 }}>
-                      Nuevo destinatario
-                    </Typography>
-                    <Typography color="text.secondary" variant="body2">
-                      Completa sus datos para realizar el pago.
-                    </Typography>
-                  </Box>
-                  <ChevronRightRounded aria-hidden="true" color="primary" />
-                </Stack>
-              </CardActionArea>
-            </Card>
-            <Card variant="outlined">
-              <CardActionArea
-                onClick={onOpenDirectory}
-                sx={{ minHeight: 112, height: "100%", p: 2 }}
-              >
-                <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                  <Box
-                    aria-hidden="true"
-                    sx={(theme) => ({
-                      width: 44,
-                      height: 44,
-                      flexShrink: 0,
-                      display: "grid",
-                      placeItems: "center",
-                      borderRadius: 1.5,
-                      color: "primary.main",
-                      bgcolor: alpha(theme.palette.primary.main, 0.08),
-                    })}
+                  <Typography
+                    component="span"
+                    sx={{
+                      width: "100%",
+                      color: selected ? "secondary.main" : "text.secondary",
+                      fontSize: 11,
+                      lineHeight: 1.2,
+                      textAlign: "center",
+                      textTransform: "none",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
                   >
-                    <ContactsRounded />
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ fontWeight: 700 }}>
-                      Destinatario guardado
-                    </Typography>
-                    <Typography color="text.secondary" variant="body2">
-                      Elige uno de tu directorio.
-                    </Typography>
-                  </Box>
-                  <ChevronRightRounded aria-hidden="true" color="primary" />
-                </Stack>
-              </CardActionArea>
-            </Card>
-            {errors.recipient && (
-              <Typography
-                color="error"
-                id="recipient-choice-error"
-                role="alert"
-                variant="caption"
-                sx={{ gridColumn: "1 / -1" }}
-              >
-                {errors.recipient}
+                    {firstName}
+                  </Typography>
+                </Button>
+              );
+            })}
+            {contacts.length === 0 && (
+              <Typography color="text.secondary" variant="body2" sx={{ py: 2 }}>
+                Aún no tienes beneficiarios guardados. Puedes agregar uno nuevo.
               </Typography>
             )}
           </Box>
-        )}
+          {errors.recipient && (
+            <Typography color="error" id="recipient-choice-error" role="alert" sx={{ px: 2 }} variant="caption">
+              {errors.recipient}
+            </Typography>
+          )}
+        </Box>
 
-        {recipientMode === "manual" && (
-          <Stack spacing={2}>
+        <Box
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            borderRadius: "2rem 2rem 0 0",
+            bgcolor: "common.white",
+            boxShadow: "0 0 1.25rem rgba(2, 0, 77, 0.08)",
+          }}
+        >
+          <Stack spacing={2} sx={{ p: 2, pb: 0 }}>
             <Stack
               direction="row"
               sx={{
@@ -311,16 +397,18 @@ export function RecipientDetailsStep({
                 variant="h6"
                 sx={{ color: "secondary.main", fontWeight: 700 }}
               >
-                Destinatario
+                Datos del beneficiario
               </Typography>
-              <Button
-                disabled={isSubmitting}
-                onClick={onChangeRecipient}
-                type="button"
-                variant="text"
-              >
-                Cambiar
-              </Button>
+              {hasRecipientData && (
+                <Button
+                  disabled={isSubmitting}
+                  onClick={onChangeRecipient}
+                  type="button"
+                  variant="text"
+                >
+                  Limpiar
+                </Button>
+              )}
             </Stack>
 
             <TextField
@@ -337,19 +425,8 @@ export function RecipientDetailsStep({
               )}
               required
               select
-              sx={{
-                minWidth: 0,
-                "& .MuiSelect-select": {
-                  minHeight: "44px !important",
-                  display: "flex",
-                  alignItems: "center",
-                  boxSizing: "border-box",
-                  py: 1.25,
-                  pr: "40px !important",
-                  whiteSpace: "normal !important",
-                  overflow: "visible",
-                },
-              }}
+              size="small"
+              sx={paymentFieldSx}
               slotProps={{
                 inputLabel: { shrink: true },
                 select: {
@@ -424,8 +501,10 @@ export function RecipientDetailsStep({
                 )}
                 required
                 select
+                size="small"
+                slotProps={{ inputLabel: { shrink: true } }}
                 value={manualRecipient.documentType}
-                sx={{ width: "100%" }}
+                sx={paymentFieldSx}
               >
                 <MenuItem value="V">V</MenuItem>
                 <MenuItem value="J">J</MenuItem>
@@ -443,6 +522,7 @@ export function RecipientDetailsStep({
                   event.target.value.replace(/\D/g, "").slice(0, 9),
                 )}
                 required
+                size="small"
                 slotProps={{
                   inputLabel: { shrink: true },
                   htmlInput: {
@@ -453,6 +533,7 @@ export function RecipientDetailsStep({
                 }}
                 type="text"
                 value={manualRecipient.documentNumber}
+                sx={paymentFieldSx}
               />
             </Box>
 
@@ -469,7 +550,9 @@ export function RecipientDetailsStep({
                 event.target.value.replace(/\D/g, "").slice(0, 11),
               )}
               required
+              size="small"
               slotProps={{
+                inputLabel: { shrink: true },
                 htmlInput: {
                   autoComplete: "tel",
                   inputMode: "numeric",
@@ -477,6 +560,7 @@ export function RecipientDetailsStep({
                 },
               }}
               value={manualRecipient.phone}
+              sx={paymentFieldSx}
             />
 
             <TextField
@@ -492,185 +576,119 @@ export function RecipientDetailsStep({
                 event.target.value,
               )}
               required
+              size="small"
+              slotProps={{ inputLabel: { shrink: true } }}
               value={manualRecipient.name}
+              sx={paymentFieldSx}
             />
 
-            <Box
-              sx={(theme) => ({
-                py: 0.5,
-                px: 1,
-                borderRadius: 2,
-                bgcolor: alpha(theme.palette.primary.main, 0.06),
-              })}
-            >
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={manualRecipient.saveToDirectory}
-                    disabled={isSubmitting}
-                    onChange={(event) => onManualChange(
-                      "saveToDirectory",
-                      event.target.checked,
-                    )}
-                  />
-                }
-                label={(
-                  <Box sx={{ py: 0.5 }}>
-                    <Typography>Guardar en mi directorio</Typography>
-                    <Typography color="text.secondary" variant="caption">
-                      Se guardará cuando el pago se complete.
-                    </Typography>
-                  </Box>
-                )}
-                sx={{ m: 0, width: "100%", minHeight: 48 }}
-              />
-            </Box>
-          </Stack>
-        )}
-
-        {recipientMode === "directory" && selectedContact && (
-          <Card variant="outlined">
-            <CardContent>
-              <Stack spacing={1.5}>
-                <Stack
-                  direction="row"
-                  sx={{
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: 1,
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Typography
-                    component="h2"
-                    variant="h6"
-                    sx={{ color: "secondary.main", fontWeight: 700 }}
-                  >
-                    Destinatario
-                  </Typography>
-                  <Button
-                    onClick={onChangeRecipient}
-                    type="button"
-                    variant="text"
-                  >
-                    Cambiar
-                  </Button>
-                </Stack>
-                <Typography sx={{ fontWeight: 700 }}>
-                  {selectedContact.name}
-                </Typography>
-                <Typography color="text.secondary" variant="body2">
-                  {formatDocument(
-                    selectedContact.documentType,
-                    selectedContact.documentNumber,
+            {recipientMode !== "directory" && (
+              <Box
+                sx={(theme) => ({
+                  py: 0.5,
+                  px: 1,
+                  borderRadius: 2,
+                  bgcolor: alpha(theme.palette.primary.main, 0.06),
+                })}
+              >
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={manualRecipient.saveToDirectory}
+                      disabled={isSubmitting}
+                      onChange={(event) => onManualChange(
+                        "saveToDirectory",
+                        event.target.checked,
+                      )}
+                    />
+                  }
+                  label={(
+                    <Box sx={{ py: 0.5 }}>
+                      <Typography>Guardar en mi directorio</Typography>
+                      <Typography color="text.secondary" variant="caption">
+                        Se guardará cuando el pago se complete.
+                      </Typography>
+                    </Box>
                   )}
-                </Typography>
-                <Typography color="text.secondary" variant="body2">
-                  {formatPhone(selectedContact.phone)}
-                </Typography>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: "center" }}
-                >
-                  <AccountBalanceRounded color="primary" fontSize="small" />
-                  <Typography color="text.secondary" variant="body2">
-                    {selectedBank ? formatBank(selectedBank) : "Banco no disponible"}
-                  </Typography>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-        )}
-
-        {recipientMode !== "choice" && (
-          <Stack spacing={1.25}>
-            <Typography
-              component="h2"
-              variant="h6"
-              sx={{ color: "secondary.main", fontWeight: 700 }}
-            >
-              Monto
-            </Typography>
-            <TextField
-              disabled={isSubmitting}
-              error={Boolean(errors.amount)}
-              fullWidth
-              helperText={errors.amount}
-              inputRef={amountRef}
-              label="Monto a enviar"
-              name="amount"
-              onBlur={completeAmountFormat}
-              onChange={(event) => updateAmount(
-                event.target.value,
-                event.target,
-              )}
-              required
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      Bs.
-                    </InputAdornment>
-                  ),
-                },
-                htmlInput: {
-                  inputMode: "decimal",
-                  style: {
-                    fontSize: "1.5rem",
-                    fontWeight: 700,
-                  },
-                },
-              }}
-              value={amount}
-            />
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={(theme) => ({
-                alignItems: "center",
-                justifyContent: "space-between",
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: alpha(theme.palette.primary.main, 0.07),
-              })}
-            >
-              <Typography color="text.secondary" variant="body2">
-                Disponible utilizable
-              </Typography>
-              <Typography sx={{ color: "secondary.main", fontWeight: 700 }}>
-                {availableLabel}
-              </Typography>
-            </Stack>
+                  sx={{ m: 0, width: "100%", minHeight: 48 }}
+                />
+              </Box>
+            )}
           </Stack>
-        )}
-      </Stack>
 
-      {recipientMode !== "choice" && (
-        <Box
+        <Card
+          elevation={0}
           sx={{
-            position: { xs: "sticky", md: "static" },
-            zIndex: 2,
-            bottom: {
-              xs: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`,
-              md: "auto",
-            },
-            mt: "auto",
-            pt: 3,
-            pb: 1.5,
-            bgcolor: "background.default",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            borderRadius: 0,
+            bgcolor: "transparent",
           }}
         >
-          <Button
-            disabled={isSubmitting}
-            fullWidth
-            type="submit"
-            variant="contained"
-          >
-            {isSubmitting ? "Preparando pago…" : "Revisar pago"}
-          </Button>
+          <CardContent sx={{ flex: 1, p: 2, "&:last-child": { pb: 2 } }}>
+            <Stack spacing={1.5}>
+              <TextField
+                disabled={isSubmitting}
+                error={Boolean(errors.amount)}
+                fullWidth
+                helperText={errors.amount}
+                inputRef={amountRef}
+                label="Monto a enviar"
+                name="amount"
+                onBlur={completeAmountFormat}
+                onChange={(event) => updateAmount(event.target.value, event.target)}
+                placeholder="0,00"
+                required
+                size="small"
+                slotProps={{
+                  input: {
+                    startAdornment: <InputAdornment position="start">Bs.</InputAdornment>,
+                  },
+                  inputLabel: { shrink: true },
+                  htmlInput: { inputMode: "decimal" },
+                }}
+                sx={paymentFieldSx}
+                value={amount}
+              />
+              <TextField
+                disabled={isSubmitting}
+                fullWidth
+                label="Concepto"
+                name="concept"
+                onChange={(event) => onConceptChange(event.target.value)}
+                size="small"
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  htmlInput: { maxLength: maxPaymentConceptLength },
+                }}
+                sx={paymentFieldSx}
+                value={concept}
+              />
+              <PaymentIconSelector
+                disabled={isSubmitting}
+                onSelect={onSelectIcon}
+                selectedIcon={selectedIcon}
+              />
+              {submitError && (
+                <Alert aria-live="assertive" role="alert" severity="error">
+                  {submitError}
+                </Alert>
+              )}
+              <Button
+                disabled={isSubmitting || accessStatus !== "active"}
+                fullWidth
+                sx={{ borderRadius: 8, minHeight: 48 }}
+                type="submit"
+                variant="contained"
+              >
+                {isSubmitting ? "Preparando pago…" : "Continuar"}
+              </Button>
+            </Stack>
+          </CardContent>
+        </Card>
         </Box>
-      )}
+      </Stack>
     </Box>
   );
 }

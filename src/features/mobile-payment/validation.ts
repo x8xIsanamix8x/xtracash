@@ -67,10 +67,7 @@ export function validateDetails({
   const errors: DetailsErrors = {};
   const fieldOrder: DetailsField[] = [];
 
-  if (recipientMode === "choice") {
-    errors.recipient = "Selecciona cómo ingresar el destinatario.";
-    fieldOrder.push("recipient");
-  } else if (recipientMode === "directory") {
+  if (recipientMode === "directory") {
     if (selectedContactId === null) {
       errors.recipient = "Selecciona un contacto del directorio.";
       fieldOrder.push("recipient");
