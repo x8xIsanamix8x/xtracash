@@ -99,11 +99,15 @@ type JsonResponse = Readonly<{ status?: number; body: unknown }>;
 
 export type BffMock = Readonly<{
   /** Responde una ruta del BFF (patrón glob de Playwright) con JSON. */
-  respond: (pattern: string, response: JsonResponse | (() => JsonResponse)) => Promise<void>;
+  respond: (pattern: string, response: JsonResponse | ((url: URL) => JsonResponse)) => Promise<void>;
   /** Simula que se cae la conexión al pedir esa ruta. */
   disconnect: (pattern: string) => Promise<void>;
   /** Cuántas veces el navegador pidió una ruta del BFF. */
   calls: (pathname: string) => number;
+  /** Cuerpos JSON enviados por POST a una ruta del BFF, en orden. */
+  sentBodies: (pathname: string) => readonly unknown[];
+  /** Consultas (`?paymentDate=...`) con las que se pidió una ruta. */
+  queries: (pathname: string) => readonly string[];
 }>;
 
 export const test = base.extend<{ bff: BffMock }>({
@@ -122,9 +126,16 @@ export const test = base.extend<{ bff: BffMock }>({
     ]);
 
     const counts = new Map<string, number>();
+    const bodies = new Map<string, unknown[]>();
+    const searches = new Map<string, string[]>();
     context.on("request", (request) => {
-      const { pathname } = new URL(request.url());
-      if (pathname.startsWith("/api/")) counts.set(pathname, (counts.get(pathname) ?? 0) + 1);
+      const { pathname, search } = new URL(request.url());
+      if (!pathname.startsWith("/api/")) return;
+      counts.set(pathname, (counts.get(pathname) ?? 0) + 1);
+      searches.set(pathname, [...(searches.get(pathname) ?? []), search]);
+      if (request.method() === "POST") {
+        bodies.set(pathname, [...(bodies.get(pathname) ?? []), request.postDataJSON()]);
+      }
     });
 
     // Ninguna llamada de la app debe llegar a Core: lo no simulado responde 503.
@@ -138,7 +149,9 @@ export const test = base.extend<{ bff: BffMock }>({
     await provide({
       respond: async (pattern, response) => {
         await context.route(pattern, (route) => {
-          const { status = 200, body } = typeof response === "function" ? response() : response;
+          const { status = 200, body } = typeof response === "function"
+            ? response(new URL(route.request().url()))
+            : response;
           return route.fulfill({ status, json: body });
         });
       },
@@ -146,6 +159,8 @@ export const test = base.extend<{ bff: BffMock }>({
         await context.route(pattern, (route) => route.abort("internetdisconnected"));
       },
       calls: (pathname) => counts.get(pathname) ?? 0,
+      sentBodies: (pathname) => bodies.get(pathname) ?? [],
+      queries: (pathname) => searches.get(pathname) ?? [],
     });
   },
 });

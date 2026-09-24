@@ -8,3 +8,4 @@ export {
 export { InstallmentsListView } from "./InstallmentsListView";
 export { ConsumptionDetailView, ConsumptionNotFound } from "./ConsumptionDetailView";
 export { PaymentInstructionsView } from "./PaymentInstructionsView";
+export { PaymentReportView } from "./PaymentReportView";
