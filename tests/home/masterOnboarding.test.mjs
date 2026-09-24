@@ -39,7 +39,7 @@ test("mantiene la redirección externa y la composición responsive solicitada",
   assert.match(home, /completedPhases <= 2/);
   assert.match(home, /MasterOnboardingPrompt/);
   assert.match(profile, /MasterOnboardingProfileCard/);
-  assert.match(profile, /"information" "onboarding" "security"/);
+  assert.match(profile, /aria-label="Secciones del perfil"/);
 });
 
 test("acepta las cuatro etapas de Core y el DTO BFF sin mezclar sus campos", () => {
