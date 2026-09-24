@@ -26,13 +26,29 @@ export function formatBsAmount(amount: string) {
 
 const rateSourceLabels: Readonly<Record<string, string>> = {
   BANCO_ACTIVO: "Banco Activo",
+  BCV: "BCV",
 };
 
+export function formatPercentage(value: string) {
+  return `${formatDecimal(value)}%`;
+}
+
 export function formatRateLabel(rateValue: string, rateSource: string) {
-  const value = `Bs. ${rateValue.replace(".", ",")}`;
+  const value = `Bs. ${formatDecimal(rateValue)}`;
   const source = rateSourceLabels[rateSource.trim().toUpperCase()];
 
   return source ? `${value} · ${source}` : value;
+}
+
+function formatDecimal(value: string) {
+  const numericValue = Number(value);
+
+  return Number.isFinite(numericValue)
+    ? numericValue.toLocaleString("es-VE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    : value.replace(".", ",");
 }
 
 function groupWholeUnits(wholeUnits: string) {

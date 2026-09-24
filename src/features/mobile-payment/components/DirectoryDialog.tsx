@@ -39,6 +39,7 @@ import {
   formatPhone,
   getBank,
 } from "../format";
+import { paymentFieldSx } from "./paymentFieldStyle";
 import type {
   Bank,
   DirectoryContact,
@@ -233,13 +234,14 @@ export function DirectoryDialog({
           display: "flex",
           gap: 1,
           alignItems: "center",
+          pl: { xs: 2, sm: 3 },
           pr: 7,
           color: "secondary.main",
           fontWeight: 700,
         }}
       >
         <ContactsRounded color="primary" />
-        Elegir del directorio
+        Buscar beneficiario
       </DialogTitle>
       <IconButton
         aria-label="Cerrar directorio"
@@ -261,11 +263,12 @@ export function DirectoryDialog({
             <TextField
               autoFocus={isDesktop}
               fullWidth
-              label="Buscar contacto"
+              label="Buscar beneficiario"
               name="directorySearch"
               inputRef={searchRef}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Nombre o teléfono"
+              size="small"
               slotProps={{
                 input: {
                   startAdornment: (
@@ -274,7 +277,9 @@ export function DirectoryDialog({
                     </InputAdornment>
                   ),
                 },
+                inputLabel: { shrink: true },
               }}
+              sx={paymentFieldSx}
               value={search}
             />
           )}
@@ -367,7 +372,7 @@ export function DirectoryDialog({
           )}
 
           {status === "ready" && filteredContacts.length > 0 && (
-            <List disablePadding aria-label="Contactos del directorio">
+            <List disablePadding aria-label="Beneficiarios del directorio">
               {filteredContacts.map((contact) => {
                 const bank = getBank(banks, contact.bankCode);
 
