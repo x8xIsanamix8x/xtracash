@@ -27,10 +27,6 @@ export function ProfileState({ status, onRetry }: ProfileStateProps) {
         sx={{
           display: "grid",
           gap: 3,
-          gridTemplateAreas: {
-            xs: '"summary" "information" "security"',
-            md: '"summary information" "security information"',
-          },
           gridTemplateColumns: { xs: "1fr", md: "minmax(0, 0.9fr) minmax(0, 1.1fr)" },
         }}
       >
@@ -39,21 +35,14 @@ export function ProfileState({ status, onRetry }: ProfileStateProps) {
           animation="wave"
           height={220}
           variant="rounded"
-          sx={{ gridArea: "summary", ...reducedMotionStyles }}
+          sx={reducedMotionStyles}
         />
         <Skeleton
           aria-hidden="true"
           animation="wave"
-          height={260}
+          height={460}
           variant="rounded"
-          sx={{ gridArea: "security", ...reducedMotionStyles }}
-        />
-        <Skeleton
-          aria-hidden="true"
-          animation="wave"
-          height={520}
-          variant="rounded"
-          sx={{ gridArea: "information", ...reducedMotionStyles }}
+          sx={reducedMotionStyles}
         />
       </Box>
     );
