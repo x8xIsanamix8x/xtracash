@@ -29,6 +29,13 @@ test("normaliza iconos históricos del Home al catálogo de Pago Móvil", () => 
   assert.equal(normalizePaymentIconId("unknown"), null);
 });
 
+test("normaliza los íconos de Core con sufijo -ico", () => {
+  assert.equal(normalizePaymentIconId("stethoscope-ico"), "stethoscope");
+  assert.equal(normalizePaymentIconId("market-ico"), "shopping-cart");
+  assert.equal(normalizePaymentIconId("home"), "house");
+  assert.equal(normalizePaymentIconId("unknown-ico"), null);
+});
+
 test("permite propósito vacío y rechaza conceptos largos o iconos ajenos", () => {
   assert.deepEqual(parsePaymentPurpose({ concept: "", iconId: null }), {
     concept: "",

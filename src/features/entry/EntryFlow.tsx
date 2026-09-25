@@ -65,10 +65,10 @@ export function EntryFlow({ biometricEnabled = false }: Readonly<{ biometricEnab
         aria-busy="true"
         component="main"
         sx={{
-          position: "relative",
+          // Fija a la pantalla completa: en la PWA de iOS, 100dvh no cubre la franja de abajo.
+          position: "fixed",
+          inset: 0,
           isolation: "isolate",
-          minHeight: "100dvh",
-          height: "100dvh",
           display: "grid",
           placeItems: "center",
           overflow: "hidden",
