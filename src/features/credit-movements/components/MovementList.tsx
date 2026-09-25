@@ -145,8 +145,8 @@ export function MovementList({ groups, isFiltered }: MovementListProps) {
                                   width: 48,
                                   height: 48,
                                   borderRadius: 1.5,
-                                  bgcolor: theme.palette.secondary.main,
-                                  color: "common.white",
+                                  bgcolor: alpha(theme.palette.primary.main, 0.12),
+                                  color: "primary.main",
                                 })}
                               >
                                 <PaymentPurposeIcon
