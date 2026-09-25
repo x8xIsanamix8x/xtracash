@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import {
+  Box,
   Button,
   Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
-  FormControlLabel,
   List,
   ListItem,
   ListItemText,
@@ -20,6 +19,7 @@ import {
 import { themeTokens } from "@/theme/tokens";
 
 import type { RegistrationData } from "../types";
+import { TermsAndConditionsContent } from "./TermsAndConditionsContent";
 
 type ConfirmationStepProps = Readonly<{
   data: RegistrationData;
@@ -77,31 +77,55 @@ export function ConfirmationStep({
         <Typography sx={{ color: themeTokens.color.preLoginMuted, fontSize: "0.875rem" }}>
           Al crear tu cuenta, recibirás en tu correo las instrucciones para verificarla.
         </Typography>
-        <Button
-          disabled={isSubmitting}
-          onClick={() => setIsTermsOpen(true)}
-          type="button"
-          variant="text"
-          sx={{ alignSelf: "flex-start", px: 0, color: themeTokens.color.preLoginPrimary, fontWeight: 500 }}
-        >
-          Consultar términos y condiciones
-        </Button>
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={termsAccepted}
+        <Stack direction="row" sx={{ alignItems: "flex-start", ml: -1 }}>
+          <Checkbox
+            checked={termsAccepted}
+            disabled={isSubmitting}
+            id="registration-terms-accepted"
+            onChange={(event) => onTermsChange(event.target.checked)}
+            required
+            slotProps={{
+              input: {
+                "aria-describedby": "terms-requirement",
+                "aria-label": "Acepto los términos y condiciones",
+              },
+            }}
+            sx={{
+              color: themeTokens.color.preLoginMuted,
+              "&.Mui-checked": { color: themeTokens.color.preLoginPrimary },
+            }}
+          />
+          <Box sx={{ minWidth: 0, pt: "9px" }}>
+            <Typography
+              component="label"
+              htmlFor="registration-terms-accepted"
+              sx={{ color: themeTokens.color.preLoginNavy, cursor: "pointer" }}
+            >
+              Acepto los{" "}
+            </Typography>
+            <Button
+              aria-controls={isTermsOpen ? "registration-terms-dialog" : undefined}
+              aria-expanded={isTermsOpen}
+              aria-haspopup="dialog"
               disabled={isSubmitting}
-              onChange={(event) => onTermsChange(event.target.checked)}
-              slotProps={{ input: { "aria-describedby": "terms-requirement" } }}
+              onClick={() => setIsTermsOpen(true)}
+              type="button"
+              variant="text"
               sx={{
-                color: themeTokens.color.preLoginMuted,
-                "&.Mui-checked": { color: themeTokens.color.preLoginPrimary },
+                minWidth: 0,
+                p: 0,
+                color: themeTokens.color.preLoginPrimary,
+                fontSize: "1rem",
+                fontWeight: 600,
+                lineHeight: "inherit",
+                textTransform: "none",
+                verticalAlign: "baseline",
               }}
-            />
-          }
-          label="He leído y acepto los términos y condiciones"
-          sx={{ color: themeTokens.color.preLoginNavy }}
-        />
+            >
+              términos y condiciones
+            </Button>
+          </Box>
+        </Stack>
         <Typography sx={{ color: themeTokens.color.preLoginMuted }} id="terms-requirement" variant="caption">
           Debes aceptar los términos antes de crear tu cuenta.
         </Typography>
@@ -111,18 +135,48 @@ export function ConfirmationStep({
         aria-describedby="registration-terms-description"
         aria-labelledby="registration-terms-title"
         fullWidth
-        maxWidth="sm"
+        id="registration-terms-dialog"
+        maxWidth="md"
         onClose={() => setIsTermsOpen(false)}
         open={isTermsOpen}
+        scroll="paper"
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              maxHeight: "calc(100dvh - 32px)",
+            },
+          },
+        }}
       >
-        <DialogTitle id="registration-terms-title">Términos y condiciones</DialogTitle>
-        <DialogContent>
-          <DialogContentText id="registration-terms-description">
-            Los términos y condiciones definitivos están pendientes de publicación por Producto y Legal.
-          </DialogContentText>
+        <DialogTitle
+          id="registration-terms-title"
+          sx={{ color: themeTokens.color.preLoginNavy, fontWeight: 800, pb: 1.5 }}
+        >
+          Términos y condiciones
+        </DialogTitle>
+        <DialogContent
+          dividers
+          sx={{
+            bgcolor: "#F8F8FD",
+            borderColor: "rgba(0, 0, 75, 0.1)",
+            px: { xs: 2, sm: 3 },
+            py: { xs: 2.5, sm: 3 },
+          }}
+        >
+          <TermsAndConditionsContent />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsTermsOpen(false)} type="button" variant="contained">
+        <DialogActions sx={{ borderTop: "1px solid rgba(0, 0, 75, 0.08)", p: 2 }}>
+          <Button
+            onClick={() => setIsTermsOpen(false)}
+            type="button"
+            variant="contained"
+            sx={{
+              borderRadius: "999px",
+              bgcolor: themeTokens.color.preLoginPrimary,
+              px: 3,
+            }}
+          >
             Entendido
           </Button>
         </DialogActions>
