@@ -134,7 +134,7 @@ test("normaliza los iconos históricos sin ocultar el icono recibido por Home", 
   assert.equal(parseNewBusinessHomeData(source)?.consumptions[0].icon, "stethoscope");
 });
 
-test("mantiene iconos seguros, rutas existentes y flujo visual de reporte", async () => {
+test("mantiene iconos seguros, rutas existentes y lleva el pago de cuotas a Cuotas", async () => {
   const [dashboard, consumptionCard, home, navigation, details, review] = await Promise.all([
     readFile(
       new URL(
@@ -173,9 +173,13 @@ test("mantiene iconos seguros, rutas existentes y flujo visual de reporte", asyn
   assert.match(dashboard, /PrimaryFinancialCard/);
   assert.match(details, /PrimaryFinancialCard/);
   assert.match(review, /PrimaryFinancialCard/);
-  assert.match(dashboard, /href="\/mobile-payment"/);
+  assert.match(dashboard, /"\/mobile-payment"/);
   assert.match(dashboard, /href="\/movements"/);
-  assert.match(home, /PaymentReportFlow/);
+  // El reporte de cuotas vive en /installments; el Home ya no abre el diálogo viejo.
+  assert.doesNotMatch(home, /PaymentReportFlow/);
+  assert.match(dashboard, /href="\/installments"/);
+  assert.match(dashboard, /Detalles de cuota/);
+  assert.ok(dashboard.includes("href={`/installments/${item.id}`}"));
   assert.doesNotMatch(home, /createNewBusinessHomeViewModel\(summary/);
   assert.match(navigation, /label: "Movimientos"/);
   assert.match(navigation, /label: "Cuotas"/);
@@ -189,4 +193,26 @@ test("mantiene iconos seguros, rutas existentes y flujo visual de reporte", asyn
   assert.match(navigation, /right: 0/);
   assert.match(navigation, /left: 0/);
   assert.match(navigation, /bottom: 0/);
+});
+
+test("el monto próximo suma todas las cuotas que vencen el día más cercano", async () => {
+  const summary = JSON.parse(await readFile(
+    new URL("tests/installments/fixtures/resumen.json", projectUrl),
+    "utf8",
+  ));
+  const data = parseNewBusinessHomeData(summary);
+  assert.ok(data);
+
+  const viewModel = createNewBusinessHomeViewModel(data);
+  assert.match(viewModel.debt.nextPaymentDate, /^7 oct/);
+  // Clínica (34.372,09) + Mercado (25.263,59), ambas vencen el 07/10.
+  assert.equal(viewModel.debt.nextPaymentAmount, "Bs. 59.635,68");
+
+  const laterMercado = createNewBusinessHomeViewModel({
+    ...data,
+    consumptions: data.consumptions.map((item) => (
+      item.label === "Mercado" ? { ...item, nextPaymentDate: "2026-10-22" } : item
+    )),
+  });
+  assert.equal(laterMercado.debt.nextPaymentAmount, "Bs. 34.372,09");
 });

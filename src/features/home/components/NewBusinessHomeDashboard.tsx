@@ -25,7 +25,6 @@ type NewBusinessHomeDashboardProps = Readonly<{
   greeting: string;
   viewModel: HomeDashboardViewModel;
   onNotifications: () => void;
-  onReportInstallment: () => void;
 }>;
 
 function HomeHeader({
@@ -97,10 +96,8 @@ function HomeHeader({
 
 function BalanceCard({
   balance,
-  onReportInstallment,
 }: Readonly<{
   balance: HomeDashboardViewModel["balance"];
-  onReportInstallment: () => void;
 }>) {
   const isReportAction = balance.primaryAction === "reportInstallment";
   const actionStyles = {
@@ -148,27 +145,16 @@ function BalanceCard({
             Línea total: {balance.totalCredit}
           </Typography>
         </Stack>
-        {isReportAction ? (
-          <Button
-            fullWidth
-            onClick={onReportInstallment}
-            sx={actionStyles}
-            type="button"
-            variant="contained"
-          >
-            {balance.primaryActionLabel}
-          </Button>
-        ) : (
-          <Button
-            component={Link}
-            fullWidth
-            href="/mobile-payment"
-            sx={actionStyles}
-            variant="contained"
-          >
-            {balance.primaryActionLabel}
-          </Button>
-        )}
+        {/* "Reactivar" lleva a Cuotas: ahí se paga el total pendiente. */}
+        <Button
+          component={Link}
+          fullWidth
+          href={isReportAction ? "/installments" : "/mobile-payment"}
+          sx={actionStyles}
+          variant="contained"
+        >
+          {balance.primaryActionLabel}
+        </Button>
       </Stack>
     </PrimaryFinancialCard>
   );
@@ -273,7 +259,9 @@ function ConsumptionsSection({
         </Card>
       ) : (
         <Stack spacing={1.5}>
-          {items.map((item) => <ConsumptionCard item={item} key={item.id} />)}
+          {items.map((item) => (
+            <ConsumptionCard href={`/installments/${item.id}`} item={item} key={item.id} />
+          ))}
         </Stack>
       )}
     </Box>
@@ -283,12 +271,10 @@ function ConsumptionsSection({
 function DebtOverview({
   debt,
   showReportAction,
-  onReportInstallment,
   isDebtFree,
 }: Readonly<{
   debt: NonNullable<HomeDashboardViewModel["debt"]>;
   showReportAction: boolean;
-  onReportInstallment: () => void;
   isDebtFree: boolean;
 }>) {
   return (
@@ -362,13 +348,13 @@ function DebtOverview({
           )}
           {showReportAction && (
             <Button
+              component={Link}
               fullWidth
-              onClick={onReportInstallment}
+              href="/installments"
               sx={{ bgcolor: homeVisualTokens.color.navy }}
-              type="button"
               variant="contained"
             >
-              Reportar cuota
+              Detalles de cuota
             </Button>
           )}
         </Stack>
@@ -381,7 +367,6 @@ export function NewBusinessHomeDashboard({
   greeting,
   viewModel,
   onNotifications,
-  onReportInstallment,
 }: NewBusinessHomeDashboardProps) {
   return (
     <Stack spacing={2.5}>
@@ -390,10 +375,7 @@ export function NewBusinessHomeDashboard({
         firstName={viewModel.firstName}
         onNotifications={onNotifications}
       />
-      <BalanceCard
-        balance={viewModel.balance}
-        onReportInstallment={onReportInstallment}
-      />
+      <BalanceCard balance={viewModel.balance} />
       {viewModel.notice && (
         <AttentionNotice
           message={viewModel.notice.message}
@@ -404,7 +386,6 @@ export function NewBusinessHomeDashboard({
       {viewModel.debt && (
         <DebtOverview
           debt={viewModel.debt}
-          onReportInstallment={onReportInstallment}
           showReportAction={viewModel.showReportInstallmentAction}
           isDebtFree={viewModel.consumptions.length === 0}
         />

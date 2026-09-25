@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Container, Snackbar } from "@mui/material";
 
@@ -8,7 +8,6 @@ import {
   APP_BOTTOM_NAVIGATION_HEIGHT,
   AppBottomNavigation,
 } from "@/components/AppBottomNavigation";
-import { PaymentReportFlow } from "@/features/payment-report";
 import {
   MasterOnboardingPrompt,
   consumeMasterOnboardingPrompt,
@@ -33,14 +32,9 @@ export function HomeView() {
   const [notice, setNotice] = useState("");
   const [homeViewModel, setHomeViewModel] = useState<HomeDashboardViewModel | null>(null);
   const [greeting, setGreeting] = useState("Buenos días");
-  const [isPaymentReportOpen, setIsPaymentReportOpen] = useState(false);
   const [masterOnboardingProgress, setMasterOnboardingProgress] = useState<
     OnboardingMasterProgress | null
   >(null);
-  const closePaymentReport = useCallback(
-    () => setIsPaymentReportOpen(false),
-    [],
-  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -124,17 +118,12 @@ export function HomeView() {
             onNotifications={() => setNotice(
               "Las notificaciones estarán disponibles en la siguiente etapa.",
             )}
-            onReportInstallment={() => setIsPaymentReportOpen(true)}
             viewModel={homeViewModel}
           />
         )}
       </Container>
 
       <AppBottomNavigation activeItem="home" />
-      <PaymentReportFlow
-        onClose={closePaymentReport}
-        open={isPaymentReportOpen}
-      />
       {masterOnboardingProgress && (
         <MasterOnboardingPrompt
           onClose={() => setMasterOnboardingProgress(null)}
