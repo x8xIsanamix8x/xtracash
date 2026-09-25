@@ -32,10 +32,17 @@ const paymentIconLabels: Readonly<Record<PaymentIconId, string>> = {
 
 const legacyHomeIconIds: Readonly<Record<string, PaymentIconId>> = {
   health: "stethoscope",
+  "health-ico": "stethoscope",
+  "stethoscope-ico": "stethoscope",
   pets: "paw-print",
+  "pets-ico": "paw-print",
+  "paw-print-ico": "paw-print",
   restaurant: "shopping-cart",
+  "restaurant-ico": "shopping-cart",
   shopping: "shopping-bag",
+  "shopping-ico": "shopping-bag",
   services: "receipt",
+  "services-ico": "receipt",
 };
 
 type PaymentPurpose = Readonly<{

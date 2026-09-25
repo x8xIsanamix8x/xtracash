@@ -11,7 +11,7 @@ const dateTimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const movementTypes = new Set<CreditMovementType>([
-  "CREDITO",
+  "CONSUMO",
   "REPORTE_PAGO",
 ]);
 const movementStatuses = new Set<CreditMovementStatus>([
@@ -71,6 +71,13 @@ export function isCreditMovementStatus(
 }
 
 function parseMovement(value: unknown): CreditMovement | null {
+  const optionalNonEmptyStringFields = ["label", "icon"] as const;
+  const optionalNullableStringFields = [
+    "beneficiaryName",
+    "bankReference",
+    "paymentDate",
+  ] as const;
+
   if (
     !isRecord(value)
     || !isUuid(value.id)
@@ -84,9 +91,41 @@ function parseMovement(value: unknown): CreditMovement | null {
       value.rejectionReason !== null
       && typeof value.rejectionReason !== "string"
     )
+    || optionalNonEmptyStringFields.some((field) => (
+      value[field] !== undefined && !isNonEmptyString(value[field])
+    ))
+    || optionalNullableStringFields.some((field) => (
+      value[field] !== undefined
+      && value[field] !== null
+      && typeof value[field] !== "string"
+    ))
   ) {
     return null;
   }
+
+  const label = isNonEmptyString(value.label) ? value.label.trim() : undefined;
+  const icon = isNonEmptyString(value.icon) ? value.icon.trim() : undefined;
+  const beneficiaryName = value.beneficiaryName === undefined
+    ? undefined
+    : value.beneficiaryName === null
+      ? null
+      : typeof value.beneficiaryName === "string"
+        ? value.beneficiaryName.trim()
+        : undefined;
+  const bankReference = value.bankReference === undefined
+    ? undefined
+    : value.bankReference === null
+      ? null
+      : typeof value.bankReference === "string"
+        ? value.bankReference.trim()
+        : undefined;
+  const paymentDate = value.paymentDate === undefined
+    ? undefined
+    : value.paymentDate === null
+      ? null
+      : typeof value.paymentDate === "string"
+        ? value.paymentDate.trim()
+        : undefined;
 
   return {
     id: value.id,
@@ -99,6 +138,11 @@ function parseMovement(value: unknown): CreditMovement | null {
     rejectionReason: value.rejectionReason === null
       ? null
       : value.rejectionReason.trim(),
+    ...(label === undefined ? {} : { label }),
+    ...(icon === undefined ? {} : { icon }),
+    ...(beneficiaryName === undefined ? {} : { beneficiaryName }),
+    ...(bankReference === undefined ? {} : { bankReference }),
+    ...(paymentDate === undefined ? {} : { paymentDate }),
   };
 }
 
@@ -107,14 +151,14 @@ export function parseCreditMovementsPage(
 ): CreditMovementsPage | null {
   if (
     !isRecord(value)
-    || !isCanonicalAmount(value.availableBs)
-    || !isCanonicalAmount(value.currentDebtBs)
-    || !isCanonicalAmount(value.minimumPaymentBs)
+    || (value.availableBs !== null && !isCanonicalAmount(value.availableBs))
+    || (value.currentDebtBs !== null && !isCanonicalAmount(value.currentDebtBs))
+    || (value.minimumPaymentBs !== null && !isCanonicalAmount(value.minimumPaymentBs))
     || (
       value.nextCutoffDate !== null
       && !isCalendarDate(value.nextCutoffDate)
     )
-    || !isNonEmptyString(value.financialStatus)
+    || (value.financialStatus !== null && !isNonEmptyString(value.financialStatus))
     || !Array.isArray(value.movements)
     || !Number.isSafeInteger(value.page)
     || (value.page as number) < 0
@@ -134,7 +178,9 @@ export function parseCreditMovementsPage(
     currentDebtBs: value.currentDebtBs,
     minimumPaymentBs: value.minimumPaymentBs,
     nextCutoffDate: value.nextCutoffDate,
-    financialStatus: value.financialStatus.trim(),
+    financialStatus: value.financialStatus === null
+      ? null
+      : value.financialStatus.trim(),
     movements: movements as readonly CreditMovement[],
     page: value.page as number,
     size: value.size as number,

@@ -91,7 +91,7 @@ export function MovementsSummaryCard({ data }: MovementsSummaryCardProps) {
                   overflowWrap: "anywhere",
                 }}
               >
-                {formatBolivars(data.availableBs)}
+                {data.availableBs ? formatBolivars(data.availableBs) : "—"}
               </Typography>
             </Stack>
           </Stack>
@@ -108,11 +108,11 @@ export function MovementsSummaryCard({ data }: MovementsSummaryCardProps) {
           >
             <Metric
               label="Deuda actual"
-              value={formatBolivars(data.currentDebtBs)}
+              value={data.currentDebtBs ? formatBolivars(data.currentDebtBs) : "—"}
             />
             <Metric
               label="Pago mínimo"
-              value={formatBolivars(data.minimumPaymentBs)}
+              value={data.minimumPaymentBs ? formatBolivars(data.minimumPaymentBs) : "—"}
             />
           </Box>
         </Stack>

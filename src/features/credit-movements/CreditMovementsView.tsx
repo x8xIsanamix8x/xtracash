@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowBackRounded,
   ReplayRounded,
+  SearchRounded,
   TuneRounded,
 } from "@mui/icons-material";
 import {
@@ -16,6 +17,7 @@ import {
   Container,
   IconButton,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 
@@ -29,7 +31,6 @@ import {
 } from "./components/CreditMovementsState";
 import { MovementFilterDialog } from "./components/MovementFilterDialog";
 import { MovementList } from "./components/MovementList";
-import { MovementsSummaryCard } from "./components/MovementsSummaryCard";
 import {
   createMovementGroups,
   getMovementFilterLabel,
@@ -54,12 +55,14 @@ const initialFilters: CreditMovementFilters = {
 function createQuery(
   filters: CreditMovementFilters,
   page: number,
+  search: string,
 ): CreditMovementQuery {
   return {
     ...(filters.type === "all" ? {} : { type: filters.type }),
     ...(filters.status === "all" ? {} : { status: filters.status }),
     page,
     size: PAGE_SIZE,
+    ...(search.trim() ? { q: search.trim() } : {}),
   };
 }
 
@@ -94,6 +97,8 @@ export function CreditMovementsView() {
   const [pendingFilters, setPendingFilters] = useState<CreditMovementFilters>(
     initialFilters,
   );
+  const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
@@ -112,7 +117,7 @@ export function CreditMovementsView() {
     requestIdRef.current = requestId;
     requestRef.current = { controller, id: requestId };
 
-    void getCreditMovements(createQuery(nextFilters, page), controller.signal)
+    void getCreditMovements(createQuery(nextFilters, page, appliedSearch), controller.signal)
       .then((nextPage) => {
         if (requestRef.current?.id !== requestId) return;
 
@@ -174,7 +179,7 @@ export function CreditMovementsView() {
           setIsLoadingMore(false);
         }
       });
-  }, [router]);
+  }, [appliedSearch, router]);
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => {
@@ -193,7 +198,6 @@ export function CreditMovementsView() {
     () => createMovementGroups(data?.movements ?? []),
     [data],
   );
-  const filterLabel = getMovementFilterLabel(filters);
   const isFiltered = filters.type !== "all" || filters.status !== "all";
   const hasMore = data !== null
     && data.movements.length < data.total
@@ -276,15 +280,14 @@ export function CreditMovementsView() {
         <Stack spacing={3} sx={{ width: "100%", maxWidth: 760, mx: "auto" }}>
           <Stack
             component="header"
-            direction="row"
-            spacing={1}
-            sx={{ minHeight: 48, alignItems: "center" }}
+            sx={{ minHeight: 56, alignItems: "center", position: "relative" }}
           >
             <IconButton
               aria-label="Volver al inicio"
               color="primary"
               component={Link}
               href="/home"
+              sx={{ position: "absolute", left: 0, top: 4, zIndex: 1 }}
             >
               <ArrowBackRounded />
             </IconButton>
@@ -294,9 +297,11 @@ export function CreditMovementsView() {
               tabIndex={-1}
               variant="h4"
               sx={{
-                flex: 1,
+                width: "100%",
                 color: "secondary.main",
-                fontWeight: 700,
+                fontSize: { xs: "2rem", sm: "2.25rem" },
+                fontWeight: 500,
+                textAlign: "center",
                 outline: "none",
                 borderRadius: 1,
                 "&:focus-visible": {
@@ -305,60 +310,71 @@ export function CreditMovementsView() {
                 },
               }}
             >
-              Movimientos
-            </Typography>
-            <Typography
-              noWrap
-              sx={{
-                color: themeTokens.color.brandLogo,
-                display: { xs: "none", sm: "block" },
-                fontSize: "1rem",
-                fontWeight: 800,
-                letterSpacing: "-0.03em",
-              }}
-            >
-              Impúlsate Móvil
+              Mis consumos
             </Typography>
           </Stack>
 
           {status === "ready" && data ? (
             <>
-              <MovementsSummaryCard data={data} />
               <Box component="section" aria-labelledby="recent-movements-title">
                 <Stack
-                  direction="row"
-                  spacing={1.5}
-                  sx={{ mb: 2, alignItems: "center", justifyContent: "space-between" }}
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  sx={{ mb: 1.5, alignItems: "stretch" }}
                 >
-                  <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-                    <Typography
-                      component="h2"
-                      id="recent-movements-title"
-                      variant="h5"
-                      sx={{
-                        color: "secondary.main",
-                        fontSize: { xs: "1.25rem", sm: "1.5rem" },
-                        fontWeight: 700,
-                        letterSpacing: "-0.02em",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      Movimientos recientes
-                    </Typography>
-                    <Typography color="text.secondary" variant="body2">
-                      Filtro: {filterLabel}
-                    </Typography>
-                  </Stack>
+                  <TextField
+                    fullWidth
+                    onChange={(event) => setSearch(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        setAppliedSearch(search);
+                        setStatus("loading");
+                      }
+                    }}
+                    placeholder="Buscar consumo"
+                    slotProps={{
+                      input: {
+                        startAdornment: <SearchRounded color="primary" />,
+                      },
+                    }}
+                    value={search}
+                  />
                   <Button
-                    aria-label={`Filtrar movimientos. Filtro activo: ${filterLabel}`}
                     onClick={openFilter}
                     startIcon={<TuneRounded />}
-                    sx={{ flexShrink: 0 }}
+                    sx={{ minWidth: { sm: 132 }, flexShrink: 0 }}
                     type="button"
-                    variant={isFiltered ? "contained" : "outlined"}
+                    variant="contained"
                   >
                     Filtrar
                   </Button>
+                </Stack>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ mb: 2, overflowX: "auto" }}
+                >
+                  {([
+                    ["all", "Todos"],
+                    ["CONSUMO", "Consumos"],
+                    ["REPORTE_PAGO", "Pagos"],
+                  ] as const).map(([type, label]) => (
+                    <Button
+                      key={type}
+                      onClick={() => {
+                        const nextFilters = { ...filters, type: type === "all" ? "all" : type } as CreditMovementFilters;
+                        setFilters(nextFilters);
+                        setPendingFilters(nextFilters);
+                        setStatus("loading");
+                        requestPage(0, nextFilters, "replace");
+                      }}
+                      sx={{ minWidth: 112, flex: 1, whiteSpace: "nowrap" }}
+                      type="button"
+                      variant={filters.type === type ? "contained" : "outlined"}
+                    >
+                      {label}
+                    </Button>
+                  ))}
                 </Stack>
                 <MovementList groups={groups} isFiltered={isFiltered} />
 
