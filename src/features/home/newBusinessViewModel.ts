@@ -14,7 +14,7 @@ const statusPresentation = {
   Readonly<{ label: string; tone: "positive" | "attention" }>
 >;
 
-function formatShortDate(value: string): string {
+export function formatShortDate(value: string): string {
   const [year, month, day] = value.split("-").map(Number);
   const formatter = new Intl.DateTimeFormat("es-VE", {
     day: "numeric",
@@ -24,19 +24,34 @@ function formatShortDate(value: string): string {
   return formatter.format(new Date(Date.UTC(year, month - 1, day, 16)));
 }
 
+/** Suma montos "34372.09" al céntimo, sin errores de coma flotante. */
+function sumBolivars(amounts: readonly string[]): string {
+  const cents = amounts.reduce((total, amount) => {
+    const [integer, fraction = ""] = amount.split(".");
+    return total + BigInt(`${integer}${fraction.padEnd(2, "0").slice(0, 2)}`);
+  }, BigInt(0));
+  const digits = cents.toString().padStart(3, "0");
+  return `${digits.slice(0, -2)}.${digits.slice(-2)}`;
+}
+
 export function createNewBusinessHomeViewModel(
   data: NewBusinessHomeData,
 ): HomeDashboardViewModel {
   const isSuspended = data.balance.status === "SUSPENDED";
   const hasPaymentDue = data.balance.status === "PAYMENT_DUE";
-  const nextConsumption = [...data.consumptions]
-    .filter((consumption) => (
-      consumption.nextPaymentDate !== null
-      && consumption.nextPaymentAmount !== null
-    ))
-    .sort((left, right) => (
-      left.nextPaymentDate!.localeCompare(right.nextPaymentDate!)
-    ))[0] ?? null;
+  const upcoming = data.consumptions.filter((consumption) => (
+    consumption.nextPaymentDate !== null
+    && consumption.nextPaymentAmount !== null
+  ));
+  const nextPaymentDate = upcoming
+    .map((consumption) => consumption.nextPaymentDate!)
+    .sort()[0] ?? null;
+  // Todo lo que vence ese día, de todos los consumos (no solo el primero).
+  const nextPaymentAmount = nextPaymentDate
+    ? sumBolivars(upcoming
+      .filter((consumption) => consumption.nextPaymentDate === nextPaymentDate)
+      .map((consumption) => consumption.nextPaymentAmount!.bs))
+    : null;
 
   return {
     firstName: getFirstName(data.fullName),
@@ -105,11 +120,11 @@ export function createNewBusinessHomeViewModel(
     }),
     debt: {
         total: formatBolivars(data.debt.total.bs),
-        nextPaymentDate: nextConsumption?.nextPaymentDate
-          ? formatShortDate(nextConsumption.nextPaymentDate)
+        nextPaymentDate: nextPaymentDate
+          ? formatShortDate(nextPaymentDate)
           : null,
-        nextPaymentAmount: nextConsumption?.nextPaymentAmount
-          ? formatBolivars(nextConsumption.nextPaymentAmount.bs)
+        nextPaymentAmount: nextPaymentAmount
+          ? formatBolivars(nextPaymentAmount)
           : null,
       },
     showReportInstallmentAction: data.consumptions.length > 0,

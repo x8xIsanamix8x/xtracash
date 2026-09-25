@@ -2,48 +2,99 @@ import type { PaymentIconId } from "../payment-purpose/types";
 
 export const maxPaymentConceptLength = 40;
 
+// Catálogo compatible con Core, incluyendo IDs históricos.
 export const paymentIconIds: readonly PaymentIconId[] = [
+  "house",
+  "wallet",
+  "card",
+  "car",
+  "fuel",
+  "scooter",
+  "calendar",
+  "people",
   "school",
+  "badge",
+  "sofa",
+  "envelope",
+  "gift",
+  "coffee",
+  "heart",
   "stethoscope",
   "paw-print",
   "receipt",
   "shopping-cart",
-  "car",
-  "house",
   "shopping-bag",
   "briefcase",
   "shapes",
 ];
 
+// Orden que se muestra en Solicitudes de pago, igual al orden entregado en el diseño.
+export const paymentIconOptionIds: readonly PaymentIconId[] = [
+  "house",
+  "wallet",
+  "card",
+  "car",
+  "fuel",
+  "scooter",
+  "calendar",
+  "people",
+  "school",
+  "badge",
+  "sofa",
+  "envelope",
+  "gift",
+  "coffee",
+  "heart",
+];
+
 const paymentIconIdSet = new Set<string>(paymentIconIds);
 
 const paymentIconLabels: Readonly<Record<PaymentIconId, string>> = {
+  house: "Hogar",
+  wallet: "Dinero",
+  card: "Pagos",
+  car: "Transporte",
+  fuel: "Gasolina",
+  scooter: "Movilidad",
+  calendar: "Agenda",
+  people: "Familia",
   school: "Educación",
+  badge: "Reconocimientos",
+  sofa: "Casa",
+  envelope: "Envíos",
+  gift: "Regalos",
+  coffee: "Comida",
+  heart: "Bienestar",
   stethoscope: "Salud",
   "paw-print": "Mascotas",
   receipt: "Facturas",
   "shopping-cart": "Alimentos",
-  car: "Transporte",
-  house: "Hogar",
   "shopping-bag": "Compras",
   briefcase: "Trabajo",
   shapes: "Otros",
 };
 
+// Nombres que usa Core. El mapa es deducido (24/09/2026): se ajusta cuando backend
+// publique su catálogo de íconos.
 const legacyHomeIconIds: Readonly<Record<string, PaymentIconId>> = {
   health: "stethoscope",
-  "health-ico": "stethoscope",
-  "stethoscope-ico": "stethoscope",
+  clinic: "stethoscope",
   pets: "paw-print",
-  "pets-ico": "paw-print",
-  "paw-print-ico": "paw-print",
+  pet: "paw-print",
   restaurant: "shopping-cart",
-  "restaurant-ico": "shopping-cart",
+  market: "shopping-cart",
   shopping: "shopping-bag",
-  "shopping-ico": "shopping-bag",
   services: "receipt",
-  "services-ico": "receipt",
+  home: "house",
+  education: "school",
+  transport: "car",
+  work: "briefcase",
+  other: "shapes",
+  others: "shapes",
 };
+
+// Core agrega el sufijo `-ico` (p. ej. `stethoscope-ico`).
+const coreIconSuffix = /-ico$/;
 
 type PaymentPurpose = Readonly<{
   concept: string;
@@ -61,7 +112,9 @@ export function getPaymentIconLabel(iconId: PaymentIconId): string {
 export function normalizePaymentIconId(value: unknown): PaymentIconId | null {
   if (isPaymentIconId(value)) return value;
   if (typeof value !== "string") return null;
-  return legacyHomeIconIds[value] ?? null;
+  const name = value.replace(coreIconSuffix, "");
+  if (isPaymentIconId(name)) return name;
+  return legacyHomeIconIds[name] ?? null;
 }
 
 export function parsePaymentPurpose(value: unknown): PaymentPurpose | null {

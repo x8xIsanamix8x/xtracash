@@ -1,5 +1,5 @@
 {
-  "name": "xtracash",
+  "name": "impulsate-movil",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,10 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:payment-report": "node --no-warnings --experimental-strip-types --test tests/payment-report/*.test.mjs",
     "test:mobile-payment": "node --no-warnings --experimental-strip-types --test tests/mobile-payment/*.test.mjs",
     "test:auth": "node --no-warnings --experimental-strip-types --test tests/auth/*.test.mjs",
     "test:home": "node --no-warnings --experimental-strip-types --test tests/home/*.test.mjs",
+    "test:installments": "node --no-warnings --experimental-strip-types --test tests/installments/*.test.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report",
     "test:profile": "node --no-warnings --experimental-strip-types --test tests/profile/*.test.mjs",
     "test:entry": "node --no-warnings --experimental-strip-types --test tests/entry/*.test.mjs",
     "test:help": "node --no-warnings --experimental-strip-types --test tests/entry/helpCenter.test.mjs",
@@ -28,6 +30,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

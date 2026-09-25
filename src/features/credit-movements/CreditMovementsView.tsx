@@ -1,12 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowBackRounded,
-  ReplayRounded,
   SearchRounded,
+  ReplayRounded,
   TuneRounded,
 } from "@mui/icons-material";
 import {
@@ -15,12 +13,12 @@ import {
   Button,
   CircularProgress,
   Container,
-  IconButton,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 
+import { AppBackButton } from "@/components/AppBackButton";
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
@@ -282,15 +280,9 @@ export function CreditMovementsView() {
             component="header"
             sx={{ minHeight: 56, alignItems: "center", position: "relative" }}
           >
-            <IconButton
-              aria-label="Volver al inicio"
-              color="primary"
-              component={Link}
-              href="/home"
-              sx={{ position: "absolute", left: 0, top: 4, zIndex: 1 }}
-            >
-              <ArrowBackRounded />
-            </IconButton>
+            <Box sx={{ position: "absolute", left: 0, top: 4, zIndex: 1 }}>
+              <AppBackButton href="/home" label="Volver al inicio" />
+            </Box>
             <Typography
               component="h1"
               ref={titleRef}
