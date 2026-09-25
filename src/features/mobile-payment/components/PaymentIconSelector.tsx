@@ -22,11 +22,11 @@ import {
 } from "@/features/payment-purpose/PaymentPurposeIcon";
 import {
   getPaymentIconLabel,
-  paymentIconIds,
+  paymentIconOptionIds,
 } from "../paymentPurpose";
 import type { PaymentIconId } from "../types";
 
-const iconOptions = paymentIconIds.map((id) => ({
+const iconOptions = paymentIconOptionIds.map((id) => ({
   id,
   label: getPaymentIconLabel(id),
   Icon: paymentIconComponents[id],
