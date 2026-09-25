@@ -113,10 +113,10 @@ export function AccessView({
       <Box
         component="main"
         sx={{
-          position: "relative",
+          // Fija a la pantalla completa: en la PWA de iOS, 100dvh no cubre la franja de abajo.
+          position: "fixed",
+          inset: 0,
           isolation: "isolate",
-          minHeight: "100dvh",
-          height: "100dvh",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",

@@ -30,13 +30,27 @@ const paymentIconLabels: Readonly<Record<PaymentIconId, string>> = {
   shapes: "Otros",
 };
 
+// Nombres que usa Core. El mapa es deducido (24/09/2026): se ajusta cuando backend
+// publique su catálogo de íconos.
 const legacyHomeIconIds: Readonly<Record<string, PaymentIconId>> = {
   health: "stethoscope",
+  clinic: "stethoscope",
   pets: "paw-print",
+  pet: "paw-print",
   restaurant: "shopping-cart",
+  market: "shopping-cart",
   shopping: "shopping-bag",
   services: "receipt",
+  home: "house",
+  education: "school",
+  transport: "car",
+  work: "briefcase",
+  other: "shapes",
+  others: "shapes",
 };
+
+// Core agrega el sufijo `-ico` (p. ej. `stethoscope-ico`).
+const coreIconSuffix = /-ico$/;
 
 type PaymentPurpose = Readonly<{
   concept: string;
@@ -54,7 +68,9 @@ export function getPaymentIconLabel(iconId: PaymentIconId): string {
 export function normalizePaymentIconId(value: unknown): PaymentIconId | null {
   if (isPaymentIconId(value)) return value;
   if (typeof value !== "string") return null;
-  return legacyHomeIconIds[value] ?? null;
+  const name = value.replace(coreIconSuffix, "");
+  if (isPaymentIconId(name)) return name;
+  return legacyHomeIconIds[name] ?? null;
 }
 
 export function parsePaymentPurpose(value: unknown): PaymentPurpose | null {
