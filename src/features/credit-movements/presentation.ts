@@ -42,9 +42,11 @@ const typePresentation: Record<
     title: (movement: CreditMovement) => string;
   }>
 > = {
-  CREDITO: {
-    description: "Pago móvil realizado",
-    title: (movement) => movement.counterparty,
+  CONSUMO: {
+    description: "Consumo realizado",
+    title: (movement) => cleanConsumptionLabel(
+      movement.label ?? movement.counterparty,
+    ),
   },
   REPORTE_PAGO: {
     description: "Pago a tu crédito",
@@ -63,7 +65,7 @@ export const movementTypeFilterOptions: readonly Readonly<{
   label: string;
 }>[] = [
   { value: "all", label: "Todos" },
-  { value: "CREDITO", label: "Créditos" },
+  { value: "CONSUMO", label: "Consumos" },
   { value: "REPORTE_PAGO", label: "Pagos reportados" },
 ];
 
@@ -88,6 +90,10 @@ function capitalize(value: string): string {
   return value
     ? `${value.charAt(0).toLocaleUpperCase("es-VE")}${value.slice(1)}`
     : value;
+}
+
+function cleanConsumptionLabel(value: string): string {
+  return value.replace(/^CONSUMO\s+A\s*:\s*/i, "").trim();
 }
 
 function readCaracasDateParts(value: string): CaracasDateParts {

@@ -157,9 +157,73 @@ function parseMovement(value: unknown): CreditMovement | null {
   return parseLegacyMovement(value) ?? parseCorePaymentReportMovement(value);
 }
 
+function normalizeModernStatus(value: unknown): CreditMovement["status"] | null {
+  if (value === "PENDIENTE" || value === "EN_PROCESO") return "PENDIENTE";
+  if (value === "APROBADO" || value === "CONFIRMADA") return "APROBADO";
+  if (value === "RECHAZADO" || value === "RECHAZADA" || value === "FALLIDA") return "RECHAZADO";
+  return null;
+}
+
+function parseModernMovement(value: unknown): CreditMovement | null {
+  if (!isRecord(value) || !isNonEmptyString(value.id)) return null;
+  const type = value.type === "CONSUMO"
+    ? "CONSUMO"
+    : value.type === "REPORTE_PAGO" || value.type === "REPORTE"
+      ? "REPORTE_PAGO"
+    : null;
+  const status = normalizeModernStatus(value.status);
+  const amountBs = readMoney(value.amount);
+  if (!type || !status || amountBs === null || !isDateTime(value.date)) return null;
+  const label = isNonEmptyString(value.label) ? value.label.trim() : "Movimiento";
+  const icon = isNonEmptyString(value.icon) ? value.icon.trim() : "services";
+  return {
+    id: value.id,
+    type,
+    status,
+    statusDetail: typeof value.debtStatus === "string" ? value.debtStatus : String(value.status),
+    amountBs,
+    occurredAt: value.date,
+    counterparty: typeof value.beneficiaryName === "string"
+      ? value.beneficiaryName
+      : label,
+    rejectionReason: typeof value.rejectionReason === "string" ? value.rejectionReason : null,
+    label,
+    icon,
+    beneficiaryName: typeof value.beneficiaryName === "string" ? value.beneficiaryName : null,
+    bankReference: typeof value.bankReference === "string" ? value.bankReference : null,
+    paymentDate: typeof value.paymentDate === "string" ? value.paymentDate : null,
+  };
+}
+
+function parseModernCreditMovements(value: Record<string, unknown>): CreditMovementsPage | null {
+  if (!Array.isArray(value.items)
+    || !Number.isSafeInteger(value.page)
+    || !Number.isSafeInteger(value.size)
+    || !Number.isSafeInteger(value.total)
+    || (value.page as number) < 0
+    || (value.size as number) <= 0
+    || (value.total as number) < 0) return null;
+  const movements = value.items.map(parseModernMovement);
+  if (movements.some((movement) => movement === null)) return null;
+  return {
+    availableBs: null,
+    currentDebtBs: null,
+    minimumPaymentBs: null,
+    nextCutoffDate: null,
+    financialStatus: null,
+    movements: movements as readonly CreditMovement[],
+    page: value.page as number,
+    size: value.size as number,
+    total: value.total as number,
+  };
+}
+
 export function parseCoreCreditMovements(
   value: unknown,
 ): CreditMovementsPage | null {
+  if (isRecord(value) && Array.isArray(value.items)) {
+    return parseModernCreditMovements(value);
+  }
   if (
     !isRecord(value)
     || !isRecord(value.deuda)

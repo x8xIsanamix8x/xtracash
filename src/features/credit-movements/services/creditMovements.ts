@@ -26,10 +26,11 @@ function createQueryString(query: CreditMovementQuery): string {
     page: String(query.page),
     size: String(query.size),
   });
-  if (query.type) searchParams.set("tipo", query.type);
-  if (query.status) searchParams.set("estado", query.status);
-  if (query.from) searchParams.set("desde", query.from);
-  if (query.to) searchParams.set("hasta", query.to);
+  if (query.type) searchParams.set("type", query.type);
+  if (query.status) searchParams.set("status", query.status);
+  if (query.from) searchParams.set("from", query.from);
+  if (query.to) searchParams.set("to", query.to);
+  if (query.q) searchParams.set("q", query.q);
   return searchParams.toString();
 }
 

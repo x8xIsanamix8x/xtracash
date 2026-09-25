@@ -1,4 +1,4 @@
-export type CreditMovementType = "CREDITO" | "REPORTE_PAGO";
+export type CreditMovementType = "CONSUMO" | "REPORTE_PAGO";
 
 export type CreditMovementStatus = "PENDIENTE" | "APROBADO" | "RECHAZADO";
 
@@ -11,14 +11,19 @@ export type CreditMovement = Readonly<{
   occurredAt: string;
   counterparty: string;
   rejectionReason: string | null;
+  label?: string;
+  icon?: string;
+  beneficiaryName?: string | null;
+  bankReference?: string | null;
+  paymentDate?: string | null;
 }>;
 
 export type CreditMovementsPage = Readonly<{
-  availableBs: string;
-  currentDebtBs: string;
-  minimumPaymentBs: string;
+  availableBs: string | null;
+  currentDebtBs: string | null;
+  minimumPaymentBs: string | null;
   nextCutoffDate: string | null;
-  financialStatus: string;
+  financialStatus: string | null;
   movements: readonly CreditMovement[];
   page: number;
   size: number;
@@ -38,6 +43,7 @@ export type CreditMovementQuery = Readonly<{
   status?: CreditMovementStatus;
   from?: string;
   to?: string;
+  q?: string;
   page: number;
   size: number;
 }>;
