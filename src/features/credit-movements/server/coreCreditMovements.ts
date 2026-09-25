@@ -17,12 +17,18 @@ export type CoreCreditMovementsErrorType =
 export class CoreCreditMovementsError extends Error {
   readonly type: CoreCreditMovementsErrorType;
   readonly status: number | null;
+  readonly detail: string | null;
 
-  constructor(type: CoreCreditMovementsErrorType, status: number | null = null) {
+  constructor(
+    type: CoreCreditMovementsErrorType,
+    status: number | null = null,
+    detail: string | null = null,
+  ) {
     super(type);
     this.name = "CoreCreditMovementsError";
     this.type = type;
     this.status = status;
+    this.detail = detail;
   }
 }
 
@@ -36,12 +42,13 @@ function getEndpoint(query: CreditMovementQuery): string {
     page: String(query.page),
     size: String(query.size),
   });
-  if (query.type) searchParams.set("tipo", query.type);
-  if (query.status) searchParams.set("estado", query.status);
-  if (query.from) searchParams.set("desde", query.from);
-  if (query.to) searchParams.set("hasta", query.to);
+  if (query.type) searchParams.set("type", query.type);
+  if (query.status) searchParams.set("status", query.status);
+  if (query.from) searchParams.set("from", query.from);
+  if (query.to) searchParams.set("to", query.to);
+  if (query.q) searchParams.set("q", query.q);
 
-  return `${configuration.baseUrl}/api/impulsate-movil/estado-cuenta?${searchParams}`;
+  return `${configuration.baseUrl}/api/impulsate-movil/movimientos?${searchParams}`;
 }
 
 export async function getCreditMovementsFromCore(
@@ -63,7 +70,13 @@ export async function getCreditMovementsFromCore(
   }
 
   if (!response.ok) {
-    throw new CoreCreditMovementsError("http", response.status);
+    let detail: string | null = null;
+    try {
+      detail = (await response.text()).slice(0, 500);
+    } catch {
+      detail = null;
+    }
+    throw new CoreCreditMovementsError("http", response.status, detail);
   }
 
   let body: unknown;
@@ -74,6 +87,12 @@ export async function getCreditMovementsFromCore(
   }
 
   const page = parseCoreCreditMovements(body);
-  if (page === null) throw new CoreCreditMovementsError("protocol");
+  if (page === null) {
+    throw new CoreCreditMovementsError(
+      "protocol",
+      response.status,
+      JSON.stringify(body).slice(0, 500),
+    );
+  }
   return page;
 }

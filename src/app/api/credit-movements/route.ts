@@ -28,7 +28,14 @@ function coreFailureResponse(error: CoreCreditMovementsError) {
   if (error.type === "configuration" || error.type === "network") {
     return serviceUnavailableResponse();
   }
-  return authJson({ error: "upstream_error" }, 502);
+  const diagnostic = process.env.NODE_ENV === "production"
+    ? undefined
+    : {
+      type: error.type,
+      status: error.status,
+      detail: error.detail,
+    };
+  return authJson({ error: "upstream_error", ...(diagnostic ? { diagnostic } : {}) }, 502);
 }
 
 async function withRotatedSession(
