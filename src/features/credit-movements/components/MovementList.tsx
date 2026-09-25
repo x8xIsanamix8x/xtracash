@@ -1,9 +1,6 @@
 import {
-  CancelOutlined,
-  CheckCircleOutlineRounded,
   FilterAltOffRounded,
   HistoryRounded,
-  ScheduleRounded,
 } from "@mui/icons-material";
 import {
   Avatar,
@@ -20,27 +17,15 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
-import type {
-  CreditMovementMonthGroup,
-  CreditMovementStatus,
-} from "../types";
+import { PaymentPurposeIcon } from "@/features/payment-purpose/PaymentPurposeIcon";
+import { normalizePaymentIconId } from "@/features/mobile-payment/paymentPurpose";
+
+import type { CreditMovementMonthGroup } from "../types";
 
 type MovementListProps = Readonly<{
   groups: readonly CreditMovementMonthGroup[];
   isFiltered: boolean;
 }>;
-
-const movementVisuals: Record<
-  CreditMovementStatus,
-  Readonly<{
-    icon: typeof CheckCircleOutlineRounded;
-    tone: "success" | "primary" | "error";
-  }>
-> = {
-  APROBADO: { icon: CheckCircleOutlineRounded, tone: "success" },
-  PENDIENTE: { icon: ScheduleRounded, tone: "primary" },
-  RECHAZADO: { icon: CancelOutlined, tone: "error" },
-};
 
 export function MovementList({ groups, isFiltered }: MovementListProps) {
   if (groups.length === 0) {
@@ -128,43 +113,44 @@ export function MovementList({ groups, isFiltered }: MovementListProps) {
                 >
                   {day.label}
                 </Typography>
-                <Card variant="outlined" sx={{ borderRadius: 1.5 }}>
+                <Card sx={{ border: 0, bgcolor: "transparent", boxShadow: "none" }}>
                   <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
                     <List disablePadding aria-label={`Movimientos del ${day.label}`}>
                       {day.items.map((item, index) => {
-                        const visual = movementVisuals[item.status];
-                        const MovementIcon = visual.icon;
-                        const rejectionReason = item.status === "RECHAZADO"
-                          ? item.rejectionReason?.trim()
-                          : null;
+                        const iconId = item.type === "REPORTE_PAGO"
+                          ? "receipt"
+                          : normalizePaymentIconId(item.icon) ?? "receipt";
 
                         return (
                           <ListItem
                             alignItems="flex-start"
-                            divider={index < day.items.length - 1}
+                            divider={false}
                             key={item.id}
                             sx={{
                               display: "grid",
-                              gridTemplateColumns: "auto minmax(0, 1fr) auto",
+                              gridTemplateColumns: "48px minmax(0, 1fr) minmax(120px, 160px)",
+                              columnGap: { xs: 1.5, sm: 2 },
+                              mb: index < day.items.length - 1 ? 1.5 : 0,
                               px: { xs: 1.5, sm: 2 },
-                              py: 1.5,
+                              py: 1.75,
+                              borderRadius: 1.5,
+                              bgcolor: "#F2F2F2",
                             }}
                           >
                             <ListItemAvatar
-                              sx={{ minWidth: { xs: 48, sm: 56 }, mt: 0.25 }}
+                              sx={{ minWidth: 48, mt: 0.25 }}
                             >
                               <Avatar
                                 sx={(theme) => ({
-                                  width: 40,
-                                  height: 40,
-                                  bgcolor: alpha(
-                                    theme.palette[visual.tone].main,
-                                    0.1,
-                                  ),
-                                  color: `${visual.tone}.main`,
+                                  width: 48,
+                                  height: 48,
+                                  borderRadius: 1.5,
+                                  bgcolor: theme.palette.secondary.main,
+                                  color: "common.white",
                                 })}
                               >
-                                <MovementIcon
+                                <PaymentPurposeIcon
+                                  iconId={iconId}
                                   aria-hidden="true"
                                   sx={{ fontSize: 23 }}
                                 />
@@ -172,54 +158,7 @@ export function MovementList({ groups, isFiltered }: MovementListProps) {
                             </ListItemAvatar>
                             <ListItemText
                               primary={item.displayTitle}
-                              secondary={(
-                                <Stack
-                                  component="span"
-                                  spacing={0.6}
-                                  sx={{ mt: 0.25 }}
-                                >
-                                  <Typography
-                                    color="text.secondary"
-                                    component="span"
-                                    variant="body2"
-                                  >
-                                    {item.description}
-                                  </Typography>
-                                  <Box component="span">
-                                    <Chip
-                                      color={visual.tone}
-                                      label={item.statusLabel}
-                                      size="small"
-                                      variant="outlined"
-                                      sx={{ height: 24, fontWeight: 700 }}
-                                    />
-                                  </Box>
-                                  {rejectionReason && (
-                                    <Typography
-                                      color="error.main"
-                                      component="span"
-                                      variant="caption"
-                                      sx={{
-                                        display: "-webkit-box",
-                                        overflow: "hidden",
-                                        overflowWrap: "anywhere",
-                                        WebkitBoxOrient: "vertical",
-                                        WebkitLineClamp: 3,
-                                      }}
-                                    >
-                                      Motivo: {rejectionReason}
-                                    </Typography>
-                                  )}
-                                  <Typography
-                                    color="text.secondary"
-                                    component="span"
-                                    variant="caption"
-                                    sx={{ fontVariantNumeric: "tabular-nums" }}
-                                  >
-                                    {item.displayDate}
-                                  </Typography>
-                                </Stack>
-                              )}
+                              secondary={item.type === "REPORTE_PAGO" ? item.counterparty : undefined}
                               sx={{ minWidth: 0, my: 0, mr: 1 }}
                               slotProps={{
                                 primary: {
@@ -229,23 +168,52 @@ export function MovementList({ groups, isFiltered }: MovementListProps) {
                                     overflowWrap: "anywhere",
                                   },
                                 },
-                                secondary: { component: "div" },
+                                secondary: {
+                                  component: "div",
+                                  sx: { color: "text.secondary", fontSize: "0.95rem" },
+                                },
                               }}
                             />
-                            <Typography
-                              sx={{
-                                maxWidth: { xs: 112, sm: "none" },
-                                mt: 0.25,
-                                color: "text.primary",
-                                fontSize: { xs: "0.875rem", sm: "1rem" },
-                                fontVariantNumeric: "tabular-nums",
-                                fontWeight: 800,
-                                overflowWrap: "anywhere",
-                                textAlign: "right",
-                              }}
-                            >
-                              {item.amount}
-                            </Typography>
+                            <Stack spacing={0.5} sx={{ alignItems: "flex-end", textAlign: "right" }}>
+                              <Chip
+                                label={item.statusLabel}
+                                size="small"
+                                sx={(theme) => ({
+                                  height: 28,
+                                  borderRadius: 99,
+                                  color: item.status === "APROBADO"
+                                    ? theme.palette.success.dark
+                                    : item.status === "RECHAZADO"
+                                      ? theme.palette.error.main
+                                      : theme.palette.warning.dark,
+                                  bgcolor: item.status === "APROBADO"
+                                    ? alpha(theme.palette.success.main, 0.2)
+                                    : item.status === "RECHAZADO"
+                                      ? alpha(theme.palette.error.main, 0.1)
+                                      : alpha(theme.palette.warning.main, 0.18),
+                                  fontWeight: 700,
+                                })}
+                              />
+                              <Typography
+                                sx={{
+                                  maxWidth: { xs: 140, sm: "none" },
+                                  color: "text.primary",
+                                  fontSize: { xs: "0.875rem", sm: "1rem" },
+                                  fontVariantNumeric: "tabular-nums",
+                                  fontWeight: 800,
+                                  overflowWrap: "anywhere",
+                                }}
+                              >
+                                {item.amount}
+                              </Typography>
+                              <Typography
+                                color="text.secondary"
+                                variant="caption"
+                                sx={{ fontVariantNumeric: "tabular-nums" }}
+                              >
+                                {item.displayDate}
+                              </Typography>
+                            </Stack>
                           </ListItem>
                         );
                       })}

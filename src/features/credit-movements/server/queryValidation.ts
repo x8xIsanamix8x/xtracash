@@ -8,10 +8,11 @@ import {
 import type { CreditMovementQuery } from "../types";
 
 const allowedParameters = new Set([
-  "tipo",
-  "estado",
-  "desde",
-  "hasta",
+  "type",
+  "status",
+  "from",
+  "to",
+  "q",
   "page",
   "size",
 ]);
@@ -46,10 +47,11 @@ export function parseCreditMovementQuery(
     if (!allowedParameters.has(key)) return null;
   }
 
-  const type = readUniqueValue(searchParams, "tipo");
-  const status = readUniqueValue(searchParams, "estado");
-  const from = readUniqueValue(searchParams, "desde");
-  const to = readUniqueValue(searchParams, "hasta");
+  const type = readUniqueValue(searchParams, "type");
+  const status = readUniqueValue(searchParams, "status");
+  const from = readUniqueValue(searchParams, "from");
+  const to = readUniqueValue(searchParams, "to");
+  const q = readUniqueValue(searchParams, "q");
   const pageValue = readUniqueValue(searchParams, "page");
   const sizeValue = readUniqueValue(searchParams, "size");
   if (
@@ -57,6 +59,7 @@ export function parseCreditMovementQuery(
     || status === "invalid"
     || from === "invalid"
     || to === "invalid"
+    || q === "invalid"
     || pageValue === "invalid"
     || sizeValue === "invalid"
     || (type !== null && !isCreditMovementType(type))
@@ -77,6 +80,7 @@ export function parseCreditMovementQuery(
     ...(status === null ? {} : { status }),
     ...(from === null ? {} : { from }),
     ...(to === null ? {} : { to }),
+    ...(q === null ? {} : { q }),
     page,
     size,
   };
