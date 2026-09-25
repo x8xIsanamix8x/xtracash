@@ -70,7 +70,7 @@ export function PaymentSupportField({
       role="group"
     >
       <Stack spacing={0.5}>
-        <Typography id={`${fieldId}-title`} sx={{ fontWeight: 700 }}>
+        <Typography id={`${fieldId}-title`} sx={{ fontWeight: 600 }}>
           Comprobante de pago (opcional)
         </Typography>
         <Typography color="text.secondary" id={descriptionId} variant="body2">
@@ -111,7 +111,7 @@ export function PaymentSupportField({
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography
                 title={sanitizePaymentSupportDisplayName(file.name)}
-                sx={{ fontWeight: 700, overflowWrap: "anywhere" }}
+                sx={{ fontWeight: 500, overflowWrap: "anywhere" }}
                 variant="body2"
               >
                 {sanitizePaymentSupportDisplayName(file.name)}

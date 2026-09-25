@@ -8,14 +8,14 @@ import {
 } from "@mui/icons-material";
 import { Box, Button, Skeleton, Stack, Typography } from "@mui/material";
 
-import { ConsumptionCard } from "@/features/home/components/ConsumptionCard";
 import { homeVisualTokens } from "@/features/home/homeVisualTokens";
 
 import { InstallmentsHeader } from "./components/InstallmentsHeader";
 import { pillButton, StateCard } from "./components/StateCard";
 import { InstallmentsScreen } from "./components/InstallmentsScreen";
+import { UpcomingInstallmentCard } from "./components/UpcomingInstallmentCard";
 import { useInstallmentsOverview } from "./InstallmentsProvider";
-import { createInstallmentsListItems } from "./presentation";
+import { createUpcomingInstallmentItems } from "./presentation";
 
 const reducedMotion = {
   "@media (prefers-reduced-motion: reduce)": { animation: "none" },
@@ -28,7 +28,7 @@ function ListSkeleton() {
         <Skeleton
           animation="wave"
           aria-hidden="true"
-          height={150}
+          height={104}
           key={key}
           sx={{ borderRadius: `${homeVisualTokens.radius.card}px`, ...reducedMotion }}
           variant="rounded"
@@ -66,7 +66,7 @@ export function InstallmentsListView() {
       );
     }
 
-    const items = createInstallmentsListItems(overview.data);
+    const items = createUpcomingInstallmentItems(overview.data);
     if (items.length === 0) {
       return (
         <StateCard
@@ -85,12 +85,8 @@ export function InstallmentsListView() {
     return (
       <Stack component="ul" spacing={1.5} sx={{ m: 0, p: 0, listStyle: "none" }}>
         {items.map((item) => (
-          <li key={item.card.id}>
-            <ConsumptionCard
-              highlightLabel={item.isNext ? "Próxima" : undefined}
-              href={item.href}
-              item={item.card}
-            />
+          <li key={item.id}>
+            <UpcomingInstallmentCard item={item} />
           </li>
         ))}
       </Stack>
@@ -109,7 +105,7 @@ export function InstallmentsListView() {
               mb: 1.5,
               color: homeVisualTokens.color.navy,
               fontSize: "1.25rem",
-              fontWeight: 800,
+              fontWeight: 600,
             }}
           >
             Próximas cuotas

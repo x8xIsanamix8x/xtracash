@@ -17,7 +17,7 @@ import { encodePaymentSupportFile } from "./services/paymentSupport";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 
 import { InstallmentsHeader } from "./components/InstallmentsHeader";
-import { InstallmentsScreen } from "./components/InstallmentsScreen";
+import { InstallmentsScreen, panelSlotSx, panelToBottomSx } from "./components/InstallmentsScreen";
 import { ReportForm } from "./components/ReportForm";
 import type { ExpectedAmount } from "./components/ReportForm";
 import { ReportFailure, ReportSuccess } from "./components/ReportResult";
@@ -33,7 +33,9 @@ import {
   createPaymentChoices,
   getSelectedOption,
   normalizePaymentSelection,
+  paymentBackLink,
   paymentSelectionToQuery,
+  type PaymentOrigin,
 } from "./paymentOptions";
 import type { PaymentSelection } from "./paymentOptions";
 import { createConsumptionDetailViewModel } from "./presentation";
@@ -84,9 +86,10 @@ function ReportSkeleton() {
 type PaymentReportViewProps = Readonly<{
   consumptionId: string;
   requestedSelection: PaymentSelection | null;
+  origin: PaymentOrigin;
 }>;
 
-export function PaymentReportView({ consumptionId, requestedSelection }: PaymentReportViewProps) {
+export function PaymentReportView({ consumptionId, requestedSelection, origin }: PaymentReportViewProps) {
   const router = useRouter();
   const detail = useConsumptionDetail(consumptionId);
   const todayData = usePaymentData(consumptionId);
@@ -114,7 +117,8 @@ export function PaymentReportView({ consumptionId, requestedSelection }: Payment
   const [quoteAttempt, setQuoteAttempt] = useState(0);
   const submitControllerRef = useRef<AbortController | null>(null);
 
-  const detailHref = `/installments/${consumptionId}`;
+  // "Volver a cuotas" del resultado: a la lista o al detalle, según desde dónde se abrió el pago.
+  const detailHref = paymentBackLink(consumptionId, origin).href;
   const todayQuote = todayData.status === "ready" ? todayData.data.quote : null;
   const minDate = detail.status === "ready" ? detail.data.consumption.consumedOn : today;
   const dateIsValid = validatePaymentDate(values.paymentDate, { today, minDate }) === null;
@@ -172,7 +176,7 @@ export function PaymentReportView({ consumptionId, requestedSelection }: Payment
     ? normalizePaymentSelection(choices, requestedSelection ?? paymentSelections[consumptionId])
     : null;
   const instructionsHref = selection
-    ? `/installments/${consumptionId}/payment?${paymentSelectionToQuery(selection)}`
+    ? `/installments/${consumptionId}/payment?${paymentSelectionToQuery(selection, origin)}`
     : detailHref;
 
   const activeQuote = !dateIsValid
@@ -392,6 +396,7 @@ export function PaymentReportView({ consumptionId, requestedSelection }: Payment
     return (
       <Card
         sx={{
+          ...panelToBottomSx,
           borderRadius: `${homeVisualTokens.radius.card}px`,
           bgcolor: homeVisualTokens.color.white,
           boxShadow: "0 8px 24px rgba(0, 0, 75, 0.08)",
@@ -431,9 +436,9 @@ export function PaymentReportView({ consumptionId, requestedSelection }: Payment
 
   return (
     <InstallmentsScreen>
-      <Stack spacing={2.5}>
+      <Stack spacing={2.5} sx={panelSlotSx}>
         <InstallmentsHeader backHref={instructionsHref} backLabel="Volver a las instrucciones" title="Reportar pago" />
-        <Box>{content}</Box>
+        <Box sx={panelSlotSx}>{content}</Box>
       </Stack>
     </InstallmentsScreen>
   );

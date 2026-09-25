@@ -172,12 +172,30 @@ export function createAmountBreakdown(option: PaymentOption): AmountBreakdown {
   };
 }
 
-export function paymentSelectionToQuery(selection: PaymentSelection): string {
+/** Desde dónde se abrió el pago: define a dónde lleva "volver" (`?from=list`). */
+export type PaymentOrigin = "list" | "detail";
+
+export function parsePaymentOrigin(value: string | null | undefined): PaymentOrigin {
+  return value === "list" ? "list" : "detail";
+}
+
+export function paymentSelectionToQuery(
+  selection: PaymentSelection,
+  origin: PaymentOrigin = "detail",
+): string {
   const query = new URLSearchParams({ option: selection.option });
   if (selection.option === "CUOTAS" && selection.installmentCount) {
     query.set("count", String(selection.installmentCount));
   }
+  if (origin === "list") query.set("from", "list");
   return query.toString();
+}
+
+/** A dónde vuelve el pago: a "Próximas cuotas" si se abrió desde ahí; si no, al detalle. */
+export function paymentBackLink(consumptionId: string, origin: PaymentOrigin) {
+  return origin === "list"
+    ? { href: "/installments", label: "Volver a mis cuotas" }
+    : { href: `/installments/${consumptionId}`, label: "Volver al detalle" };
 }
 
 /** Lee `?option=&count=` (sin validar contra el consumo: eso lo hace `normalizePaymentSelection`). */

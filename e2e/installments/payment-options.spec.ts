@@ -2,7 +2,6 @@ import {
   consumptionDetail,
   coreOption,
   expect,
-  installmentsOverview,
   paymentData,
   test,
 } from "../support/app";
@@ -30,29 +29,29 @@ const optionsSection = (page: Page) => page.getByRole("region", { name: /¿Quier
 const instructionsButton = (page: Page) => page.getByRole("link", { name: "Ver instrucciones de pago" });
 
 test.describe("SPEC-04 · Opciones de pago y desglose", () => {
-  test("por defecto la próxima cuota, con su desglose", async ({ page, bff }) => {
+  test("por defecto la próxima cuota; las opciones solo dicen qué pagan", async ({ page, bff }) => {
     await openDetail(page, bff);
     const section = optionsSection(page);
 
     await expect(section.getByRole("radio", { name: /Próxima cuota/ })).toBeChecked();
     await expect(section.getByRole("radio")).toHaveCount(3);
-    await expect(section).toContainText("Bs. 34.372,09");
-    await expect(section).toContainText("Capital");
-    await expect(section).toContainText("Total a pagar");
-    await expect(section).toContainText("Sin intereses: estás dentro de los primeros 15 días.");
+    // Sin montos, fechas ni detalle del monto (el monto se ve en las instrucciones).
+    await expect(section).not.toContainText("Bs.");
+    await expect(section).not.toContainText("hasta el");
+    await expect(section).not.toContainText("Ver detalle del monto");
+    await expect(section).not.toContainText("Total a pagar");
     await expect(section).toContainText("Consulta el monto final antes de pagar.");
     await expect(section).not.toContainText("Tasa BCV");
     await expect(instructionsButton(page)).toHaveAttribute("href", `${instructionsUrl}?option=PROXIMA`);
   });
 
-  test("elegir todas las pendientes recalcula el total al instante", async ({ page, bff }) => {
+  test("elegir todas las pendientes cambia el destino sin volver a cotizar", async ({ page, bff }) => {
     await openDetail(page, bff);
     const section = optionsSection(page);
     const quoteCalls = bff.calls(`/api/installments/${clinicaId}/payment-data`);
 
     await section.getByRole("radio", { name: /Todas las pendientes/ }).check();
 
-    await expect(section.getByRole("definition").last()).toHaveText("Bs. 103.116,44");
     await expect(instructionsButton(page)).toHaveAttribute("href", `${instructionsUrl}?option=TODAS`);
     expect(bff.calls(`/api/installments/${clinicaId}/payment-data`)).toBe(quoteCalls);
   });
@@ -68,15 +67,31 @@ test.describe("SPEC-04 · Opciones de pago y desglose", () => {
     const section = optionsSection(page);
 
     await section.getByRole("radio", { name: /Elegir cuántas cuotas/ }).check();
-    await expect(section.getByText("2 cuotas", { exact: true })).toBeVisible();
+    await expect(section.locator("[aria-live=polite]")).toHaveText("Cuotas a pagar: 2");
     await expect(section.getByRole("button", { name: "Una cuota menos" })).toBeDisabled();
 
     await section.getByRole("button", { name: "Una cuota más" }).click();
     await section.getByRole("button", { name: "Una cuota más" }).click();
-    await expect(section.getByText("4 cuotas", { exact: true })).toBeVisible();
+    await expect(section.locator("[aria-live=polite]")).toHaveText("Cuotas a pagar: 4");
     await expect(section.getByRole("button", { name: "Una cuota más" })).toBeDisabled();
-    await expect(section.getByRole("definition").last()).toHaveText("Bs. 40.000,00");
     await expect(instructionsButton(page)).toHaveAttribute("href", `${instructionsUrl}?option=CUOTAS&count=4`);
+  });
+
+  test("con un solo valor posible el contador igual se ve, al lado del texto y deshabilitado", async ({ page, bff }) => {
+    await openDetail(page, bff);
+    const section = optionsSection(page);
+
+    await section.getByRole("radio", { name: /Elegir cuántas cuotas/ }).check();
+    await expect(section.locator("[aria-live=polite]")).toHaveText("Cuotas a pagar: 2");
+    await expect(section.getByRole("button", { name: "Una cuota menos" })).toBeDisabled();
+    await expect(section.getByRole("button", { name: "Una cuota más" })).toBeDisabled();
+
+    const [label, minus] = await Promise.all([
+      section.getByText("Elegir cuántas cuotas").boundingBox(),
+      section.getByRole("button", { name: "Una cuota menos" }).boundingBox(),
+    ]);
+    expect(Math.abs(label!.y + label!.height / 2 - (minus!.y + minus!.height / 2))).toBeLessThan(6);
+    expect(minus!.height).toBeLessThanOrEqual(28);
   });
 
   test("en mora solo se puede pagar todo", async ({ page, bff }) => {
@@ -126,13 +141,13 @@ test.describe("SPEC-04 · Opciones de pago y desglose", () => {
     await expect(page.getByRole("button", { name: /Pagar$/ })).toHaveCount(0);
   });
 
-  test("la opción elegida se conserva al ir y volver de la lista", async ({ page, bff }) => {
-    await bff.respond("**/api/installments", { body: installmentsOverview() });
+  test("la opción elegida se conserva al ir y volver de las instrucciones", async ({ page, bff }) => {
     await openDetail(page, bff);
     await optionsSection(page).getByRole("radio", { name: /Todas las pendientes/ }).check();
 
-    await page.getByRole("link", { name: "Volver a mis cuotas" }).click();
-    await page.getByRole("link", { name: /Clínica/ }).click();
+    await instructionsButton(page).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Instrucciones de pago" })).toBeVisible();
+    await page.getByRole("link", { name: "Volver al detalle" }).click();
 
     await expect(optionsSection(page).getByRole("radio", { name: /Todas las pendientes/ })).toBeChecked();
   });

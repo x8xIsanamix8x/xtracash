@@ -123,7 +123,7 @@ export function ReportForm({
       <Stack spacing={1.5}>
         <ConsumptionSummary header={header} />
         <Typography sx={{ color: color.navy, fontSize: "0.875rem" }}>
-          <Box component="span" sx={{ fontWeight: 700 }}>Pagando:</Box> {payingLabel}
+          <Box component="span" sx={{ fontWeight: 600 }}>Pagando:</Box> {payingLabel}
         </Typography>
 
         <TextField
@@ -262,7 +262,7 @@ export function ReportForm({
           component={Link}
           fullWidth
           href={detailHref}
-          sx={{ minHeight: 44, borderRadius: 99, color: color.navy, fontWeight: 700 }}
+          sx={{ minHeight: 44, borderRadius: 99, color: color.navy, fontWeight: 600 }}
         >
           Volver a cuotas
         </Button>

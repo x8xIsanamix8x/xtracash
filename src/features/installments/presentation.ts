@@ -1,4 +1,4 @@
-import type { ConsumptionCardItem, ConsumptionCardTone } from "../home/components/ConsumptionCard";
+import type { ConsumptionCardTone } from "../home/components/ConsumptionCard";
 import { formatBolivars } from "../home/presentation";
 import { formatShortDate } from "../home/newBusinessViewModel";
 import type {
@@ -11,34 +11,11 @@ import type {
   ScheduleInstallment,
 } from "./types";
 
-export type InstallmentsListItem = Readonly<{
-  card: ConsumptionCardItem;
-  href: string;
-  /** Tiene la próxima obligación a vencer (puede haber empate entre consumos). */
-  isNext: boolean;
-}>;
-
 type StatusPresentation = Readonly<{ label: string; tone: ConsumptionCardTone }>;
 
 /** Como el Figma: "Cuota 01". */
 export function formatInstallmentNumber(number: number): string {
   return `Cuota ${String(number).padStart(2, "0")}`;
-}
-
-/** El peor estado de sus cuotas manda: mora > vencida > en revisión > al día. */
-function getStatusPresentation(consumption: InstallmentsConsumption): StatusPresentation {
-  const statuses = new Set(consumption.pendingInstallments.map((item) => item.status));
-
-  if (statuses.has("EN_MORA") || consumption.status === "VENCIDO_CON_MORA") {
-    return { label: "En mora", tone: "attention" };
-  }
-  if (statuses.has("VENCIDA") || consumption.status === "VENCIDO_SIN_MORA") {
-    return { label: "Vencida", tone: "attention" };
-  }
-  if (statuses.has("EN_REVISION")) {
-    return { label: "En revisión", tone: "info" };
-  }
-  return { label: "Al día", tone: "positive" };
 }
 
 /** La cuota que el consumo tiene que pagar ahora: la `isNext` o, si no hay, la más vieja. */
@@ -47,25 +24,6 @@ export function getCurrentInstallment(
 ): PendingInstallment {
   return consumption.pendingInstallments.find((item) => item.isNext)
     ?? consumption.pendingInstallments[0];
-}
-
-function getProgress(consumption: InstallmentsConsumption) {
-  const { paidInstallments, totalInstallments, pendingInstallments } = consumption;
-
-  if (paidInstallments === null || totalInstallments === null) {
-    const pending = pendingInstallments.length;
-    return {
-      text: pending === 1 ? "1 cuota pendiente" : `${pending} cuotas pendientes`,
-      value: null,
-    };
-  }
-
-  return {
-    text: paidInstallments === 1
-      ? `1 cuota pagada de ${totalInstallments}`
-      : `${paidInstallments} cuotas pagadas de ${totalInstallments}`,
-    value: Math.min(100, Math.max(0, Math.round((paidInstallments / totalInstallments) * 100))),
-  };
 }
 
 /** Fecha de la próxima obligación: la más cercana entre las cuotas `isNext`. */
@@ -78,32 +36,69 @@ function getNextDueDate(consumptions: readonly InstallmentsConsumption[]): strin
   return dueDates[0] ?? null;
 }
 
-export function createInstallmentsListItems(
+// --- Próximas cuotas (SPEC-02) ---
+
+/** Una hoja de calendario por consumo: su cuota por pagar. */
+export type UpcomingInstallmentItem = Readonly<{
+  id: string;
+  label: string;
+  icon: InstallmentsConsumption["icon"];
+  numberLabel: string;
+  day: string;
+  month: string;
+  /** "Vence el 7 de octubre de 2026" (lectores de pantalla). */
+  dueDateLabel: string;
+  amount: string;
+  status: Readonly<{ kind: ScheduleStatusKind; label: string }>;
+  /** Datos de pago del consumo; `null` si no se puede pagar (pago en revisión). */
+  href: string | null;
+}>;
+
+/**
+ * Estado de la hoja. Un pago en revisión bloquea el consumo entero (no se puede reportar otro);
+ * si no, manda la cuota: en mora > vencida > próxima (la más cercana de todas) > pendiente.
+ */
+function getUpcomingStatusKind(
+  consumption: InstallmentsConsumption,
+  current: PendingInstallment,
+  nextDueDate: string | null,
+): ScheduleStatusKind {
+  const statuses = new Set(consumption.pendingInstallments.map((item) => item.status));
+  if (statuses.has("EN_REVISION")) return "review";
+  if (statuses.has("EN_MORA") || consumption.status === "VENCIDO_CON_MORA") return "late";
+  if (current.status === "VENCIDA") return "overdue";
+  return current.isNext && current.dueDate === nextDueDate ? "next" : "pending";
+}
+
+export function createUpcomingInstallmentItems(
   overview: InstallmentsOverview,
-): readonly InstallmentsListItem[] {
+): readonly UpcomingInstallmentItem[] {
   const nextDueDate = getNextDueDate(overview.consumptions);
 
-  return overview.consumptions.map((consumption) => {
-    const status = getStatusPresentation(consumption);
-    const progress = getProgress(consumption);
+  // Como un calendario: por fecha de la cuota; si empatan, del consumo más viejo al más nuevo.
+  const byDueDate = [...overview.consumptions].sort((left, right) => (
+    getCurrentInstallment(left).dueDate.localeCompare(getCurrentInstallment(right).dueDate)
+  ));
+
+  return byDueDate.map((consumption) => {
     const current = getCurrentInstallment(consumption);
+    const kind = getUpcomingStatusKind(consumption, current, nextDueDate);
+    const [, month, day] = current.dueDate.split("-").map(Number);
 
     return {
-      href: `/installments/${consumption.consumptionId}`,
-      isNext: current.isNext && current.dueDate === nextDueDate,
-      card: {
-        id: consumption.consumptionId,
-        icon: consumption.icon,
-        label: consumption.label,
-        amount: consumption.amount ? formatBolivars(consumption.amount.bs) : null,
-        installmentProgress: progress.text,
-        progress: progress.value,
-        nextPaymentAmount: formatBolivars(current.amount.bs),
-        nextPaymentDate: formatShortDate(current.dueDate),
-        nextPaymentLabel: formatInstallmentNumber(current.number),
-        statusLabel: status.label,
-        tone: status.tone,
-      },
+      id: consumption.consumptionId,
+      label: consumption.label,
+      icon: consumption.icon,
+      numberLabel: formatInstallmentNumber(current.number),
+      day: String(day).padStart(2, "0"),
+      month: shortMonths[month - 1],
+      dueDateLabel: `Vence el ${formatLongDate(current.dueDate)}`,
+      amount: formatBolivars(current.amount.bs),
+      status: { kind, label: scheduleStatusLabels[kind] },
+      href: kind === "review"
+        ? null
+        // En mora solo se puede pagar todo lo pendiente.
+        : `/installments/${consumption.consumptionId}/payment?option=${kind === "late" ? "TODAS" : "PROXIMA"}&from=list`,
     };
   });
 }

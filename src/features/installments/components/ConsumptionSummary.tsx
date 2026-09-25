@@ -44,7 +44,7 @@ export function ConsumptionSummary({ header }: ConsumptionSummaryProps) {
           <Stack spacing={0.25} sx={{ minWidth: 0, flex: 1 }}>
             <Typography
               component="h2"
-              sx={{ color: homeVisualTokens.color.navy, fontWeight: 800, overflowWrap: "anywhere" }}
+              sx={{ color: homeVisualTokens.color.navy, fontWeight: 600, overflowWrap: "anywhere" }}
             >
               {header.label}
             </Typography>

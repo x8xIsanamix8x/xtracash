@@ -69,12 +69,12 @@ function SummaryTable({ rows }: Readonly<{ rows: readonly ReportSummaryRow[] }>)
             borderTop: index === 0 ? 0 : `1px solid ${alpha(color.navy, 0.12)}`,
           }}
         >
-          <Typography component="dt" sx={{ color: color.navy, fontSize: "0.875rem", fontWeight: 600 }}>
+          <Typography component="dt" sx={{ color: color.navy, fontSize: "0.875rem", fontWeight: 400 }}>
             {row.label}
           </Typography>
           <Typography
             component="dd"
-            sx={{ m: 0, color: color.navy, fontSize: "0.875rem", fontWeight: 700, textAlign: "right", overflowWrap: "anywhere" }}
+            sx={{ m: 0, color: color.navy, fontSize: "0.875rem", fontWeight: 600, textAlign: "right", overflowWrap: "anywhere" }}
           >
             {row.value}
           </Typography>
@@ -84,7 +84,7 @@ function SummaryTable({ rows }: Readonly<{ rows: readonly ReportSummaryRow[] }>)
   );
 }
 
-const secondaryButton = { minHeight: 48, borderRadius: 99, color: color.navy, fontSize: "1rem", fontWeight: 700 } as const;
+const secondaryButton = { minHeight: 48, borderRadius: 99, color: color.navy, fontSize: "1rem", fontWeight: 600 } as const;
 
 /** Figma 18: "¡Pago reportado!" con el resumen del reporte. */
 export function ReportSuccess({ rows }: Readonly<{ rows: readonly ReportSummaryRow[] }>) {
@@ -95,7 +95,7 @@ export function ReportSuccess({ rows }: Readonly<{ rows: readonly ReportSummaryR
         <Typography
           component="h2"
           id="report-success-title"
-          sx={{ color: color.navy, fontSize: "1.75rem", fontWeight: 800 }}
+          sx={{ color: color.navy, fontSize: "1.75rem", fontWeight: 700 }}
         >
           ¡Pago reportado!
         </Typography>
@@ -151,7 +151,7 @@ export function ReportFailure({
         <Typography
           component="h2"
           id="report-failure-title"
-          sx={{ color: color.navy, fontSize: "1.5rem", fontWeight: 800 }}
+          sx={{ color: color.navy, fontSize: "1.5rem", fontWeight: 700 }}
         >
           No pudimos reportar tu pago
         </Typography>

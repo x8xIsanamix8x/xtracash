@@ -8,7 +8,7 @@ export const pillButton = {
   px: 3,
   borderRadius: 99,
   bgcolor: "#4637F5",
-  fontWeight: 700,
+  fontWeight: 600,
   "&:hover, &:active": { bgcolor: "#4637F5" },
 } as const;
 
@@ -54,7 +54,7 @@ export function StateCard({
           </Box>
           <Typography
             component="h2"
-            sx={{ color: homeVisualTokens.color.navy, fontSize: "1.125rem", fontWeight: 800 }}
+            sx={{ color: homeVisualTokens.color.navy, fontSize: "1.125rem", fontWeight: 600 }}
           >
             {title}
           </Typography>

@@ -11,7 +11,7 @@ import { homeVisualTokens } from "@/features/home/homeVisualTokens";
 import { ConsumptionSummary } from "./components/ConsumptionSummary";
 import { InstallmentSchedule } from "./components/InstallmentSchedule";
 import { InstallmentsHeader } from "./components/InstallmentsHeader";
-import { InstallmentsScreen } from "./components/InstallmentsScreen";
+import { InstallmentsScreen, panelSlotSx, panelToBottomSx } from "./components/InstallmentsScreen";
 import { PaymentOptions } from "./components/PaymentOptions";
 import { pillButton, StateCard } from "./components/StateCard";
 import {
@@ -51,7 +51,6 @@ function scrollToPaymentOptions() {
 function usePaymentSection(
   consumptionId: string,
   viewModel: ConsumptionDetailViewModel | null,
-  interestFreeDays: number | null,
 ) {
   const paymentData = usePaymentData(consumptionId);
   const { paymentSelections, setPaymentSelection } = useInstallmentsCache();
@@ -101,9 +100,7 @@ function usePaymentSection(
           choices={choices}
           consumptionId={consumptionId}
           hasPaymentInReview={viewModel.hasPaymentInReview}
-          interestFreeDays={interestFreeDays}
           onSelectionChange={select}
-          quote={paymentData.data.quote}
           selection={selection}
         />
       );
@@ -116,11 +113,7 @@ function usePaymentSection(
 export function ConsumptionDetailView({ consumptionId }: Readonly<{ consumptionId: string }>) {
   const detail = useConsumptionDetail(consumptionId);
   const viewModel = detail.status === "ready" ? createConsumptionDetailViewModel(detail.data) : null;
-  const payment = usePaymentSection(
-    consumptionId,
-    viewModel,
-    detail.status === "ready" ? detail.data.consumption.interestFreeDays : null,
-  );
+  const payment = usePaymentSection(consumptionId, viewModel);
 
   if (detail.status === "error" && detail.error === "not_found") notFound();
 
@@ -149,6 +142,7 @@ export function ConsumptionDetailView({ consumptionId }: Readonly<{ consumptionI
     return (
       <Card
         sx={{
+          ...panelToBottomSx,
           borderRadius: `${homeVisualTokens.radius.card}px`,
           bgcolor: homeVisualTokens.color.white,
           boxShadow: "0 8px 24px rgba(0, 0, 75, 0.08)",
@@ -177,9 +171,9 @@ export function ConsumptionDetailView({ consumptionId }: Readonly<{ consumptionI
 
   return (
     <InstallmentsScreen>
-      <Stack spacing={2.5}>
-        <InstallmentsHeader backHref="/installments" backLabel="Volver a mis cuotas" title="Mis cuotas" />
-        <Box>{content}</Box>
+      <Stack spacing={2.5} sx={panelSlotSx}>
+        <InstallmentsHeader backHref="/home" backLabel="Volver al inicio" title="Mis cuotas" />
+        <Box sx={panelSlotSx}>{content}</Box>
       </Stack>
     </InstallmentsScreen>
   );
@@ -189,7 +183,7 @@ export function ConsumptionNotFound() {
   return (
     <InstallmentsScreen>
       <Stack spacing={2.5}>
-        <InstallmentsHeader backHref="/installments" backLabel="Volver a mis cuotas" title="Mis cuotas" />
+        <InstallmentsHeader backHref="/home" backLabel="Volver al inicio" title="Mis cuotas" />
         <StateCard
           action={(
             <Button component={Link} href="/installments" sx={pillButton} variant="contained">

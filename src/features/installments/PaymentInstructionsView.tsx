@@ -49,7 +49,9 @@ import {
   createPaymentChoices,
   getSelectedOption,
   normalizePaymentSelection,
+  paymentBackLink,
   paymentSelectionToQuery,
+  type PaymentOrigin,
 } from "./paymentOptions";
 import type { PaymentSelection } from "./paymentOptions";
 
@@ -123,7 +125,7 @@ function InstructionRows({
               </Typography>
               <Typography
                 component="dd"
-                sx={{ m: 0, color: color.navy, fontSize: "0.875rem", fontWeight: 700, lineHeight: 1.35, overflowWrap: "anywhere" }}
+                sx={{ m: 0, color: color.navy, fontSize: "0.875rem", fontWeight: 600, lineHeight: 1.35, overflowWrap: "anywhere" }}
               >
                 {row.displayValue}
               </Typography>
@@ -156,18 +158,20 @@ type PaymentInstructionsViewProps = Readonly<{
   consumptionId: string;
   /** Opción de la URL (`?option=&count=`). */
   requestedSelection: PaymentSelection | null;
+  origin: PaymentOrigin;
 }>;
 
 export function PaymentInstructionsView({
   consumptionId,
   requestedSelection,
+  origin,
 }: PaymentInstructionsViewProps) {
   const detail = useConsumptionDetail(consumptionId);
   const paymentData = usePaymentData(consumptionId);
   const { paymentSelections } = useInstallmentsCache();
   const [method, setMethod] = useState<PaymentMethod>("mobile");
   const { copiedKey, message, clearMessage, copy } = useCopy();
-  const detailHref = `/installments/${consumptionId}`;
+  const back = paymentBackLink(consumptionId, origin);
 
   if (
     (detail.status === "error" && detail.error === "not_found")
@@ -186,8 +190,8 @@ export function PaymentInstructionsView({
       return (
         <StateCard
           action={unconfigured ? (
-            <Button component={Link} href={detailHref} sx={pillButton} variant="contained">
-              Volver al detalle
+            <Button component={Link} href={back.href} sx={pillButton} variant="contained">
+              {back.label}
             </Button>
           ) : (
             <Button
@@ -251,7 +255,7 @@ export function PaymentInstructionsView({
             color: color.white,
           }}
         >
-          <Typography id="payment-amount-title" sx={{ fontSize: "0.875rem", fontWeight: 700 }}>
+          <Typography id="payment-amount-title" sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
             Monto a pagar
           </Typography>
           <Typography
@@ -298,7 +302,7 @@ export function PaymentInstructionsView({
                       border: 0,
                       borderRadius: "99px !important",
                       color: color.navy,
-                      fontWeight: 700,
+                      fontWeight: 500,
                       textTransform: "none",
                     },
                     "& .Mui-selected": {
@@ -324,7 +328,7 @@ export function PaymentInstructionsView({
                 onClick={() => void copy("all", createCopyAllText(rows), "Datos copiados")}
                 size="small"
                 startIcon={copiedKey === "all" ? <CheckRounded /> : <ContentCopyRounded />}
-                sx={{ alignSelf: "center", minHeight: 36, borderRadius: 99, color: installmentsPrimary, fontWeight: 700 }}
+                sx={{ alignSelf: "center", minHeight: 36, borderRadius: 99, color: installmentsPrimary, fontWeight: 600 }}
               >
                 Copiar todos los datos
               </Button>
@@ -340,7 +344,7 @@ export function PaymentInstructionsView({
           <Button
             component={Link}
             fullWidth
-            href={`/installments/${consumptionId}/report?${paymentSelectionToQuery(selection)}`}
+            href={`/installments/${consumptionId}/report?${paymentSelectionToQuery(selection, origin)}`}
             sx={pillButton}
             variant="contained"
           >
@@ -354,7 +358,7 @@ export function PaymentInstructionsView({
   return (
     <InstallmentsScreen>
       <Stack spacing={2}>
-        <InstallmentsHeader backHref={detailHref} backLabel="Volver al detalle" title="Instrucciones de pago" />
+        <InstallmentsHeader backHref={back.href} backLabel={back.label} title="Instrucciones de pago" />
         <Box>{content}</Box>
       </Stack>
       <Snackbar

@@ -129,23 +129,14 @@ test.describe("SPEC-03 · Detalle del consumo", () => {
     await expect(page.getByRole("region", { name: "Resumen de Clínica" })).toContainText("Bs. 0,00");
   });
 
-  test("volver a la lista usa lo que ya estaba cargado", async ({ page, bff }) => {
-    await bff.respond("**/api/installments", { body: installmentsOverview() });
+  test("volver del detalle lleva al Inicio (al detalle se entra desde el Home)", async ({ page, bff }) => {
     await bff.respond(detailApi, { body: consumptionDetail() });
 
-    await page.goto("/installments");
-    await page.getByRole("link", { name: /Clínica/ }).click();
+    await page.goto(detailUrl);
     await expect(page.getByRole("region", { name: "Resumen de Clínica" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Volver a mis cuotas" }).click();
-    await expect(page).toHaveURL(/\/installments$/);
-    await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(2);
-
-    await page.getByRole("link", { name: /Clínica/ }).click();
-    await expect(page.getByRole("region", { name: "Resumen de Clínica" })).toBeVisible();
-
-    expect(bff.calls("/api/installments")).toBe(1);
-    expect(bff.calls(`/api/installments/${clinicaId}`)).toBe(1);
+    await page.getByRole("link", { name: "Volver al inicio" }).click();
+    await expect(page).toHaveURL(/\/home$/);
   });
 
   test("un consumo que no existe muestra 'No encontramos este consumo'", async ({ page, bff }) => {
