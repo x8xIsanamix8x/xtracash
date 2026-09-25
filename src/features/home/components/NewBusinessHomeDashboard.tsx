@@ -270,10 +270,10 @@ function ConsumptionsSection({
 
 function DebtOverview({
   debt,
-  showReportAction,
   isDebtFree,
 }: Readonly<{
   debt: NonNullable<HomeDashboardViewModel["debt"]>;
+  /** Sin uso mientras el botón "Detalles de cuota" está comentado (ver abajo). */
   showReportAction: boolean;
   isDebtFree: boolean;
 }>) {
@@ -313,6 +313,11 @@ function DebtOverview({
               </Typography>
             )}
           </Stack>
+          {/*
+            Oculto (25/09, Gabriel) para evitar scroll en el Home: la card solo muestra la deuda
+            total acumulada. Se deja comentado por si se vuelve a mostrar la próxima cuota, el monto
+            próximo a cancelar y el botón "Detalles de cuota".
+
           {(debt.nextPaymentDate || debt.nextPaymentAmount) && (
             <Box
               sx={{
@@ -357,6 +362,7 @@ function DebtOverview({
               Detalles de cuota
             </Button>
           )}
+          */}
         </Stack>
       </CardContent>
     </Card>
