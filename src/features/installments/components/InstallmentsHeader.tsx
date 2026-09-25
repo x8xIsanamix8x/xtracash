@@ -1,8 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
-import { ChevronLeftRounded } from "@mui/icons-material";
-import { Box, IconButton, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 
+import { APP_BACK_BUTTON_SIZE, AppBackButton } from "@/components/AppBackButton";
 import { homeVisualTokens } from "@/features/home/homeVisualTokens";
 
 type InstallmentsHeaderProps = Readonly<{
@@ -12,9 +11,7 @@ type InstallmentsHeaderProps = Readonly<{
   backLabel?: string;
 }>;
 
-const controlSize = 42;
-
-/** Cabecera de Cuotas (Figma 13/14): isotipo, título centrado y volver naranja. */
+/** Cabecera de Cuotas: volver naranja a la izquierda, título centrado e isotipo a la derecha. */
 export function InstallmentsHeader({
   title,
   backHref,
@@ -25,15 +22,28 @@ export function InstallmentsHeader({
       component="header"
       sx={{
         display: "grid",
-        gridTemplateColumns: `${controlSize}px minmax(0, 1fr) ${controlSize}px`,
+        gridTemplateColumns: `${APP_BACK_BUTTON_SIZE}px minmax(0, 1fr) ${APP_BACK_BUTTON_SIZE}px`,
         alignItems: "center",
         gap: 1,
       }}
     >
+      {backHref ? <AppBackButton href={backHref} label={backLabel} /> : <Box aria-hidden="true" />}
+      <Typography
+        component="h1"
+        sx={{
+          color: homeVisualTokens.color.navy,
+          fontSize: "1rem",
+          fontWeight: 600,
+          textAlign: "center",
+          overflowWrap: "anywhere",
+        }}
+      >
+        {title}
+      </Typography>
       <Box
         sx={{
-          width: controlSize,
-          height: controlSize,
+          width: APP_BACK_BUTTON_SIZE,
+          height: APP_BACK_BUTTON_SIZE,
           display: "grid",
           placeItems: "center",
           borderRadius: "50%",
@@ -50,41 +60,6 @@ export function InstallmentsHeader({
           width={26}
         />
       </Box>
-      <Typography
-        component="h1"
-        sx={{
-          color: homeVisualTokens.color.navy,
-          fontSize: "1rem",
-          fontWeight: 700,
-          textAlign: "center",
-          overflowWrap: "anywhere",
-        }}
-      >
-        {title}
-      </Typography>
-      {backHref ? (
-        <IconButton
-          aria-label={backLabel}
-          component={Link}
-          href={backHref}
-          sx={{
-            width: controlSize,
-            height: controlSize,
-            borderRadius: 2,
-            bgcolor: homeVisualTokens.color.orange,
-            color: homeVisualTokens.color.white,
-            "&:hover, &:active": { bgcolor: homeVisualTokens.color.orange },
-            "&:focus-visible": {
-              outline: `3px solid ${homeVisualTokens.color.navy}`,
-              outlineOffset: 2,
-            },
-          }}
-        >
-          <ChevronLeftRounded />
-        </IconButton>
-      ) : (
-        <Box aria-hidden="true" />
-      )}
     </Box>
   );
 }
