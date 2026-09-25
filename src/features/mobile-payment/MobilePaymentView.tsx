@@ -9,7 +9,7 @@ import {
 } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowBackRounded, ChevronLeftRounded, ErrorOutlineRounded } from "@mui/icons-material";
+import { ErrorOutlineRounded } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -20,12 +20,12 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  IconButton,
   Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
 
+import { AppBackButton } from "@/components/AppBackButton";
 import {
   APP_BOTTOM_NAVIGATION_HEIGHT,
   AppBottomNavigation,
@@ -999,15 +999,11 @@ export function MobilePaymentView() {
               px: detailsHorizontalGutter,
             }}
           >
-            <Box sx={{ width: "2.75rem", display: "flex", alignItems: "center" }}>
-              <Image
-                alt="Impúlsate"
-                height={32}
-                src="/icons/impulsate-icon-master.png"
-                style={{ borderRadius: "50%" }}
-                width={32}
-              />
-            </Box>
+            <AppBackButton
+              disabled={isInitiating || isConfirming}
+              label={backLabel}
+              onClick={navigateBack}
+            />
             <Typography
               component={step === "result" ? "p" : "h1"}
               id={step === "result"
@@ -1025,20 +1021,15 @@ export function MobilePaymentView() {
             >
               {step === "review" ? "Confirmar pago" : "Usar disponible"}
             </Typography>
-            <IconButton
-              aria-label={backLabel}
-              disabled={isInitiating || isConfirming}
-              onClick={navigateBack}
-              sx={{
-                minWidth: "2.75rem",
-                minHeight: "2.75rem",
-                color: "#FF7900",
-                "& .MuiSvgIcon-root": { bgcolor: "#FF7900", color: "#fff", borderRadius: 1, fontSize: "1.75rem" },
-              }}
-              type="button"
-            >
-              <ChevronLeftRounded />
-            </IconButton>
+            <Box sx={{ width: "2.75rem", display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+              <Image
+                alt="Impúlsate"
+                height={32}
+                src="/icons/impulsate-icon-master.png"
+                style={{ borderRadius: "50%" }}
+                width={32}
+              />
+            </Box>
           </Stack>
         ) : (
           <Stack
@@ -1046,16 +1037,11 @@ export function MobilePaymentView() {
             direction="row"
             sx={{ minHeight: step === "result" ? 44 : 48, alignItems: "center" }}
           >
-            <IconButton
-              aria-label={backLabel}
-              color="primary"
+            <AppBackButton
               disabled={isInitiating || isConfirming}
+              label={backLabel}
               onClick={navigateBack}
-              sx={{ minWidth: 44, minHeight: 44 }}
-              type="button"
-            >
-              <ArrowBackRounded />
-            </IconButton>
+            />
           </Stack>
         )}
 

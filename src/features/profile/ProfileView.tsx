@@ -2,13 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeftRounded } from "@mui/icons-material";
 import {
   Box,
   Container,
-  IconButton,
   Snackbar,
   Stack,
   Tab,
@@ -16,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { AppBackButton } from "@/components/AppBackButton";
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
 import {
   SignOutDialog,
@@ -205,6 +203,25 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
             direction="row"
             sx={{ minHeight: 48, alignItems: "center", justifyContent: "space-between" }}
           >
+            <AppBackButton href="/home" label="Volver al inicio" />
+            <Typography
+              component="h1"
+              ref={titleRef}
+              tabIndex={-1}
+              sx={{
+                color: "secondary.main",
+                fontSize: "1rem",
+                fontWeight: 600,
+                outline: "none",
+                borderRadius: 1,
+                "&:focus-visible": {
+                  outline: `3px solid ${themeTokens.color.focus}`,
+                  outlineOffset: 3,
+                },
+              }}
+            >
+              Perfil
+            </Typography>
             <Box
               sx={{
                 width: 44,
@@ -226,43 +243,6 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
                 width={26}
               />
             </Box>
-            <Typography
-              component="h1"
-              ref={titleRef}
-              tabIndex={-1}
-              sx={{
-                color: "secondary.main",
-                fontSize: "1rem",
-                fontWeight: 600,
-                outline: "none",
-                borderRadius: 1,
-                "&:focus-visible": {
-                  outline: `3px solid ${themeTokens.color.focus}`,
-                  outlineOffset: 3,
-                },
-              }}
-            >
-              Perfil
-            </Typography>
-            <IconButton
-              aria-label="Volver al inicio"
-              component={Link}
-              href="/home"
-              sx={{
-                width: 44,
-                minWidth: 44,
-                minHeight: 44,
-                color: "#FF7900",
-                "& .MuiSvgIcon-root": {
-                  bgcolor: "#FF7900",
-                  color: "common.white",
-                  borderRadius: 1,
-                  fontSize: "1.75rem",
-                },
-              }}
-            >
-              <ChevronLeftRounded />
-            </IconButton>
           </Stack>
 
           {status === "ready" && user ? (

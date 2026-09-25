@@ -7,6 +7,7 @@ import { themeTokens } from "@/theme/tokens";
 
 export type AppDestination =
   | "home"
+  | "installments"
   | "movements"
   | "mobile-payment"
   | "profile";
@@ -15,6 +16,7 @@ export const APP_BOTTOM_NAVIGATION_HEIGHT = 64;
 
 export const appDestinationHref: Readonly<Record<AppDestination, string>> = {
   home: "/home",
+  installments: "/installments",
   movements: "/movements",
   "mobile-payment": "/mobile-payment",
   profile: "/profile",
@@ -26,7 +28,7 @@ const navigationItems: readonly Readonly<{
   label: string;
 }>[] = [
   { destination: "home", icon: "/navigation/home.svg", label: "Inicio" },
-  { destination: "mobile-payment", icon: "/navigation/cuotas.svg", label: "Cuotas" },
+  { destination: "installments", icon: "/navigation/cuotas.svg", label: "Cuotas" },
   { destination: "movements", icon: "/navigation/movements.svg", label: "Movimientos" },
   { destination: "profile", icon: "/navigation/profile.svg", label: "Perfil" },
 ];
