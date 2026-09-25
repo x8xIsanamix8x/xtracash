@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Box, ButtonBase, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
@@ -8,119 +9,107 @@ import { installmentsPrimary } from "./ConsumptionSummary";
 
 const { color } = homeVisualTokens;
 
+/** Ancho fijo de cada hoja (cabe "Bs. 34.372,09"), sean 1 o muchas cuotas. Si no caben, scroll. */
+const CARD_WIDTH = 118;
+/** Cuánto se ve de la cuota anterior al arrancar en la próxima. */
+const PREVIOUS_PEEK = 32;
+
 /** Texto solo para lectores de pantalla. */
 const visuallyHidden = {
   position: "absolute",
-  width: 1,
-  height: 1,
+  width: "1px",
+  height: "1px",
   overflow: "hidden",
   clip: "rect(0 0 0 0)",
   whiteSpace: "nowrap",
   border: 0,
   p: 0,
-  m: -1,
+  m: "-1px",
 } as const;
 
 const statusStyles: Readonly<Record<ScheduleStatusKind, Readonly<{
   chipBg: string;
   chipColor: string;
   accent: string;
+  accentText: string;
   border: string;
 }>>> = {
-  paid: { chipBg: alpha(color.positive, 0.24), chipColor: color.navy, accent: color.positive, border: "transparent" },
-  next: { chipBg: installmentsPrimary, chipColor: color.white, accent: installmentsPrimary, border: installmentsPrimary },
-  pending: { chipBg: color.navy, chipColor: color.white, accent: color.navy, border: "transparent" },
-  overdue: { chipBg: alpha(color.orange, 0.16), chipColor: color.navy, accent: color.orange, border: color.orange },
-  late: { chipBg: alpha(color.danger, 0.14), chipColor: color.danger, accent: color.danger, border: color.danger },
-  review: { chipBg: color.surfaceTint, chipColor: color.violet, accent: color.lavender, border: "transparent" },
+  paid: { chipBg: alpha(color.positive, 0.24), chipColor: color.navy, accent: color.positive, accentText: color.navy, border: "transparent" },
+  next: { chipBg: installmentsPrimary, chipColor: color.white, accent: installmentsPrimary, accentText: color.white, border: installmentsPrimary },
+  pending: { chipBg: color.navy, chipColor: color.white, accent: color.navy, accentText: color.white, border: "transparent" },
+  overdue: { chipBg: alpha(color.orange, 0.16), chipColor: color.navy, accent: color.orange, accentText: color.white, border: color.orange },
+  late: { chipBg: alpha(color.danger, 0.14), chipColor: color.danger, accent: color.danger, accentText: color.white, border: color.danger },
+  review: { chipBg: color.surfaceTint, chipColor: color.violet, accent: color.lavender, accentText: color.navy, border: "transparent" },
 };
 
-function CalendarDate({ day, month, accent }: Readonly<{ day: string; month: string; accent: string }>) {
-  return (
-    <Box
-      aria-hidden="true"
-      sx={{
-        width: 52,
-        flexShrink: 0,
-        overflow: "hidden",
-        borderRadius: 1.5,
-        bgcolor: color.white,
-        boxShadow: `0 2px 6px ${alpha(color.black, 0.08)}`,
-        textAlign: "center",
-      }}
-    >
-      <Typography
-        sx={{
-          py: 0.25,
-          bgcolor: accent,
-          color: accent === color.lavender || accent === color.positive ? color.navy : color.white,
-          fontSize: "0.6875rem",
-          fontWeight: 800,
-          letterSpacing: "0.06em",
-        }}
-      >
-        {month}
-      </Typography>
-      <Typography sx={{ py: 0.25, color: color.navy, fontSize: "1.375rem", fontWeight: 800, lineHeight: 1.3 }}>
-        {day}
-      </Typography>
-    </Box>
-  );
-}
-
-function ScheduleRow({ item }: Readonly<{ item: ScheduleItem }>) {
+/** Una hoja de calendario: mes arriba, día grande, número de cuota, monto y estado. */
+function CalendarCard({ item }: Readonly<{ item: ScheduleItem }>) {
   const style = statusStyles[item.status.kind];
-  const muted = item.status.kind === "paid";
+  const isNext = item.status.kind === "next";
 
   return (
     <Stack
-      direction="row"
-      spacing={1.5}
       sx={{
         width: "100%",
-        p: 1.25,
-        alignItems: "center",
-        textAlign: "left",
+        height: "100%",
+        overflow: "hidden",
+        alignItems: "stretch",
+        textAlign: "center",
         borderRadius: `${homeVisualTokens.radius.inset}px`,
         border: "2px solid",
         borderColor: style.border,
-        bgcolor: item.status.kind === "next" ? color.white : color.neutralSurface,
-        opacity: muted ? 0.65 : 1,
+        bgcolor: isNext ? color.white : color.neutralSurface,
+        boxShadow: isNext ? `0 6px 16px ${alpha(installmentsPrimary, 0.18)}` : "none",
+        opacity: item.status.kind === "paid" ? 0.65 : 1,
       }}
     >
-      <CalendarDate accent={style.accent} day={item.day} month={item.month} />
-      <Stack spacing={0.25} sx={{ minWidth: 0, flex: 1 }}>
-        <Box component="span" sx={visuallyHidden}>{item.dueDateLabel}</Box>
+      <Box component="span" sx={visuallyHidden}>{item.dueDateLabel}</Box>
+      <Typography
+        aria-hidden="true"
+        sx={{
+          py: 0.5,
+          bgcolor: style.accent,
+          color: style.accentText,
+          fontSize: "0.75rem",
+          fontWeight: 800,
+          letterSpacing: "0.08em",
+        }}
+      >
+        {item.month}
+      </Typography>
+      <Stack spacing={0.5} sx={{ flex: 1, px: 1, pt: 0.75, pb: 1.25, alignItems: "center" }} useFlexGap>
+        <Typography
+          aria-hidden="true"
+          sx={{ color: color.navy, fontSize: "1.875rem", fontWeight: 800, lineHeight: 1 }}
+        >
+          {item.day}
+        </Typography>
         <Typography sx={{ color: color.neutral, fontSize: "0.75rem", fontWeight: 700 }}>
           {item.numberLabel}
         </Typography>
-        <Typography sx={{ color: color.navy, fontSize: "1rem", fontWeight: 800, overflowWrap: "anywhere" }}>
+        <Typography sx={{ color: color.navy, fontSize: "0.8125rem", fontWeight: 800, whiteSpace: "nowrap" }}>
           {item.amount}
         </Typography>
+        <Typography
+          component="span"
+          sx={{
+            mt: "auto",
+            px: 1,
+            py: 0.25,
+            borderRadius: 99,
+            bgcolor: style.chipBg,
+            color: style.chipColor,
+            fontSize: "0.6875rem",
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {item.status.label}
+        </Typography>
         {item.paidOnLabel && (
-          <Typography sx={{ color: color.neutral, fontSize: "0.75rem" }}>{item.paidOnLabel}</Typography>
-        )}
-        {item.status.kind === "review" && (
-          <Typography sx={{ color: color.violet, fontSize: "0.75rem" }}>
-            Tu pago está en validación
-          </Typography>
+          <Typography sx={{ color: color.neutral, fontSize: "0.6875rem" }}>{item.paidOnLabel}</Typography>
         )}
       </Stack>
-      <Typography
-        component="span"
-        sx={{
-          flexShrink: 0,
-          px: 1.25,
-          py: 0.25,
-          borderRadius: 99,
-          bgcolor: style.chipBg,
-          color: style.chipColor,
-          fontSize: "0.75rem",
-          fontWeight: 700,
-        }}
-      >
-        {item.status.label}
-      </Typography>
     </Stack>
   );
 }
@@ -131,7 +120,19 @@ type InstallmentScheduleProps = Readonly<{
   onSelect?: (item: ScheduleItem) => void;
 }>;
 
+/** "Tus cuotas": calendario horizontal (estilo Cashea) con scroll lateral si no caben. */
 export function InstallmentSchedule({ items, onSelect }: InstallmentScheduleProps) {
+  const listRef = useRef<HTMLOListElement>(null);
+
+  // Al abrir, la fila arranca en la próxima cuota (solo scroll horizontal de la fila) y deja
+  // asomar la anterior para que se note que hay cuotas a la izquierda.
+  useEffect(() => {
+    const list = listRef.current;
+    const next = list?.querySelector<HTMLElement>("[data-next='true']");
+    if (!list || !next) return;
+    list.scrollLeft = Math.max(0, next.offsetLeft - list.offsetLeft - PREVIOUS_PEEK);
+  }, []);
+
   return (
     <Box component="section" aria-labelledby="installment-schedule-title">
       <Typography
@@ -141,25 +142,55 @@ export function InstallmentSchedule({ items, onSelect }: InstallmentScheduleProp
       >
         Tus cuotas
       </Typography>
-      <Stack component="ol" spacing={1} sx={{ m: 0, p: 0, listStyle: "none" }}>
+      <Stack
+        aria-labelledby="installment-schedule-title"
+        component="ol"
+        direction="row"
+        ref={listRef}
+        spacing={1}
+        useFlexGap
+        // Enfocable para recorrer la fila con las flechas del teclado.
+        tabIndex={0}
+        sx={{
+          m: 0,
+          px: 0.25,
+          pt: 0.25,
+          pb: 1.25,
+          listStyle: "none",
+          overflowX: "auto",
+          overscrollBehaviorX: "contain",
+          scrollSnapType: "x mandatory",
+          // Cada tarjeta encaja dejando asomar la anterior.
+          scrollPaddingInlineStart: `${PREVIOUS_PEEK}px`,
+          "&:focus-visible": { outline: `3px solid ${installmentsPrimary}`, outlineOffset: 2, borderRadius: 2 },
+          "&::-webkit-scrollbar": { height: 6 },
+          "&::-webkit-scrollbar-thumb": { borderRadius: 99, bgcolor: color.lavender },
+        }}
+      >
         {items.map((item) => (
-          <li key={item.id}>
+          <Box
+            component="li"
+            data-next={item.status.kind === "next"}
+            key={item.id}
+            sx={{ flex: `0 0 ${CARD_WIDTH}px`, scrollSnapAlign: "start", display: "flex" }}
+          >
             {onSelect && item.isPayable ? (
               <ButtonBase
                 aria-label={`${item.accessibleLabel}. Pagar`}
                 onClick={() => onSelect(item)}
                 sx={{
                   width: "100%",
+                  alignItems: "stretch",
                   borderRadius: `${homeVisualTokens.radius.inset}px`,
                   "&:focus-visible": { outline: `3px solid ${installmentsPrimary}`, outlineOffset: 2 },
                 }}
               >
-                <ScheduleRow item={item} />
+                <CalendarCard item={item} />
               </ButtonBase>
             ) : (
-              <ScheduleRow item={item} />
+              <CalendarCard item={item} />
             )}
-          </li>
+          </Box>
         ))}
       </Stack>
     </Box>

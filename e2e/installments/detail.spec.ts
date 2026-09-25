@@ -30,6 +30,65 @@ test.describe("SPEC-03 · Detalle del consumo", () => {
     await expect(rows.nth(2)).toContainText("NOV");
   });
 
+  test("con muchas cuotas el calendario se desplaza de lado y arranca en la próxima", async ({ page, bff }) => {
+    await bff.respond(detailApi, {
+      body: consumptionDetail((core) => {
+        const base = core.installments[0];
+        core.consumption.installments = 6;
+        core.installments = [1, 2, 3, 4, 5, 6].map((number) => ({
+          ...base,
+          installmentId: `01a0cb0f-7b41-7d8d-9ef7-d30e8ad88f0${number}`,
+          number,
+          dueDate: `2026-10-${String(number * 4).padStart(2, "0")}`,
+          status: number <= 3 ? "PAGADA" : "PENDIENTE",
+          isNext: number === 4,
+          paidOn: number <= 3 ? "2026-10-01" : null,
+        }));
+      }),
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(detailUrl);
+
+    const calendar = page.getByRole("list", { name: "Tus cuotas" });
+    await expect(calendar.getByRole("listitem")).toHaveCount(6);
+    const layout = await calendar.evaluate((list) => ({
+      rowScrolls: list.scrollWidth > list.clientWidth,
+      scrolledToNext: list.scrollLeft > 0,
+      pageScrollsSideways: document.documentElement.scrollWidth > window.innerWidth,
+    }));
+    expect(layout).toEqual({ rowScrolls: true, scrolledToNext: true, pageScrollsSideways: false });
+    await expect(calendar.getByRole("listitem").nth(3)).toContainText("Próxima");
+    await expect(calendar.getByRole("listitem").nth(3)).toBeInViewport({ ratio: 1 });
+  });
+
+  test("con una sola cuota la hoja no se estira: mismo tamaño que con muchas", async ({ page, bff }) => {
+    await bff.respond(detailApi, {
+      body: consumptionDetail((core) => {
+        core.consumption.installments = 1;
+        core.installments = [core.installments[0]];
+      }),
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(detailUrl);
+
+    const card = page.getByRole("list", { name: "Tus cuotas" }).getByRole("listitem");
+    await expect(card).toHaveCount(1);
+    expect((await card.boundingBox())?.width).toBe(118);
+  });
+
+  test("la página termina donde termina el contenido: sin franja vacía abajo", async ({ page, bff }) => {
+    await bff.respond(detailApi, { body: consumptionDetail() });
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(detailUrl);
+    await expect(page.getByRole("list", { name: "Tus cuotas" }).getByRole("listitem")).toHaveCount(3);
+
+    const heights = await page.evaluate(() => ({
+      page: document.documentElement.scrollHeight,
+      main: Math.round(document.querySelector("main")!.getBoundingClientRect().height),
+    }));
+    expect(heights.page).toBe(heights.main);
+  });
+
   test("muestra cuotas pagadas, en mora y en revisión", async ({ page, bff }) => {
     await bff.respond(detailApi, {
       body: consumptionDetail((core) => {
@@ -48,7 +107,7 @@ test.describe("SPEC-03 · Detalle del consumo", () => {
     await expect(rows.nth(0)).toContainText("Pagada");
     await expect(rows.nth(1)).toContainText("En mora");
     await expect(rows.nth(2)).toContainText("En revisión");
-    await expect(rows.nth(2)).toContainText("Tu pago está en validación");
+    await expect(rows.nth(2)).not.toContainText("Tu pago está en validación");
   });
 
   test("un consumo pagado lo indica", async ({ page, bff }) => {
