@@ -21,18 +21,29 @@ const documentTypes = new Set(["V", "J"]);
 const channels = new Set(["MISMO_BANCO", "OTRA_ENTIDAD"]);
 const accessStatuses = new Set(["active", "suspended", "blocked"]);
 const paymentIconIds = new Set([
+  "house",
+  "wallet",
+  "card",
+  "car",
+  "fuel",
+  "scooter",
+  "calendar",
+  "people",
   "school",
+  "badge",
+  "sofa",
+  "envelope",
+  "gift",
+  "coffee",
+  "heart",
   "stethoscope",
   "paw-print",
   "receipt",
   "shopping-cart",
-  "car",
-  "house",
   "shopping-bag",
   "briefcase",
   "shapes",
 ]);
-
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
