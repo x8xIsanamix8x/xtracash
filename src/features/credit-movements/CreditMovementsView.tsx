@@ -53,15 +53,38 @@ const initialFilters: CreditMovementFilters = {
 function createQuery(
   filters: CreditMovementFilters,
   page: number,
-  search: string,
 ): CreditMovementQuery {
   return {
     ...(filters.type === "all" ? {} : { type: filters.type }),
     ...(filters.status === "all" ? {} : { status: filters.status }),
     page,
     size: PAGE_SIZE,
-    ...(search.trim() ? { q: search.trim() } : {}),
   };
+}
+
+function normalizeSearchText(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase("es-VE")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function movementMatchesSearch(
+  movement: CreditMovement,
+  normalizedSearch: string,
+): boolean {
+  if (!normalizedSearch) return true;
+
+  return [
+    movement.label,
+    movement.counterparty,
+    movement.beneficiaryName,
+    movement.bankReference,
+    movement.statusDetail,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .some((value) => normalizeSearchText(value).includes(normalizedSearch));
 }
 
 function mergeMovements(
@@ -96,7 +119,6 @@ export function CreditMovementsView() {
     initialFilters,
   );
   const [search, setSearch] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
@@ -115,7 +137,7 @@ export function CreditMovementsView() {
     requestIdRef.current = requestId;
     requestRef.current = { controller, id: requestId };
 
-    void getCreditMovements(createQuery(nextFilters, page, appliedSearch), controller.signal)
+    void getCreditMovements(createQuery(nextFilters, page), controller.signal)
       .then((nextPage) => {
         if (requestRef.current?.id !== requestId) return;
 
@@ -177,7 +199,7 @@ export function CreditMovementsView() {
           setIsLoadingMore(false);
         }
       });
-  }, [appliedSearch, router]);
+  }, [router]);
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => {
@@ -192,11 +214,20 @@ export function CreditMovementsView() {
     };
   }, [requestPage]);
 
-  const groups = useMemo(
-    () => createMovementGroups(data?.movements ?? []),
-    [data],
+  const normalizedSearch = normalizeSearchText(search);
+  const filteredMovements = useMemo(
+    () => (data?.movements ?? []).filter((movement) => (
+      movementMatchesSearch(movement, normalizedSearch)
+    )),
+    [data, normalizedSearch],
   );
-  const isFiltered = filters.type !== "all" || filters.status !== "all";
+  const groups = useMemo(
+    () => createMovementGroups(filteredMovements),
+    [filteredMovements],
+  );
+  const isFiltered = filters.type !== "all"
+    || filters.status !== "all"
+    || Boolean(normalizedSearch);
   const hasMore = data !== null
     && data.movements.length < data.total
     && !paginationExhausted;
@@ -317,12 +348,6 @@ export function CreditMovementsView() {
                   <TextField
                     fullWidth
                     onChange={(event) => setSearch(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        setAppliedSearch(search);
-                        setStatus("loading");
-                      }
-                    }}
                     placeholder="Buscar consumo"
                     slotProps={{
                       input: {
