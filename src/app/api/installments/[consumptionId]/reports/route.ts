@@ -5,7 +5,7 @@ import { isUuid } from "@/features/installments/contractValidation";
 import { createInstallmentReportInCore } from "@/features/installments/server/coreInstallments";
 import { runAuthenticatedInstallmentsOperation } from "@/features/installments/server/installmentsRoute";
 import { validateCreateInstallmentReportRequest } from "@/features/installments/server/requestValidation";
-import { MAX_PAYMENT_REPORT_JSON_BYTES } from "@/features/payment-report/paymentSupport";
+import { MAX_PAYMENT_REPORT_JSON_BYTES } from "@/features/installments/paymentSupport";
 
 type ReadRequestResult =
   | Readonly<{ ok: true; body: unknown }>

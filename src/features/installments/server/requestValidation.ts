@@ -1,12 +1,8 @@
-import {
-  getCaracasCalendarDate,
-  isAllowedPaymentDate,
-} from "@/features/payment-report/calendarDate";
-import { parsePaymentSupport } from "@/features/payment-report/server/paymentSupportValidation";
-
+import { getCaracasCalendarDate, isAllowedPaymentDate } from "../calendarDate";
 import { isRecord } from "../contractValidation";
 import { bankReferencePattern } from "../reportForm";
 import type { CreateInstallmentReportRequest, PaymentOptionKind } from "../types";
+import { parsePaymentSupport } from "./paymentSupportValidation";
 
 const amountPattern = /^(0|[1-9]\d*)\.(\d{2})$/;
 const phonePattern = /^04(12|14|16|22|24|26)\d{7}$/;

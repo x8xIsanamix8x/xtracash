@@ -20,13 +20,13 @@ import {
 import { pillFieldSx } from "@/features/auth/shared/pillFieldSx";
 import { homeVisualTokens } from "@/features/home/homeVisualTokens";
 import { formatBolivars } from "@/features/home/presentation";
-import { PaymentSupportField } from "@/features/payment-report/components/PaymentSupportField";
 
 import type { ConsumptionDetailViewModel } from "../presentation";
 import type { ReportFormErrors, ReportFormField, ReportFormValues } from "../reportForm";
 import { firstErrorField } from "../reportForm";
 import type { SourceBank } from "../types";
 import { ConsumptionSummary, installmentsPrimary } from "./ConsumptionSummary";
+import { PaymentSupportField } from "./PaymentSupportField";
 import { pillButton } from "./StateCard";
 
 const { color } = homeVisualTokens;

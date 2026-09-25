@@ -1,4 +1,4 @@
-import type { PaymentReportSupport } from "../types";
+import type { PaymentReceipt } from "../types";
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -16,7 +16,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 export async function encodePaymentSupportFile(
   file: File,
   signal: AbortSignal,
-): Promise<PaymentReportSupport> {
+): Promise<PaymentReceipt> {
   const content = await file.arrayBuffer();
   if (signal.aborted) throw new DOMException("Aborted", "AbortError");
 

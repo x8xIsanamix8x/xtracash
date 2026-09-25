@@ -1,9 +1,9 @@
 import type { PaymentSupportKind } from "../paymentSupport";
-import type { PaymentReportSupport } from "../types";
+import type { PaymentReceipt } from "../types";
 
 export type PaymentSupportParseError = "invalid" | "too_large";
 export type PaymentSupportParseResult =
-  | Readonly<{ ok: true; value: PaymentReportSupport }>
+  | Readonly<{ ok: true; value: PaymentReceipt }>
   | Readonly<{ error: PaymentSupportParseError; ok: false }>;
 
 type PaymentSupportWireValue = Readonly<{
@@ -169,33 +169,4 @@ export function parsePaymentSupport(value: unknown): PaymentSupportParseResult {
     fileName: value.fileName,
     contentBase64: value.contentBase64,
   });
-}
-
-export function parseCorePaymentSupport(
-  value: unknown,
-): PaymentSupportParseResult {
-  if (!isRecord(value)) return { ok: false, error: "invalid" };
-
-  const keys = Object.keys(value).sort();
-  if (
-    keys.length !== 2
-    || keys[0] !== "contenidoBase64"
-    || keys[1] !== "nombreArchivo"
-    || typeof value.nombreArchivo !== "string"
-    || typeof value.contenidoBase64 !== "string"
-  ) {
-    return { ok: false, error: "invalid" };
-  }
-
-  return validatePaymentSupport({
-    fileName: value.nombreArchivo,
-    contentBase64: value.contenidoBase64,
-  });
-}
-
-export function toCorePaymentSupport(support: PaymentReportSupport) {
-  return {
-    nombreArchivo: support.fileName,
-    contenidoBase64: support.contentBase64,
-  } as const;
 }

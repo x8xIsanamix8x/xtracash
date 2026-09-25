@@ -8,12 +8,12 @@ import { Alert, Box, Button, Card, CardContent, Skeleton, Stack } from "@mui/mat
 
 import { homeVisualTokens } from "@/features/home/homeVisualTokens";
 import { formatBolivars } from "@/features/home/presentation";
-import { getCaracasCalendarDate } from "@/features/payment-report/calendarDate";
+import { getCaracasCalendarDate } from "./calendarDate";
 import {
   getPaymentSupportErrorMessage,
   validatePaymentSupportFileMetadata,
-} from "@/features/payment-report/paymentSupport";
-import { encodePaymentSupportFile } from "@/features/payment-report/services/paymentSupport";
+} from "./paymentSupport";
+import { encodePaymentSupportFile } from "./services/paymentSupport";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 
 import { InstallmentsHeader } from "./components/InstallmentsHeader";

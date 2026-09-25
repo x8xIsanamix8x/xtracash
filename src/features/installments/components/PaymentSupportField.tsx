@@ -26,7 +26,7 @@ type PaymentSupportFieldProps = Readonly<{
   onSelect: (file: File) => void;
 }>;
 
-const fieldId = "payment-report-support";
+const fieldId = "installment-report-receipt";
 const descriptionId = `${fieldId}-description`;
 const errorId = `${fieldId}-error`;
 

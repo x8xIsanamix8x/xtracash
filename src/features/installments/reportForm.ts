@@ -1,5 +1,5 @@
 import { formatBolivars } from "../home/presentation";
-import { isAllowedPaymentDate, isCalendarDate } from "../payment-report/calendarDate";
+import { isAllowedPaymentDate, isCalendarDate } from "./calendarDate";
 import type { PaymentSelection } from "./paymentOptions";
 import type { CreateInstallmentReportRequest, PaymentReceipt, SourceBank } from "./types";
 
