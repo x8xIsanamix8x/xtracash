@@ -243,7 +243,7 @@ function ConsumptionsSection({
             <Stack spacing={1.5} sx={{ alignItems: "center", textAlign: "center" }}>
               <Box
                 component="img"
-                src="/entry/LoginIlustration.webp"
+                src="/entry/onboarding-empieza.webp"
                 alt=""
                 aria-hidden="true"
                 sx={{ width: "min(100%, 220px)", height: 120, objectFit: "contain" }}
