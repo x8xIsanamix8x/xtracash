@@ -20,6 +20,7 @@ import {
 } from "@mui/material";
 import { alpha, darken } from "@mui/material/styles";
 
+import { ViewportCanvasBackground } from "@/components/ViewportCanvasBackground";
 import { registrationSubmittedUrl } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
@@ -342,6 +343,7 @@ export function RegistrationView() {
         overflowX: "hidden",
       }}
     >
+      <ViewportCanvasBackground color={themeTokens.color.preLoginBackground} />
       <Stack
         component="header"
         direction="row"

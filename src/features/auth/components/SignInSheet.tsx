@@ -24,6 +24,7 @@ import {
 import type { SlideProps } from "@mui/material/Slide";
 import { alpha, darken } from "@mui/material/styles";
 
+import { ViewportCanvasBackground } from "@/components/ViewportCanvasBackground";
 import { themeTokens } from "@/theme/tokens";
 import {
   BiometricLoginAction,
@@ -196,16 +197,20 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
   };
 
   return (
-    <Dialog
-      aria-describedby="sign-in-description"
-      aria-labelledby="sign-in-title"
-      fullWidth
-      maxWidth={false}
-      onClose={requestClose}
-      open={open}
-      scroll="paper"
-      slots={{ transition: BottomSheetTransition }}
-      slotProps={{
+    <>
+      {open && (
+        <ViewportCanvasBackground color={themeTokens.color.preLoginBackground} />
+      )}
+      <Dialog
+        aria-describedby="sign-in-description"
+        aria-labelledby="sign-in-title"
+        fullWidth
+        maxWidth={false}
+        onClose={requestClose}
+        open={open}
+        scroll="paper"
+        slots={{ transition: BottomSheetTransition }}
+        slotProps={{
         backdrop: {
           sx: { bgcolor: "secondary.main", opacity: 0.78 },
         },
@@ -242,9 +247,9 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
         transition: {
           onExited: resetForm,
         },
-      }}
-      transitionDuration={prefersReducedMotion ? 0 : { enter: 220, exit: 180 }}
-    >
+        }}
+        transitionDuration={prefersReducedMotion ? 0 : { enter: 220, exit: 180 }}
+      >
       <Box
         aria-busy={isLoading}
         component="form"
@@ -514,7 +519,8 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
             )}
           </Stack>
         </DialogContent>
-      </Box>
-    </Dialog>
+        </Box>
+      </Dialog>
+    </>
   );
 }
