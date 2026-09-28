@@ -82,3 +82,20 @@ test("las pantallas de entrada ocupan el viewport dinamico completo", async () =
     assert.match(source, /minHeight: "100dvh"/);
   }
 });
+
+test("los fondos publicos cubren tambien el canvas raiz de iOS", async () => {
+  const [canvas, access, signIn, registration, recovery] = await Promise.all([
+    readFile(new URL("../../src/components/ViewportCanvasBackground.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../../src/features/entry/components/AccessView.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../../src/features/auth/components/SignInSheet.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../../src/features/auth/registration/RegistrationView.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../../src/features/auth/recovery/RecoveryView.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(canvas, /html: \{ backgroundColor: color \}/);
+  assert.match(canvas, /body: \{ backgroundColor: color \}/);
+  assert.match(access, /ViewportCanvasBackground color="#FFFFFF"/);
+  for (const source of [signIn, registration, recovery]) {
+    assert.match(source, /ViewportCanvasBackground color=\{themeTokens\.color\.preLoginBackground\}/);
+  }
+});

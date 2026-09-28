@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import { darken, lighten } from "@mui/material/styles";
 
+import { ViewportCanvasBackground } from "@/components/ViewportCanvasBackground";
 import { SignInSheet } from "@/features/auth";
 import { PUBLIC_RECOVERY_SUCCESS_MESSAGE } from "@/features/auth/recovery/presentation";
 import type {
@@ -110,6 +111,7 @@ export function AccessView({
 
   return (
     <>
+      <ViewportCanvasBackground color="#FFFFFF" />
       <Box
         component="main"
         sx={{
