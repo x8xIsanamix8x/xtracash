@@ -2,7 +2,7 @@ import type { InstallmentsBffError } from "../contractValidation";
 import type { CoreProblem } from "./coreContracts";
 
 type InstallmentsFailure = Readonly<{
-  type: "configuration" | "http" | "network" | "protocol";
+  type: "configuration" | "payment_configuration" | "http" | "network" | "protocol";
   status: number | null;
   problem: CoreProblem | null;
 }>;
@@ -20,6 +20,9 @@ export type InstallmentsFailureResponse = Readonly<{
 export function getInstallmentsFailureResponse(
   failure: InstallmentsFailure,
 ): InstallmentsFailureResponse {
+  if (failure.type === "payment_configuration") {
+    return { status: 404, body: { error: "payment_data_unconfigured" } };
+  }
   if (failure.type === "configuration" || failure.type === "network") {
     return { status: 503, body: { error: "service_unavailable" } };
   }

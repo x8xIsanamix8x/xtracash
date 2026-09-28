@@ -113,9 +113,14 @@ export function AccessView({
       <Box
         component="main"
         sx={{
-          // Fija a la pantalla completa: en la PWA de iOS, 100dvh no cubre la franja de abajo.
+          // El alto dinÃ¡mico evita que el fondo termine antes que el viewport visible.
           position: "fixed",
-          inset: 0,
+          top: 0,
+          right: 0,
+          left: 0,
+          width: "100%",
+          height: "100dvh",
+          minHeight: "100dvh",
           isolation: "isolate",
           display: "flex",
           flexDirection: "column",
@@ -125,6 +130,7 @@ export function AccessView({
             "linear-gradient(to bottom, rgba(255, 255, 255, 0) 64%, #FFFFFF 91.6%), url('/entry/login-waves-background.webp')",
           backgroundSize: "100% 100%, cover",
           backgroundPosition: "center, center",
+          backgroundRepeat: "no-repeat",
         }}
       >
         <Stack
