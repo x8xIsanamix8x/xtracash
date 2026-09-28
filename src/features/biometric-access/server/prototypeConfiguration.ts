@@ -3,7 +3,7 @@ import { isBiometricPrototypeOriginAllowed } from "../config";
 
 /** Never enable the reversible-password prototype against production Core or arbitrary hosts. */
 export function isBiometricPrototypeEnabled(host: string | null, env = process.env): boolean {
-  if (!host) return false;
+  if (!host || env.BIOMETRIC_ACCESS_ENABLED !== "true") return false;
   try {
     const core = new URL(env.CORE_API_URL ?? "");
     if (core.origin !== "https://core-api.sandbox.impulsa.vc" || core.pathname !== "/"

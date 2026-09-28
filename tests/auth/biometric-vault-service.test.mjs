@@ -23,7 +23,19 @@ function fixture(overrides = {}) {
 const prototypeError = (type) => (e) => e instanceof BiometricPrototypeError && e.type === type;
 
 test("sandbox gate fails closed for production Core and unknown host", () => {
-  const env = { NODE_ENV: "production", CORE_API_URL: "https://core-api.sandbox.impulsa.vc" };
+  const env = {
+    BIOMETRIC_ACCESS_ENABLED: "true",
+    NODE_ENV: "production",
+    CORE_API_URL: "https://core-api.sandbox.impulsa.vc",
+  };
+  assert.equal(isBiometricPrototypeEnabled("impulsamovil.onrender.com", {
+    ...env,
+    BIOMETRIC_ACCESS_ENABLED: "false",
+  }), false);
+  assert.equal(isBiometricPrototypeEnabled("impulsamovil.onrender.com", {
+    NODE_ENV: "production",
+    CORE_API_URL: "https://core-api.sandbox.impulsa.vc",
+  }), false);
   assert.equal(isBiometricPrototypeEnabled("impulsamovil.onrender.com", env), true);
   assert.equal(isBiometricPrototypeEnabled("impulsate-app.sandbox.impulsa.vc", env), true);
   for (const host of [null, "localhost:3000", "production.impulsa.vc", "impulsamovil.onrender.com.evil.test", "user@impulsamovil.onrender.com"]) {

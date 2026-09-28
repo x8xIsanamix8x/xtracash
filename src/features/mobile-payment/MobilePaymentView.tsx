@@ -973,9 +973,7 @@ export function MobilePaymentView() {
         pt: isPaymentFlowReady
             ? "max(2.1875rem, env(safe-area-inset-top))"
             : "calc(1rem + env(safe-area-inset-top))",
-        pb: step === "result"
-          ? "calc(1rem + env(safe-area-inset-bottom))"
-          : isPaymentFlowReady
+        pb: isPaymentFlowReady
             ? `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`
             : `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`,
       }}
@@ -1138,13 +1136,11 @@ export function MobilePaymentView() {
         </DialogActions>
       </Dialog>
 
-      {step !== "result" && (
-        <AppBottomNavigation
-          activeItem="mobile-payment"
-          disabled={isTransactionPending}
-          onNavigate={handleBottomNavigation}
-        />
-      )}
+      <AppBottomNavigation
+        activeItem="mobile-payment"
+        disabled={isTransactionPending}
+        onNavigate={handleBottomNavigation}
+      />
 
       <Snackbar
         autoHideDuration={2800}

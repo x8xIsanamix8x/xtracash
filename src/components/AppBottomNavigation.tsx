@@ -73,11 +73,12 @@ export function AppBottomNavigation({
       elevation={0}
       sx={{
         position: "fixed",
-        zIndex: (theme) => theme.zIndex.appBar,
+        zIndex: (theme) => theme.zIndex.appBar + 1,
         right: 0,
         left: 0,
         bottom: 0,
         width: "100%",
+        minHeight: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`,
         maxWidth: 900,
         mx: "auto",
         borderRadius: 0,

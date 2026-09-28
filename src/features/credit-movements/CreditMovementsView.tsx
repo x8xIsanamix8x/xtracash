@@ -300,9 +300,10 @@ export function CreditMovementsView() {
     <Box
       component="main"
       sx={{
+        minHeight: "100dvh",
         bgcolor: "background.default",
         pt: "calc(16px + env(safe-area-inset-top))",
-        pb: "calc(64px + env(safe-area-inset-bottom))",
+        pb: "calc(88px + env(safe-area-inset-bottom))",
       }}
     >
       <Container maxWidth="md">

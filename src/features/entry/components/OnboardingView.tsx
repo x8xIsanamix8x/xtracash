@@ -40,9 +40,14 @@ export function OnboardingView({
     <Box
       component="main"
       sx={{
-        // Fija a la pantalla completa: en la PWA de iOS, 100dvh no cubre la franja de abajo.
+        // El alto dinÃ¡mico sigue el viewport visible de la PWA.
         position: "fixed",
-        inset: 0,
+        top: 0,
+        right: 0,
+        left: 0,
+        width: "100%",
+        height: "100dvh",
+        minHeight: "100dvh",
         isolation: "isolate",
         display: "grid",
         gridTemplateRows: "48px minmax(0, 1fr) auto",

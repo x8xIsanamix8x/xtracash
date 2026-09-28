@@ -58,7 +58,8 @@ test("el formulario de ingreso móvil ocupa toda la vista con el diseño del Fig
   assert.match(signInSheet, /xs: "100dvh"/);
   assert.match(signInSheet, /overflowX: "hidden"/);
   assert.doesNotMatch(signInSheet, /Ingresa tus datos para continuar\./);
-  assert.match(signInSheet, /Activa tu biometría desde tu Perfil para acceder más rápido\./);
+  assert.match(signInSheet, /\{showBiometricAccess && \(\s*<Box/);
+  assert.doesNotMatch(signInSheet, /face-scan\.svg/);
   assert.match(signInSheet, /direction=\{props\.in \? "left" : "right"\}/);
   assert.match(signInSheet, /transitionDuration=\{prefersReducedMotion \? 0 : \{ enter: 220, exit: 180 \}\}/);
   assert.match(signInSheet, /isotipo-impulsa\.png/);
@@ -66,4 +67,18 @@ test("el formulario de ingreso móvil ocupa toda la vista con el diseño del Fig
   assert.match(signInSheet, /borderRadius: "999px"/);
   assert.doesNotMatch(signInSheet, /LoginIlustration|SignInVisual/);
   assert.doesNotMatch(signInSheet, /justifyContent: \{ xs: "space-between", sm: "flex-start" \}/);
+});
+
+test("las pantallas de entrada ocupan el viewport dinamico completo", async () => {
+  const files = [
+    "../../src/features/entry/EntryFlow.tsx",
+    "../../src/features/entry/components/AccessView.tsx",
+    "../../src/features/entry/components/OnboardingView.tsx",
+  ];
+
+  for (const pathname of files) {
+    const source = await readFile(new URL(pathname, import.meta.url), "utf8");
+    assert.match(source, /height: "100dvh"/);
+    assert.match(source, /minHeight: "100dvh"/);
+  }
 });
