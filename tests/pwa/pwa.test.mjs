@@ -142,3 +142,19 @@ test("el Service Worker excluye APIs, mutaciones y datos privados del caché", a
   assert.doesNotMatch(precache, /\/api\//);
   assert.doesNotMatch(precache, /\/home|\/profile|\/movements|\/mobile-payment/);
 });
+
+test("la navegacion principal queda fija y visible al terminar un pago movil", async () => {
+  const navigation = await readFile(
+    new URL("src/components/AppBottomNavigation.tsx", projectUrl),
+    "utf8",
+  );
+  const mobilePayment = await readFile(
+    new URL("src/features/mobile-payment/MobilePaymentView.tsx", projectUrl),
+    "utf8",
+  );
+
+  assert.match(navigation, /position: "fixed"/);
+  assert.match(navigation, /bottom: 0/);
+  assert.match(navigation, /env\(safe-area-inset-bottom\)/);
+  assert.doesNotMatch(mobilePayment, /step !== "result" && \(/);
+});

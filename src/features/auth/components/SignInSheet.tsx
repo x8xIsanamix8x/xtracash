@@ -19,7 +19,6 @@ import {
   Slide,
   Stack,
   TextField,
-  Typography,
   useMediaQuery,
 } from "@mui/material";
 import type { SlideProps } from "@mui/material/Slide";
@@ -505,28 +504,14 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
               Ingresar
             </Button>
 
-            <Box sx={{ pt: "clamp(8px, 3dvh, 28px)" }}>
-              {showBiometricAccess && (
+            {showBiometricAccess && (
+              <Box sx={{ pt: "clamp(8px, 3dvh, 28px)" }}>
                 <BiometricLoginAction
                   disabled={isLoading}
                   onAuthenticate={authenticateWithPasskey}
                 />
-              )}
-              {!showBiometricAccess && (
-                <Stack spacing={1.5} sx={{ alignItems: "center", textAlign: "center", opacity: 0.6 }}>
-                  <Box
-                    alt=""
-                    aria-hidden="true"
-                    component="img"
-                    src="/entry/face-scan.svg"
-                    sx={{ display: "block", width: 40, height: 40 }}
-                  />
-                  <Typography sx={{ maxWidth: 320, color: themeTokens.color.preLoginMuted, fontSize: "0.8125rem" }}>
-                    Ingresa con tu usuario y contraseña. Activa tu biometría desde tu Perfil para acceder más rápido.
-                  </Typography>
-                </Stack>
-              )}
-            </Box>
+              </Box>
+            )}
           </Stack>
         </DialogContent>
       </Box>

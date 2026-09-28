@@ -18,15 +18,37 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Environment configuration
 
-Copy `.env.example` to `.env.local` and configure the public Core API URL used by registration and recovery, the server-only URL used by the authentication BFF, and a random session secret of at least 32 characters:
+Copy `.env.example` to `.env.local` and configure the public Core API URL used by registration and recovery, the server-only URL used by the authentication BFF, a random session secret of at least 32 characters, and the destination shown in payment instructions:
 
 ```bash
 NEXT_PUBLIC_CORE_API_URL=https://core-api.sandbox.impulsa.vc
 CORE_API_URL=https://core-api.sandbox.impulsa.vc
 AUTH_SESSION_SECRET=
+BIOMETRIC_ACCESS_ENABLED=false
+PAYMENT_DESTINATION_BANK_NAME=
+PAYMENT_DESTINATION_BANK_CODE=
+PAYMENT_DESTINATION_TAX_ID=
+PAYMENT_DESTINATION_PHONE=
+PAYMENT_DESTINATION_BENEFICIARY_NAME=
+PAYMENT_DESTINATION_BANK_ACCOUNT=
+PAYMENT_DESTINATION_BANK_ACCOUNT_TYPE=
 ```
 
-Generate `AUTH_SESSION_SECRET` securely for each environment and do not commit its value. Public Next.js environment variables are embedded during `next build`; `CORE_API_URL` and `AUTH_SESSION_SECRET` remain server-only and must be available to the Next.js runtime.
+Generate `AUTH_SESSION_SECRET` securely for each environment and do not commit its value. Public Next.js environment variables are embedded during `next build`; `CORE_API_URL`, `AUTH_SESSION_SECRET`, and every `PAYMENT_DESTINATION_*` value remain server-only and must be available to the Next.js runtime.
+
+`BIOMETRIC_ACCESS_ENABLED` is `false` by default, which hides biometric access from Login and Profile. The existing prototype can only be shown by explicitly setting it to `true`; its sandbox host and Core restrictions still apply.
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `PAYMENT_DESTINATION_BANK_NAME` | Yes | Commercial bank name shown to the user. |
+| `PAYMENT_DESTINATION_BANK_CODE` | Yes | Four-digit Venezuelan bank code. |
+| `PAYMENT_DESTINATION_TAX_ID` | Yes | Beneficiary RIF, exactly as it should be displayed and copied. |
+| `PAYMENT_DESTINATION_PHONE` | Yes | Mobile-payment recipient in local (`0414...`) or international (`58414...`) format. Spaces and hyphens are accepted. |
+| `PAYMENT_DESTINATION_BENEFICIARY_NAME` | For transfers | Legal or personal name of the bank-account holder. |
+| `PAYMENT_DESTINATION_BANK_ACCOUNT` | For transfers | Twenty-digit bank-account number. |
+| `PAYMENT_DESTINATION_BANK_ACCOUNT_TYPE` | For transfers | Account type (`CTE`/`CORRIENTE` or `AHO`/`AHORRO`). |
+
+The final three variables are one optional group: leave all three empty to offer only mobile payment, or configure all three to also offer bank transfer. These are beneficiary details, not information entered by the customer who reports the payment.
 
 ## Registration behavior
 
