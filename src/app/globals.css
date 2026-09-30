@@ -1,3 +1,14 @@
 html {
   min-width: min(320px, 100%);
 }
+
+/* iOS amplía automáticamente los controles cuyo texto mide menos de 16 px.
+ * Se limita a WebKit táctil para conservar el tamaño visual en otros equipos y
+ * no se desactiva el zoom manual del usuario desde el viewport. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 1rem !important;
+  }
+}
