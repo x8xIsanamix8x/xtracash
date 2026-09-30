@@ -243,10 +243,10 @@ function ConsumptionsSection({
             <Stack spacing={1.5} sx={{ alignItems: "center", textAlign: "center" }}>
               <Box
                 component="img"
-                src="/entry/onboarding-empieza.webp"
+                src="/home/no-movements.webp"
                 alt=""
                 aria-hidden="true"
-                sx={{ width: "min(100%, 220px)", height: 120, objectFit: "contain" }}
+                sx={{ width: "min(100%, 280px)", height: "clamp(140px, 42vw, 180px)", objectFit: "contain" }}
               />
               <Typography sx={{ color: homeVisualTokens.color.navy, fontWeight: 700 }}>
                 Aún no tienes movimientos ni cuotas ejecutadas.

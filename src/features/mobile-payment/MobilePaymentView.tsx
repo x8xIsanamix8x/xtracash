@@ -217,6 +217,7 @@ export function MobilePaymentView() {
   const reviewTitleRef = useRef<HTMLHeadingElement>(null);
   const detailsTitleRef = useRef<HTMLHeadingElement>(null);
   const resultTitleRef = useRef<HTMLHeadingElement>(null);
+  const paymentContentRef = useRef<HTMLElement>(null);
 
   const selectedContact = useMemo(
     () => directoryEntries.find((contact) => contact.id === selectedContactId) ?? null,
@@ -333,19 +334,33 @@ export function MobilePaymentView() {
   useEffect(() => {
     if (contextStatus !== "ready" && contextStatus !== "preview") return;
 
-    const animationFrame = window.requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: "auto" });
+    let contentAnimationFrame: number | null = null;
+    const layoutAnimationFrame = window.requestAnimationFrame(() => {
+      contentAnimationFrame = window.requestAnimationFrame(() => {
+        if (step === "result") {
+          paymentContentRef.current?.scrollIntoView({
+            block: "start",
+            behavior: "auto",
+          });
+          resultTitleRef.current?.focus({ preventScroll: true });
+          return;
+        }
 
-      if (step === "details") {
-        detailsTitleRef.current?.focus({ preventScroll: true });
-      } else if (step === "review") {
-        reviewTitleRef.current?.focus({ preventScroll: true });
-      } else if (step === "result") {
-        resultTitleRef.current?.focus({ preventScroll: true });
-      }
+        window.scrollTo({ top: 0, behavior: "auto" });
+        if (step === "details") {
+          detailsTitleRef.current?.focus({ preventScroll: true });
+        } else {
+          reviewTitleRef.current?.focus({ preventScroll: true });
+        }
+      });
     });
 
-    return () => window.cancelAnimationFrame(animationFrame);
+    return () => {
+      window.cancelAnimationFrame(layoutAnimationFrame);
+      if (contentAnimationFrame !== null) {
+        window.cancelAnimationFrame(contentAnimationFrame);
+      }
+    };
   }, [contextStatus, step]);
 
   const clearDetailsError = (field: DetailsField) => {
@@ -1045,6 +1060,7 @@ export function MobilePaymentView() {
 
         <Box
           component="section"
+          ref={paymentContentRef}
           aria-labelledby={step === "result"
             ? "mobile-payment-result-title"
             : step === "review"

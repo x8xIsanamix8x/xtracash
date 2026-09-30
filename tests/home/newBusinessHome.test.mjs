@@ -171,7 +171,8 @@ test("mantiene iconos seguros, rutas existentes y lleva el pago de cuotas a Cuot
   assert.match(dashboard, /<ConsumptionCard /);
   assert.match(consumptionCard, /PaymentPurposeIcon/);
   assert.match(dashboard, /PrimaryFinancialCard/);
-  assert.match(dashboard, /onboarding-empieza\.webp/);
+  assert.match(dashboard, /\/home\/no-movements\.webp/);
+  assert.doesNotMatch(dashboard, /onboarding-empieza\.webp/);
   assert.match(details, /PrimaryFinancialCard/);
   assert.match(review, /PrimaryFinancialCard/);
   assert.match(dashboard, /"\/mobile-payment"/);
