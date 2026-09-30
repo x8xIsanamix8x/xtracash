@@ -20,7 +20,6 @@ import type {
   InstallmentsOverview,
   Money,
   PaymentData,
-  PaymentDestination,
   PaymentOption,
   PendingInstallment,
   SourceBank,
@@ -214,7 +213,6 @@ export function parseCoreBanks(value: unknown): readonly SourceBank[] | null {
 export function parseCorePaymentData(
   value: unknown,
   sourceBanks: readonly SourceBank[],
-  configuredDestination?: PaymentDestination,
 ): PaymentData | null {
   if (
     !isRecord(value)
@@ -233,13 +231,11 @@ export function parseCorePaymentData(
   const options = Array.isArray(rawOptions) ? rawOptions.map(parsePaymentOption) : null;
 
   if (
-    (!configuredDestination && (
-      !isNonEmptyString(value.bank)
-      || typeof value.bankCode !== "string"
-      || !/^\d{4}$/.test(value.bankCode)
-      || !isNonEmptyString(value.taxId)
-      || !isNonEmptyString(value.phone)
-    ))
+    !isNonEmptyString(value.bank)
+    || typeof value.bankCode !== "string"
+    || !/^\d{4}$/.test(value.bankCode)
+    || !isNonEmptyString(value.taxId)
+    || !isNonEmptyString(value.phone)
     || !isCalendarDateString(consumption.paymentDate)
     || !isNonEmptyString(rate.bolivaresPerUsd)
     || !isCalendarDateString(rate.effectiveDate)
@@ -253,11 +249,11 @@ export function parseCorePaymentData(
   }
 
   return {
-    destination: configuredDestination ?? {
-      bank: (value.bank as string).trim(),
-      bankCode: value.bankCode as string,
-      taxId: (value.taxId as string).trim(),
-      phone: (value.phone as string).trim(),
+    destination: {
+      bank: value.bank.trim(),
+      bankCode: value.bankCode,
+      taxId: value.taxId.trim(),
+      phone: value.phone.trim(),
       beneficiaryName: optionalText(value.beneficiaryName),
       account: optionalText(value.account),
       accountType: optionalText(value.accountType),
