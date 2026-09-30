@@ -62,7 +62,8 @@ test("el formulario de ingreso móvil ocupa toda la vista con el diseño del Fig
   assert.doesNotMatch(signInSheet, /face-scan\.svg/);
   assert.match(signInSheet, /direction=\{props\.in \? "left" : "right"\}/);
   assert.match(signInSheet, /transitionDuration=\{prefersReducedMotion \? 0 : \{ enter: 220, exit: 180 \}\}/);
-  assert.match(signInSheet, /isotipo-impulsa\.png/);
+  assert.match(signInSheet, /login-impulsa-mascot\.webp/);
+  assert.doesNotMatch(signInSheet, /src="\/entry\/isotipo-impulsa\.png"/);
   assert.match(signInSheet, /themeTokens\.color\.preLoginBackground/);
   assert.match(signInSheet, /borderRadius: "999px"/);
   assert.doesNotMatch(signInSheet, /LoginIlustration|SignInVisual/);
