@@ -18,7 +18,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Environment configuration
 
-Copy `.env.example` to `.env.local` and configure the public Core API URL used by registration and recovery, the server-only URL used by the authentication BFF, a random session secret of at least 32 characters, and the destination shown in payment instructions:
+Copy `.env.example` to `.env.local` and configure the public Core API URL used by registration and recovery, the server-only URL used by the BFF, and a random session secret of at least 32 characters:
 
 ```bash
 NEXT_PUBLIC_CORE_API_URL=https://core-api.sandbox.impulsa.vc
@@ -34,21 +34,21 @@ PAYMENT_DESTINATION_BANK_ACCOUNT=
 PAYMENT_DESTINATION_BANK_ACCOUNT_TYPE=
 ```
 
-Generate `AUTH_SESSION_SECRET` securely for each environment and do not commit its value. Public Next.js environment variables are embedded during `next build`; `CORE_API_URL`, `AUTH_SESSION_SECRET`, and every `PAYMENT_DESTINATION_*` value remain server-only and must be available to the Next.js runtime.
+Generate `AUTH_SESSION_SECRET` securely for each environment and do not commit its value. Public Next.js environment variables are embedded during `next build`; `CORE_API_URL` and `AUTH_SESSION_SECRET` remain server-only and must be available to the Next.js runtime.
 
 `BIOMETRIC_ACCESS_ENABLED` is `false` by default, which hides biometric access from Login and Profile. The existing prototype can only be shown by explicitly setting it to `true`; its sandbox host and Core restrictions still apply.
 
 | Variable | Required | Value |
 | --- | --- | --- |
-| `PAYMENT_DESTINATION_BANK_NAME` | Yes | Commercial bank name shown to the user. |
-| `PAYMENT_DESTINATION_BANK_CODE` | Yes | Four-digit Venezuelan bank code. |
-| `PAYMENT_DESTINATION_TAX_ID` | Yes | Beneficiary RIF, exactly as it should be displayed and copied. |
-| `PAYMENT_DESTINATION_PHONE` | Yes | Mobile-payment recipient in local (`0414...`) or international (`58414...`) format. Spaces and hyphens are accepted. |
-| `PAYMENT_DESTINATION_BENEFICIARY_NAME` | For transfers | Legal or personal name of the bank-account holder. |
-| `PAYMENT_DESTINATION_BANK_ACCOUNT` | For transfers | Twenty-digit bank-account number. |
-| `PAYMENT_DESTINATION_BANK_ACCOUNT_TYPE` | For transfers | Account type (`CTE`/`CORRIENTE` or `AHO`/`AHORRO`). |
+| `PAYMENT_DESTINATION_BANK_NAME` | No | Legacy reference for the commercial bank name. |
+| `PAYMENT_DESTINATION_BANK_CODE` | No | Legacy reference for the four-digit Venezuelan bank code. |
+| `PAYMENT_DESTINATION_TAX_ID` | No | Legacy reference for the beneficiary RIF. |
+| `PAYMENT_DESTINATION_PHONE` | No | Legacy reference for the mobile-payment recipient. |
+| `PAYMENT_DESTINATION_BENEFICIARY_NAME` | No | Legacy reference for the bank-account holder. |
+| `PAYMENT_DESTINATION_BANK_ACCOUNT` | No | Legacy reference for the bank-account number. |
+| `PAYMENT_DESTINATION_BANK_ACCOUNT_TYPE` | No | Legacy reference for the account type. |
 
-The final three variables are one optional group: leave all three empty to offer only mobile payment, or configure all three to also offer bank transfer. These are beneficiary details, not information entered by the customer who reports the payment.
+The variables remain in `.env.example` for deployment compatibility, but the installment payment screen gets the current beneficiary data from Core's authenticated `GET /api/impulsate-movil/datos-pago` response. Core also decides whether mobile payment and bank transfer are available.
 
 ## Registration behavior
 

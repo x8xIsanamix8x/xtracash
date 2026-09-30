@@ -303,10 +303,6 @@ test("traduce los errores de Core a errores del BFF", () => {
   assert.deepEqual(map(500), { status: 502, body: { error: "upstream_error" } });
   assert.deepEqual(map(null, null, "network"), { status: 503, body: { error: "service_unavailable" } });
   assert.deepEqual(map(null, null, "protocol"), { status: 502, body: { error: "upstream_error" } });
-  assert.deepEqual(
-    map(null, null, "payment_configuration"),
-    { status: 404, body: { error: "payment_data_unconfigured" } },
-  );
 });
 
 const validReport = {
