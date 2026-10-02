@@ -17,6 +17,7 @@ import {
 import { alpha } from "@mui/material/styles";
 
 import { PrimaryFinancialCard } from "@/components/PrimaryFinancialCard";
+import emptyConsumptionsImage from "../../../../public/home/empty-consumptions.png";
 import type { HomeDashboardViewModel } from "../newBusinessTypes";
 import { homeVisualTokens } from "../homeVisualTokens";
 import { ConsumptionCard } from "./ConsumptionCard";
@@ -241,12 +242,16 @@ function ConsumptionsSection({
         >
           <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
             <Stack spacing={1.5} sx={{ alignItems: "center", textAlign: "center" }}>
-              <Box
-                component="img"
-                src="/entry/onboarding-empieza.webp"
+              <Image
                 alt=""
                 aria-hidden="true"
-                sx={{ width: "min(100%, 220px)", height: 120, objectFit: "contain" }}
+                sizes="(max-width: 600px) 260px, 280px"
+                src={emptyConsumptionsImage}
+                style={{
+                  width: "min(100%, 280px)",
+                  height: "auto",
+                  objectFit: "contain",
+                }}
               />
               <Typography sx={{ color: homeVisualTokens.color.navy, fontWeight: 700 }}>
                 Aún no tienes movimientos ni cuotas ejecutadas.
