@@ -289,7 +289,6 @@ function ConsumptionsSection({
         >
           <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
             <Stack spacing={1.5} sx={{ alignItems: "center", textAlign: "center" }}>
-<<<<<<< HEAD
               <Image
                 alt=""
                 aria-hidden="true"
@@ -300,14 +299,6 @@ function ConsumptionsSection({
                   height: "auto",
                   objectFit: "contain",
                 }}
-=======
-              <Box
-                component="img"
-                src="/home/no-movements.webp"
-                alt=""
-                aria-hidden="true"
-                sx={{ width: "min(100%, 280px)", height: "clamp(140px, 42vw, 180px)", objectFit: "contain" }}
->>>>>>> 011aa641c00d13a098cdc211e03ed480e734198a
               />
               <Typography sx={{ color: homeVisualTokens.color.navy, fontWeight: 700 }}>
                 Aún no tienes movimientos ni cuotas ejecutadas.
