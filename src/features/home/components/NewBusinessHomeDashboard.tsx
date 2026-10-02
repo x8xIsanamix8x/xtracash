@@ -1,8 +1,11 @@
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   LockRounded,
   NotificationsNoneRounded,
+  VisibilityOffRounded,
+  VisibilityRounded,
   WarningAmberRounded,
 } from "@mui/icons-material";
 import {
@@ -100,6 +103,7 @@ function BalanceCard({
 }: Readonly<{
   balance: HomeDashboardViewModel["balance"];
 }>) {
+  const [isAvailableVisible, setIsAvailableVisible] = useState(false);
   const isReportAction = balance.primaryAction === "reportInstallment";
   const actionStyles = {
     minHeight: 48,
@@ -115,17 +119,47 @@ function BalanceCard({
     <PrimaryFinancialCard labelledBy="home-balance-title">
       <Stack spacing={2} sx={{ alignItems: "stretch" }}>
         <Stack spacing={0.5} sx={{ textAlign: "left", alignItems: "flex-start" }}>
-          <Typography
-            component="div"
-            id="home-balance-title"
-            sx={{ color: homeVisualTokens.color.white, fontWeight: 700 }}
+          <Stack
+            direction="row"
+            sx={{ width: "100%", alignItems: "center", justifyContent: "space-between" }}
           >
-            <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
-              {isReportAction && <LockRounded aria-hidden="true" sx={{ fontSize: 20 }} />}
-              <span>Disponible</span>
-            </Stack>
-          </Typography>
+            <Typography
+              component="div"
+              id="home-balance-title"
+              sx={{ color: homeVisualTokens.color.white, fontWeight: 700 }}
+            >
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+                {isReportAction && <LockRounded aria-hidden="true" sx={{ fontSize: 20 }} />}
+                <span>Disponible</span>
+              </Stack>
+            </Typography>
+            <IconButton
+              aria-label={isAvailableVisible ? "Ocultar disponible" : "Mostrar disponible"}
+              aria-controls="home-available-amount"
+              aria-pressed={isAvailableVisible}
+              onClick={() => setIsAvailableVisible((current) => !current)}
+              type="button"
+              sx={{
+                width: 44,
+                height: 44,
+                flexShrink: 0,
+                color: homeVisualTokens.color.white,
+                "&:hover": { bgcolor: alpha(homeVisualTokens.color.white, 0.12) },
+                "&:focus-visible": {
+                  outline: `2px solid ${homeVisualTokens.color.white}`,
+                  outlineOffset: 2,
+                },
+              }}
+            >
+              {isAvailableVisible ? <VisibilityRounded /> : <VisibilityOffRounded />}
+            </IconButton>
+          </Stack>
           <Typography
+            id="home-available-amount"
+            role="status"
+            aria-label={isAvailableVisible ? undefined : "Disponible oculto"}
+            aria-live="polite"
+            aria-atomic="true"
             sx={{
               color: homeVisualTokens.color.white,
               fontSize: "clamp(1.875rem, 9vw, 2.75rem)",
@@ -135,7 +169,7 @@ function BalanceCard({
               overflowWrap: "anywhere",
             }}
           >
-            {balance.available}
+            {isAvailableVisible ? balance.available : "Bs. ••••••"}
           </Typography>
           <Typography
             sx={{
