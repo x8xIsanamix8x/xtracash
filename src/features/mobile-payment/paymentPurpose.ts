@@ -30,21 +30,21 @@ export const paymentIconIds: readonly PaymentIconId[] = [
 
 // Orden que se muestra en Solicitudes de pago, igual al orden entregado en el diseño.
 export const paymentIconOptionIds: readonly PaymentIconId[] = [
-  "house",
-  "wallet",
-  "card",
-  "car",
-  "fuel",
-  "scooter",
-  "calendar",
-  "people",
-  "school",
-  "badge",
+  "paw-print",
   "sofa",
-  "envelope",
   "gift",
   "coffee",
   "heart",
+  "shopping-cart",
+  "badge",
+  "school",
+  "calendar",
+  "wallet",
+  "fuel",
+  "car",
+  "card",
+  "receipt",
+  "house",
 ];
 
 const paymentIconIdSet = new Set<string>(paymentIconIds);
@@ -52,23 +52,23 @@ const paymentIconIdSet = new Set<string>(paymentIconIds);
 const paymentIconLabels: Readonly<Record<PaymentIconId, string>> = {
   house: "Hogar",
   wallet: "Dinero",
-  card: "Pagos",
+  card: "Tecnología",
   car: "Transporte",
   fuel: "Gasolina",
   scooter: "Movilidad",
   calendar: "Agenda",
   people: "Familia",
   school: "Educación",
-  badge: "Reconocimientos",
-  sofa: "Casa",
+  badge: "Promociones",
+  sofa: "Remodelación",
   envelope: "Envíos",
   gift: "Regalos",
   coffee: "Comida",
   heart: "Bienestar",
   stethoscope: "Salud",
   "paw-print": "Mascotas",
-  receipt: "Facturas",
-  "shopping-cart": "Alimentos",
+  receipt: "Servicios",
+  "shopping-cart": "Dulces",
   "shopping-bag": "Compras",
   briefcase: "Trabajo",
   shapes: "Otros",
@@ -123,16 +123,20 @@ export function parsePaymentPurpose(value: unknown): PaymentPurpose | null {
   }
 
   const candidate = value as Record<string, unknown>;
+  const iconId = candidate.iconId;
+  const parsedIconId = iconId === null
+    ? null
+    : isPaymentIconId(iconId) ? iconId : undefined;
   if (
     typeof candidate.concept !== "string"
     || candidate.concept.trim().length > maxPaymentConceptLength
-    || (candidate.iconId !== null && !isPaymentIconId(candidate.iconId))
+    || parsedIconId === undefined
   ) {
     return null;
   }
 
   return {
     concept: candidate.concept.trim(),
-    iconId: candidate.iconId,
+    iconId: parsedIconId,
   };
 }
