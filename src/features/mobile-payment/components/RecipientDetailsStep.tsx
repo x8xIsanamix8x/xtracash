@@ -44,6 +44,7 @@ import type {
   RecipientMode,
 } from "../types";
 import { PaymentIconSelector } from "./PaymentIconSelector";
+import { MobilePaymentGuide } from "./MobilePaymentGuide";
 import { paymentFieldSx } from "./paymentFieldStyle";
 
 type RecipientDetailsStepProps = Readonly<{
@@ -169,7 +170,10 @@ export function RecipientDetailsStep({
                 {accessCopy.label}
                 <Box aria-hidden="true" component="span" sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: accessCopy.indicatorColor }} />
               </Typography>
-              {isPreview && <Typography sx={{ color: "#FFD4AA", fontSize: 11, fontWeight: 600 }}>Datos de ejemplo</Typography>}
+              <Stack direction="row" sx={{ alignItems: "center", gap: 0.5 }}>
+                {isPreview && <Typography sx={{ color: "#FFD4AA", fontSize: 11, fontWeight: 600 }}>Datos de ejemplo</Typography>}
+                <MobilePaymentGuide autoOpen={accessStatus === "active"} disabled={isSubmitting} />
+              </Stack>
             </Stack>
             <Typography sx={{ fontSize: "clamp(1.875rem, 9vw, 2.75rem)", fontWeight: 800, letterSpacing: "-0.035em", lineHeight: 1.1, overflowWrap: "anywhere" }}>
               {availableLabel}
