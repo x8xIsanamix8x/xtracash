@@ -1,8 +1,11 @@
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   LockRounded,
   NotificationsNoneRounded,
+  VisibilityOffRounded,
+  VisibilityRounded,
   WarningAmberRounded,
 } from "@mui/icons-material";
 import {
@@ -18,6 +21,7 @@ import {
 import { alpha } from "@mui/material/styles";
 
 import { PrimaryFinancialCard } from "@/components/PrimaryFinancialCard";
+import emptyConsumptionsImage from "../../../../public/home/empty-consumptions.png";
 import type { HomeDashboardViewModel } from "../newBusinessTypes";
 import { homeVisualTokens } from "../homeVisualTokens";
 import { ConsumptionCard } from "./ConsumptionCard";
@@ -112,6 +116,7 @@ function BalanceCard({
 }: Readonly<{
   balance: HomeDashboardViewModel["balance"];
 }>) {
+  const [isAvailableVisible, setIsAvailableVisible] = useState(false);
   const isReportAction = balance.primaryAction === "reportInstallment";
   const actionStyles = {
     minHeight: 48,
@@ -127,17 +132,47 @@ function BalanceCard({
     <PrimaryFinancialCard labelledBy="home-balance-title">
       <Stack spacing={2} sx={{ alignItems: "stretch" }}>
         <Stack spacing={0.5} sx={{ textAlign: "left", alignItems: "flex-start" }}>
-          <Typography
-            component="div"
-            id="home-balance-title"
-            sx={{ color: homeVisualTokens.color.white, fontWeight: 700 }}
+          <Stack
+            direction="row"
+            sx={{ width: "100%", alignItems: "center", justifyContent: "space-between" }}
           >
-            <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
-              {isReportAction && <LockRounded aria-hidden="true" sx={{ fontSize: 20 }} />}
-              <span>Disponible</span>
-            </Stack>
-          </Typography>
+            <Typography
+              component="div"
+              id="home-balance-title"
+              sx={{ color: homeVisualTokens.color.white, fontWeight: 700 }}
+            >
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+                {isReportAction && <LockRounded aria-hidden="true" sx={{ fontSize: 20 }} />}
+                <span>Disponible</span>
+              </Stack>
+            </Typography>
+            <IconButton
+              aria-label={isAvailableVisible ? "Ocultar disponible y límite" : "Mostrar disponible y límite"}
+              aria-controls="home-available-amount home-credit-limit"
+              aria-pressed={isAvailableVisible}
+              onClick={() => setIsAvailableVisible((current) => !current)}
+              type="button"
+              sx={{
+                width: 44,
+                height: 44,
+                flexShrink: 0,
+                color: homeVisualTokens.color.white,
+                "&:hover": { bgcolor: alpha(homeVisualTokens.color.white, 0.12) },
+                "&:focus-visible": {
+                  outline: `2px solid ${homeVisualTokens.color.white}`,
+                  outlineOffset: 2,
+                },
+              }}
+            >
+              {isAvailableVisible ? <VisibilityRounded /> : <VisibilityOffRounded />}
+            </IconButton>
+          </Stack>
           <Typography
+            id="home-available-amount"
+            role="status"
+            aria-label={isAvailableVisible ? undefined : "Disponible oculto"}
+            aria-live="polite"
+            aria-atomic="true"
             sx={{
               color: homeVisualTokens.color.white,
               fontSize: "clamp(1.875rem, 9vw, 2.75rem)",
@@ -147,15 +182,16 @@ function BalanceCard({
               overflowWrap: "anywhere",
             }}
           >
-            {balance.available}
+            {isAvailableVisible ? balance.available : "Bs. ••••••"}
           </Typography>
           <Typography
+            id="home-credit-limit"
             sx={{
               color: homeVisualTokens.color.white,
               fontSize: { xs: "0.875rem", sm: "1rem" },
             }}
           >
-            Línea total: {balance.totalCredit}
+            Línea total: {isAvailableVisible ? balance.totalCredit : "Bs. ••••••"}
           </Typography>
         </Stack>
         {/* "Reactivar" lleva a Cuotas: ahí se paga el total pendiente. */}
@@ -254,12 +290,16 @@ function ConsumptionsSection({
         >
           <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
             <Stack spacing={1.5} sx={{ alignItems: "center", textAlign: "center" }}>
-              <Box
-                component="img"
-                src="/home/no-movements.webp"
+              <Image
                 alt=""
                 aria-hidden="true"
-                sx={{ width: "min(100%, 280px)", height: "clamp(140px, 42vw, 180px)", objectFit: "contain" }}
+                sizes="(max-width: 600px) 260px, 280px"
+                src={emptyConsumptionsImage}
+                style={{
+                  width: "min(100%, 280px)",
+                  height: "auto",
+                  objectFit: "contain",
+                }}
               />
               <Typography sx={{ color: homeVisualTokens.color.navy, fontWeight: 700 }}>
                 Aún no tienes movimientos ni cuotas ejecutadas.

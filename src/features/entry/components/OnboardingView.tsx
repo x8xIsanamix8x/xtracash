@@ -27,10 +27,12 @@ export function OnboardingView({
 }: OnboardingViewProps) {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const previousStepIndexRef = useRef(stepIndex);
+  const swipeStartRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const isLastStep = stepIndex === totalSteps - 1;
 
   useEffect(() => {
     if (previousStepIndexRef.current !== stepIndex) {
+      swipeStartRef.current = null;
       titleRef.current?.focus();
       previousStepIndexRef.current = stepIndex;
     }
@@ -69,6 +71,25 @@ export function OnboardingView({
       </Box>
 
       <Box
+        onPointerDown={(event) => {
+          if (event.pointerType !== "touch") return;
+          swipeStartRef.current = event.isPrimary
+            ? { pointerId: event.pointerId, x: event.clientX, y: event.clientY }
+            : null;
+        }}
+        onPointerCancel={() => { swipeStartRef.current = null; }}
+        onPointerUp={(event) => {
+          const start = swipeStartRef.current;
+          swipeStartRef.current = null;
+          if (!start || event.pointerId !== start.pointerId) return;
+
+          const dx = event.clientX - start.x;
+          const dy = event.clientY - start.y;
+          if (Math.abs(dx) <= 48 || Math.abs(dx) <= Math.abs(dy) * 1.3) return;
+
+          if (dx < 0 && !isLastStep) onNext();
+          if (dx > 0 && stepIndex > 0) onBack();
+        }}
         sx={{
           position: "relative",
           zIndex: 1,
@@ -77,6 +98,7 @@ export function OnboardingView({
           gridTemplateRows: "minmax(96px, 1fr) auto",
           overflowY: "auto",
           overflowX: "hidden",
+          touchAction: "pan-y pinch-zoom",
           py: 1,
         }}
       >
@@ -119,6 +141,17 @@ export function OnboardingView({
         spacing={1}
         sx={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 520, mx: "auto", pt: 2 }}
       >
+        <Typography
+          color="text.secondary"
+          variant="caption"
+          sx={{
+            display: "none",
+            textAlign: "center",
+            "@media (any-pointer: coarse)": { display: "block" },
+          }}
+        >
+          Desliza para cambiar de paso
+        </Typography>
         <Box
           aria-label={`Paso ${stepIndex + 1} de ${totalSteps}`}
           role="img"
