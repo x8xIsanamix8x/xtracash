@@ -147,8 +147,8 @@ function BalanceCard({
               </Stack>
             </Typography>
             <IconButton
-              aria-label={isAvailableVisible ? "Ocultar disponible" : "Mostrar disponible"}
-              aria-controls="home-available-amount"
+              aria-label={isAvailableVisible ? "Ocultar disponible y límite" : "Mostrar disponible y límite"}
+              aria-controls="home-available-amount home-credit-limit"
               aria-pressed={isAvailableVisible}
               onClick={() => setIsAvailableVisible((current) => !current)}
               type="button"
@@ -185,12 +185,13 @@ function BalanceCard({
             {isAvailableVisible ? balance.available : "Bs. ••••••"}
           </Typography>
           <Typography
+            id="home-credit-limit"
             sx={{
               color: homeVisualTokens.color.white,
               fontSize: { xs: "0.875rem", sm: "1rem" },
             }}
           >
-            Línea total: {balance.totalCredit}
+            Línea total: {isAvailableVisible ? balance.totalCredit : "Bs. ••••••"}
           </Typography>
         </Stack>
         {/* "Reactivar" lleva a Cuotas: ahí se paga el total pendiente. */}

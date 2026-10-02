@@ -1,6 +1,7 @@
 import {
   AccountBalanceRounded,
   EditRounded,
+  ScheduleRounded,
 } from "@mui/icons-material";
 import {
   Box,
@@ -82,7 +83,7 @@ function ReviewRow({ label, value }: ReviewItemProps) {
       </Typography>
       <Typography
         component="dd"
-        sx={{ m: 0, color: "secondary.main", fontWeight: 700, textAlign: "right" }}
+        sx={{ m: 0, color: "secondary.main", fontWeight: 700, textAlign: "right", flexShrink: 0 }}
       >
         {value}
       </Typography>
@@ -132,11 +133,11 @@ export function ReviewStep({
       aria-busy={isSubmitting}
       sx={{ flex: 1, display: "flex", flexDirection: "column" }}
     >
-      <Stack sx={{ flex: 1, gap: "2.1875rem" }}>
+      <Stack sx={{ flex: 1, gap: { xs: 2, sm: "2.1875rem" } }}>
         <PrimaryFinancialCard labelledBy="mobile-payment-total-title">
           <Stack spacing={0.5} sx={{ alignItems: "flex-start", textAlign: "left" }}>
             <Typography id="mobile-payment-total-title" sx={{ fontWeight: 700 }}>
-              Total a pagar
+              Total a descontar del disponible
             </Typography>
             <Typography
               sx={{
@@ -148,6 +149,9 @@ export function ReviewStep({
               }}
             >
               {totalLabel}
+            </Typography>
+            <Typography sx={{ color: alpha("#fff", 0.85), fontSize: 13, lineHeight: 1.4 }}>
+              Este monto se restará de tu disponible.
             </Typography>
             <Stack
               direction="row"
@@ -175,6 +179,36 @@ export function ReviewStep({
             boxShadow: "0 0 1.25rem rgba(2, 0, 77, 0.08)",
           }}
         >
+          <Box
+            component="section"
+            aria-labelledby="mobile-payment-interest-free-title"
+            sx={{
+              p: 2,
+              borderRadius: 3,
+              border: "1px solid",
+              borderColor: alpha("#FF7900", 0.35),
+              borderLeft: "4px solid #FF7900",
+              bgcolor: "#FFF3E8",
+              color: "secondary.main",
+            }}
+          >
+            <Stack direction="row" spacing={1.25} sx={{ alignItems: "flex-start" }}>
+              <ScheduleRounded aria-hidden="true" sx={{ mt: 0.25, fontSize: 28, flexShrink: 0 }} />
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  component="h2"
+                  id="mobile-payment-interest-free-title"
+                  sx={{ fontSize: "1.125rem", fontWeight: 800, lineHeight: 1.3 }}
+                >
+                  {formatDays(financing.interestFreeDays)} sin comisión por intereses
+                </Typography>
+                <Typography sx={{ mt: 0.75, fontSize: 14, lineHeight: 1.5 }}>
+                  Luego de este periodo, se comenzarán a generar los intereses correspondientes.
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
+
           <Stack spacing={2.5} sx={{ p: 2, pb: 1 }}>
             <Stack
               direction="row"
@@ -269,9 +303,9 @@ export function ReviewStep({
                 </Typography>
               </Stack>
               <Box component="dl" sx={{ m: 0, display: "grid", gap: 1.25 }}>
-                <ReviewRow label="Monto solicitado" value={amountLabel} />
+                <ReviewRow label="Monto a enviar" value={amountLabel} />
                 <ReviewRow label="Comisión" value={feeLabel} />
-                <ReviewRow label="Total a pagar" value={totalLabel} />
+                <ReviewRow label="Total a descontar del disponible" value={totalLabel} />
               </Box>
               {recipient.saveToDirectory && (
                 <Typography color="text.secondary" variant="body2">
@@ -327,23 +361,6 @@ export function ReviewStep({
                     </Typography>
                   </Box>
                 ))}
-              </Box>
-
-              <Box
-                sx={{
-                  px: 1.5,
-                  py: 1.25,
-                  borderRadius: 2.5,
-                  bgcolor: "#FFF3E8",
-                  color: "secondary.main",
-                }}
-              >
-                <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
-                  {formatDays(financing.interestFreeDays)} sin comisión por intereses
-                </Typography>
-                <Typography color="text.secondary" sx={{ mt: 0.25, fontSize: 12 }}>
-                  Luego de este periodo, se comenzarán a generar los intereses correspondientes.
-                </Typography>
               </Box>
 
               <Box component="dl" sx={{ m: 0, display: "grid", gap: 1.25 }}>
