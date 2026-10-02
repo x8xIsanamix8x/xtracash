@@ -2,6 +2,7 @@ const protectedRoutes = [
   "/home",
   "/installments",
   "/movements",
+  "/notifications",
   "/mobile-payment",
   "/profile",
 ] as const;
