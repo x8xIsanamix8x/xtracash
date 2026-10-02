@@ -85,7 +85,7 @@ export function PaymentIconSelector({
       type="button"
       variant="text"
     >
-      <Icon sx={{ fontSize: "1.75rem" }} />
+      <Icon sx={{ fontSize: "2.35rem" }} />
     </Button>
   );
 

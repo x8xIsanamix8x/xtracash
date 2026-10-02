@@ -31,7 +31,15 @@ export const paymentFieldSx = {
     whiteSpace: "normal !important",
   },
   "& .MuiInputLabel-root": {
-    fontSize: "0.875rem",
+    color: "secondary.main",
+    fontSize: "1.125rem",
+    fontWeight: 600,
+    "&.Mui-focused": {
+      color: "primary.main",
+    },
+    "&.Mui-error": {
+      color: "error.main",
+    },
   },
   "& .MuiFormHelperText-root": {
     mx: "0.25rem",

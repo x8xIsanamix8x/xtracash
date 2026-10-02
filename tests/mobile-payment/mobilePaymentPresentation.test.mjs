@@ -125,3 +125,18 @@ test("mantiene estable el viewport de iOS y hace visible el procesamiento del pa
   assert.match(stickyActions, /role="status"/);
   assert.match(stickyActions, /Confirmando transferencia…/);
 });
+
+test("mantiene legibles los labels de los campos de Pago Móvil", async () => {
+  const fieldStyles = await readFile(
+    new URL(
+      "src/features/mobile-payment/components/paymentFieldStyle.ts",
+      projectUrl,
+    ),
+    "utf8",
+  );
+
+  assert.match(
+    fieldStyles,
+    /"& \.MuiInputLabel-root": \{\s*color: "secondary\.main",\s*fontSize: "1\.125rem",\s*fontWeight: 600,/,
+  );
+});
