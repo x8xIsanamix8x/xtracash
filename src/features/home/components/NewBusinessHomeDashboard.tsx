@@ -7,6 +7,7 @@ import {
 } from "@mui/icons-material";
 import {
   Box,
+  Badge,
   Button,
   Card,
   CardContent,
@@ -25,16 +26,19 @@ type NewBusinessHomeDashboardProps = Readonly<{
   greeting: string;
   viewModel: HomeDashboardViewModel;
   onNotifications: () => void;
+  unreadNotifications: number;
 }>;
 
 function HomeHeader({
   greeting,
   firstName,
   onNotifications,
+  unreadNotifications,
 }: Readonly<{
   greeting: string;
   firstName: string;
   onNotifications: () => void;
+  unreadNotifications: number;
 }>) {
   return (
     <Stack component="header" spacing={1.5}>
@@ -61,7 +65,9 @@ function HomeHeader({
           />
         </Box>
         <IconButton
-          aria-label="Ver notificaciones"
+          aria-label={unreadNotifications > 0
+            ? `Ver notificaciones, ${unreadNotifications} sin leer`
+            : "Ver notificaciones"}
           onClick={onNotifications}
           sx={{
             flexShrink: 0,
@@ -70,7 +76,14 @@ function HomeHeader({
             "&:active": { bgcolor: homeVisualTokens.color.neutralSurface },
           }}
         >
-          <NotificationsNoneRounded />
+          <Badge
+            badgeContent={unreadNotifications > 99 ? "99+" : unreadNotifications}
+            color="error"
+            invisible={unreadNotifications === 0}
+            overlap="circular"
+          >
+            <NotificationsNoneRounded />
+          </Badge>
         </IconButton>
       </Stack>
       <Stack spacing={0.5} sx={{ minWidth: 0 }}>
@@ -373,6 +386,7 @@ export function NewBusinessHomeDashboard({
   greeting,
   viewModel,
   onNotifications,
+  unreadNotifications,
 }: NewBusinessHomeDashboardProps) {
   return (
     <Stack spacing={2.5}>
@@ -380,6 +394,7 @@ export function NewBusinessHomeDashboard({
         greeting={greeting}
         firstName={viewModel.firstName}
         onNotifications={onNotifications}
+        unreadNotifications={unreadNotifications}
       />
       <BalanceCard balance={viewModel.balance} />
       {viewModel.notice && (
