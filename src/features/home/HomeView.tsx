@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Container, Snackbar } from "@mui/material";
+import { Box, Container } from "@mui/material";
 
 import {
   APP_BOTTOM_NAVIGATION_HEIGHT,
@@ -13,6 +13,7 @@ import {
   consumeMasterOnboardingPrompt,
 } from "@/features/master-onboarding";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
+import { getUnreadCount, NotificationsServiceError } from "@/features/notifications/services/notifications";
 
 import { NewBusinessHomeDashboard } from "./components/NewBusinessHomeDashboard";
 import { newBusinessHomeMocks } from "./data/newBusinessHomeMocks";
@@ -29,7 +30,7 @@ import type { OnboardingMasterProgress } from "./types";
 
 export function HomeView() {
   const router = useRouter();
-  const [notice, setNotice] = useState("");
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [homeViewModel, setHomeViewModel] = useState<HomeDashboardViewModel | null>(null);
   const [greeting, setGreeting] = useState("Buenos días");
   const [masterOnboardingProgress, setMasterOnboardingProgress] = useState<
@@ -62,6 +63,28 @@ export function HomeView() {
 
     return () => {
       controller.abort();
+    };
+  }, [router]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const refreshUnreadCount = () => {
+      void getUnreadCount(controller.signal)
+        .then((count) => {
+          if (!controller.signal.aborted) setUnreadNotifications(count);
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          if (error instanceof NotificationsServiceError && error.type === "unauthenticated") {
+            router.replace(sessionExpiredUrl);
+          }
+        });
+    };
+    refreshUnreadCount();
+    window.addEventListener("focus", refreshUnreadCount);
+    return () => {
+      controller.abort();
+      window.removeEventListener("focus", refreshUnreadCount);
     };
   }, [router]);
 
@@ -115,9 +138,8 @@ export function HomeView() {
         {homeViewModel && (
           <NewBusinessHomeDashboard
             greeting={greeting}
-            onNotifications={() => setNotice(
-              "Las notificaciones estarán disponibles en la siguiente etapa.",
-            )}
+            onNotifications={() => router.push("/notifications")}
+            unreadNotifications={unreadNotifications}
             viewModel={homeViewModel}
           />
         )}
@@ -131,19 +153,6 @@ export function HomeView() {
           progress={masterOnboardingProgress}
         />
       )}
-      <Snackbar
-        autoHideDuration={2800}
-        message={(
-          <Box component="span" role="status" aria-live="polite">
-            {notice}
-          </Box>
-        )}
-        onClose={() => setNotice("")}
-        open={Boolean(notice)}
-        sx={{
-          bottom: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 16}px + env(safe-area-inset-bottom)) !important`,
-        }}
-      />
     </Box>
   );
 }

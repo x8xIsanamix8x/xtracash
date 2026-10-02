@@ -7,7 +7,31 @@ import {
   normalizePaymentIconId,
   parsePaymentPurpose,
   paymentIconIds,
+  paymentIconOptionIds,
 } from "../../src/features/mobile-payment/paymentPurpose.ts";
+
+test("muestra el nuevo catálogo visual en el orden del diseño", () => {
+  assert.deepEqual(paymentIconOptionIds, [
+    "paw-print",
+    "sofa",
+    "gift",
+    "coffee",
+    "heart",
+    "shopping-cart",
+    "badge",
+    "school",
+    "calendar",
+    "wallet",
+    "fuel",
+    "car",
+    "card",
+    "receipt",
+    "house",
+  ]);
+  assert.equal(getPaymentIconLabel("paw-print"), "Mascotas");
+  assert.equal(getPaymentIconLabel("card"), "Tecnología");
+  assert.equal(getPaymentIconLabel("receipt"), "Servicios");
+});
 
 test("acepta el concepto y los identificadores estables del pool de iconos", () => {
   assert.equal(maxPaymentConceptLength, 40);

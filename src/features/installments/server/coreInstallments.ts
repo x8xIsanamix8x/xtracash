@@ -20,11 +20,9 @@ import {
   parseCoreUnpaidInstallments,
 } from "./coreContracts";
 import type { CoreProblem } from "./coreContracts";
-import { getPaymentDestinationFromEnvironment } from "./paymentDestinationConfiguration";
 
 export type CoreInstallmentsErrorType =
   | "configuration"
-  | "payment_configuration"
   | "http"
   | "network"
   | "protocol";
@@ -140,9 +138,6 @@ export async function getPaymentDataFromCore(
   paymentDate: string | null,
   signal: AbortSignal,
 ): Promise<PaymentData> {
-  const destination = getPaymentDestinationFromEnvironment();
-  if (!destination) throw new CoreInstallmentsError("payment_configuration");
-
   const query = new URLSearchParams({ consumptionId });
   if (paymentDate) query.set("paymentDate", paymentDate);
 
@@ -156,7 +151,7 @@ export async function getPaymentDataFromCore(
   ]);
 
   const banks = parsedOrThrow(parseCoreBanks(banksBody));
-  return parsedOrThrow(parseCorePaymentData(dataBody, banks, destination));
+  return parsedOrThrow(parseCorePaymentData(dataBody, banks));
 }
 
 export async function createInstallmentReportInCore(

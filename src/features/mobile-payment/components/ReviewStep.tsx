@@ -351,26 +351,7 @@ export function ReviewStep({
                 <ReviewRow label="Plazo total" value={formatDays(financing.totalTermDays)} />
                 <ReviewRow label="Interés diario" value={formatPercentage(financing.dailyInterestRate)} />
               </Box>
-
             </Stack>
-
-            {isSubmitting && (
-              <Stack
-                aria-live="polite"
-                role="status"
-                direction="row"
-                spacing={1}
-                sx={(theme) => ({
-                  alignItems: "center",
-                  p: 1.5,
-                  borderRadius: 2.5,
-                  bgcolor: alpha(theme.palette.primary.main, 0.08),
-                })}
-              >
-                <CircularProgress aria-hidden="true" size={22} />
-                <Typography>Confirmando transferencia…</Typography>
-              </Stack>
-            )}
           </Stack>
 
           <Box
@@ -387,6 +368,25 @@ export function ReviewStep({
               bgcolor: "common.white",
             }}
           >
+            {isSubmitting && (
+              <Stack
+                aria-live="polite"
+                role="status"
+                direction="row"
+                spacing={1}
+                sx={(theme) => ({
+                  mb: 1.5,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  p: 1.5,
+                  borderRadius: 2.5,
+                  bgcolor: alpha(theme.palette.primary.main, 0.08),
+                })}
+              >
+                <CircularProgress aria-hidden="true" size={22} />
+                <Typography>Confirmando transferencia…</Typography>
+              </Stack>
+            )}
             <Button
               disabled={isSubmitting}
               fullWidth

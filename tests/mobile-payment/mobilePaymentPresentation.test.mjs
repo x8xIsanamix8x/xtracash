@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -13,6 +14,8 @@ import {
   getMobilePaymentNavigationDecision,
   hasMobilePaymentProgress,
 } from "../../src/features/mobile-payment/navigation.ts";
+
+const projectUrl = new URL("../../", import.meta.url);
 
 test("conserva el código y el nombre bancario completo", () => {
   assert.equal(
@@ -99,4 +102,41 @@ test("bloquea la navegación transaccional y libera las pantallas de resultado",
     isTransactionPending: false,
     step: "details",
   }), "stay");
+});
+
+test("mantiene estable el viewport de iOS y hace visible el procesamiento del pago", async () => {
+  const [globalStyles, mobilePayment, reviewStep] = await Promise.all([
+    readFile(new URL("src/app/globals.css", projectUrl), "utf8"),
+    readFile(
+      new URL("src/features/mobile-payment/MobilePaymentView.tsx", projectUrl),
+      "utf8",
+    ),
+    readFile(
+      new URL("src/features/mobile-payment/components/ReviewStep.tsx", projectUrl),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(globalStyles, /@supports \(-webkit-touch-callout: none\)/);
+  assert.match(globalStyles, /input,\s*textarea,\s*select \{\s*font-size: 1rem !important;/);
+  assert.match(mobilePayment, /paymentContentRef\.current\?\.scrollIntoView/);
+
+  const stickyActions = reviewStep.slice(reviewStep.indexOf('position: { xs: "sticky"'));
+  assert.match(stickyActions, /role="status"/);
+  assert.match(stickyActions, /Confirmando transferencia…/);
+});
+
+test("mantiene legibles los labels de los campos de Pago Móvil", async () => {
+  const fieldStyles = await readFile(
+    new URL(
+      "src/features/mobile-payment/components/paymentFieldStyle.ts",
+      projectUrl,
+    ),
+    "utf8",
+  );
+
+  assert.match(
+    fieldStyles,
+    /"& \.MuiInputLabel-root": \{\s*color: "secondary\.main",\s*fontSize: "1\.125rem",\s*fontWeight: 600,/,
+  );
 });

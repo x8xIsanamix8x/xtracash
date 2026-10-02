@@ -330,12 +330,12 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
                 alt=""
                 aria-hidden="true"
                 component="img"
-                src="/entry/isotipo-impulsa.png"
+                src="/entry/login-impulsa-mascot.webp"
                 sx={{
                   display: "block",
-                  width: 74,
+                  width: 112,
                   height: "auto",
-                  "@media (max-height: 700px)": { width: 48 },
+                  "@media (max-height: 700px)": { width: 72 },
                 }}
               />
             </Box>
