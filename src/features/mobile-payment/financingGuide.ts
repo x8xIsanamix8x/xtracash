@@ -13,8 +13,8 @@ export const paymentGuideSteps = [
   {
     title: "Disfruta 15 días sin intereses",
     description: "Paga el total de tu consumo dentro de los primeros 15 días y ahorra los intereses de financiamiento.",
-    image: "/payment-guide/mascota-caminando.jpg",
-    imageAlt: "Nuestra mascota de Impúlsate caminando contigo",
+    image: "/payment-guide/mascota-celebrando.png",
+    imageAlt: "Nuestra mascota de Impúlsate celebrando con confeti",
   },
   {
     title: "Tu monto define tu plazo",
