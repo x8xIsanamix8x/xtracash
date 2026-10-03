@@ -3,16 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AccountBalanceWalletRounded,
   AccessTimeRounded,
   CheckCircleOutlineRounded,
-  EventAvailableRounded,
   MarkEmailReadRounded,
-  NotificationsActiveRounded,
   NotificationsOffRounded,
   PaymentRounded,
   ReplayRounded,
-  WarningAmberRounded,
 } from "@mui/icons-material";
 import {
   Alert,
@@ -32,8 +28,10 @@ import {
 
 import { APP_BOTTOM_NAVIGATION_HEIGHT, AppBottomNavigation } from "@/components/AppBottomNavigation";
 import { AppBackButton } from "@/components/AppBackButton";
+import { homeVisualTokens } from "@/features/home/homeVisualTokens";
+import { PaymentPurposeIcon } from "@/features/payment-purpose/PaymentPurposeIcon";
+import type { PaymentIconId } from "@/features/payment-purpose/types";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
-import { themeTokens } from "@/theme/tokens";
 
 import type { NotificationItem, NotificationsPage } from "./types";
 import {
@@ -56,14 +54,51 @@ function formatAmount(value: string): string {
   return `Bs. ${new Intl.NumberFormat("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value))}`;
 }
 
-function getNotificationIcon(notification: NotificationItem) {
+function getNotificationIconId(notification: NotificationItem): PaymentIconId {
   const hint = `${notification.type ?? ""} ${notification.subject}`.toLocaleLowerCase("es-VE");
-  if (hint.includes("vencid") || hint.includes("mora")) return WarningAmberRounded;
-  if (hint.includes("pago") || hint.includes("reporte")) return PaymentRounded;
-  if (hint.includes("financiamiento") || hint.includes("solicitud")) return AccountBalanceWalletRounded;
-  if (hint.includes("próximo") || hint.includes("proximo") || hint.includes("día de pago")) return EventAvailableRounded;
-  if (hint.includes("viernes")) return NotificationsActiveRounded;
-  return NotificationsActiveRounded;
+  if (hint.includes("vencid") || hint.includes("mora")) return "calendar";
+  if (hint.includes("viernes") || hint.includes("promoción") || hint.includes("promocion") || hint.includes("descuento")) return "badge";
+  if (hint.includes("próximo") || hint.includes("proximo") || hint.includes("día de pago") || hint.includes("dia de pago") || hint.includes("recordatorio")) return "calendar";
+  if (hint.includes("pago") || hint.includes("reporte") || hint.includes("transferencia")) return "wallet";
+  if (hint.includes("financiamiento") || hint.includes("solicitud")) return "badge";
+  return "wallet";
+}
+
+function NotificationPurposeIcon({
+  notification,
+  showUnread = false,
+}: Readonly<{ notification: NotificationItem; showUnread?: boolean }>) {
+  return (
+    <Box
+      aria-hidden="true"
+      sx={{
+        position: "relative",
+        width: 48,
+        height: 48,
+        flexShrink: 0,
+        display: "grid",
+        placeItems: "center",
+        borderRadius: 2,
+        bgcolor: homeVisualTokens.color.neutralSurface,
+      }}
+    >
+      <PaymentPurposeIcon iconId={getNotificationIconId(notification)} sx={{ fontSize: 28 }} />
+      {showUnread && !notification.isRead && (
+        <Box
+          sx={{
+            position: "absolute",
+            width: 10,
+            height: 10,
+            top: -3,
+            right: -3,
+            borderRadius: "50%",
+            bgcolor: "primary.main",
+            border: "2px solid white",
+          }}
+        />
+      )}
+    </Box>
+  );
 }
 
 function sortNewestFirst(items: readonly NotificationItem[]) {
@@ -256,9 +291,7 @@ export function NotificationsView() {
               <CardContent sx={{ p: { xs: 2.5, sm: 4 }, "&:last-child": { pb: { xs: 2.5, sm: 4 } } }}>
                 <Stack spacing={2.5}>
                   <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
-                    <Box sx={{ width: 48, height: 48, flexShrink: 0, borderRadius: 2, display: "grid", placeItems: "center", color: "primary.main", bgcolor: "rgba(60, 68, 209, 0.10)" }}>
-                      {(() => { const Icon = getNotificationIcon(selected); return <Icon />; })()}
-                    </Box>
+                    <NotificationPurposeIcon notification={selected} />
                     <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
                       <Typography component="h2" variant="h5" sx={{ color: "secondary.main", fontWeight: 700, overflowWrap: "anywhere" }}>{selected.subject}</Typography>
                       <Typography color="text.secondary" variant="body2">{formatDateTime(selected.occurredAt)}</Typography>
@@ -309,16 +342,12 @@ export function NotificationsView() {
                 </Typography>
               )}
               {data?.items.map((notification) => {
-                const Icon = getNotificationIcon(notification);
                 return (
                   <Card key={notification.id} sx={{ borderRadius: 2, bgcolor: notification.isRead ? "background.paper" : "rgba(60, 68, 209, 0.06)", border: "1px solid", borderColor: notification.isRead ? "rgba(2, 0, 77, 0.08)" : "rgba(60, 68, 209, 0.24)", boxShadow: "none" }}>
                     <CardActionArea aria-label={`${notification.subject}, ${notification.isRead ? "leída" : "no leída"}`} onClick={() => openNotification(notification)}>
                       <CardContent sx={{ p: { xs: 1.75, sm: 2.25 }, "&:last-child": { pb: { xs: 1.75, sm: 2.25 } } }}>
                         <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
-                          <Box sx={{ position: "relative", width: 48, height: 48, flexShrink: 0, borderRadius: 2, display: "grid", placeItems: "center", color: "common.white", bgcolor: themeTokens.color.brandDeep }}>
-                            <Icon />
-                            {!notification.isRead && <Box aria-hidden="true" sx={{ position: "absolute", width: 10, height: 10, top: -3, right: -3, borderRadius: "50%", bgcolor: "primary.main", border: "2px solid white" }} />}
-                          </Box>
+                          <NotificationPurposeIcon notification={notification} showUnread />
                           <Stack spacing={0.525} sx={{ minWidth: 0, flex: 1 }}>
                             <Stack direction="row" spacing={1} sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
                               <Typography component="h2" sx={{ color: "secondary.main", fontWeight: notification.isRead ? 600 : 700, lineHeight: 1.35, overflowWrap: "anywhere" }}>{notification.subject}</Typography>
