@@ -77,6 +77,6 @@ export function parseNotificationsPage(value: unknown): NotificationsPage | null
 export function parseUnreadCount(value: unknown): number | null {
   if (Number.isInteger(value) && (value as number) >= 0) return value as number;
   if (!isRecord(value)) return null;
-  const count = value.count ?? value.unreadCount ?? value.noLeidas ?? value.no_leidas;
+  const count = value.count ?? value.unread ?? value.unreadCount ?? value.noLeidas ?? value.no_leidas;
   return Number.isInteger(count) && (count as number) >= 0 ? count as number : null;
 }
