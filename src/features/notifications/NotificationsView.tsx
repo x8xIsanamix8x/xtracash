@@ -41,6 +41,7 @@ import {
   markNotificationRead,
   NotificationsServiceError,
 } from "./services/notifications";
+import { PushNotificationsCard } from "./push/PushNotificationsCard";
 
 const PAGE_SIZE = 20;
 
@@ -285,6 +286,8 @@ export function NotificationsView() {
               </IconButton>
             )}
           </Stack>
+
+          {!isDetail && <PushNotificationsCard variant="banner" />}
 
           {isDetail && selected ? (
             <Card component="article" variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
