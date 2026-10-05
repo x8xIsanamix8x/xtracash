@@ -14,6 +14,7 @@ import {
 } from "@/features/master-onboarding";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { getUnreadCount, NotificationsServiceError } from "@/features/notifications/services/notifications";
+import { syncPushSubscription } from "@/features/notifications/push/pushNotifications";
 
 import { NewBusinessHomeDashboard } from "./components/NewBusinessHomeDashboard";
 import { newBusinessHomeMocks } from "./data/newBusinessHomeMocks";
@@ -80,11 +81,24 @@ export function HomeView() {
           }
         });
     };
+    // IMOV-442: un push que llega con la app abierta (el service worker avisa) y la vuelta de la app a
+    // primer plano también actualizan la campana.
+    const handleWorkerMessage = (event: MessageEvent) => {
+      if ((event.data as { type?: unknown } | null)?.type === "INBOX_UPDATED") refreshUnreadCount();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refreshUnreadCount();
+    };
     refreshUnreadCount();
+    void syncPushSubscription();
     window.addEventListener("focus", refreshUnreadCount);
+    document.addEventListener("visibilitychange", handleVisibility);
+    navigator.serviceWorker?.addEventListener("message", handleWorkerMessage);
     return () => {
       controller.abort();
       window.removeEventListener("focus", refreshUnreadCount);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      navigator.serviceWorker?.removeEventListener("message", handleWorkerMessage);
     };
   }, [router]);
 

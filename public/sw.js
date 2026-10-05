@@ -153,3 +153,62 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
+
+// IMOV-442: notificaciones push. El Core manda { id, type, title, body, url } cifrado por Web Push;
+// el aviso completo (con montos) se lee al abrir la app, nunca en la pantalla bloqueada.
+const PUSH_FALLBACK = {
+  title: "Impúlsate Móvil",
+  body: "Tienes un aviso nuevo.",
+  url: "/notifications",
+};
+
+function readPushPayload(data) {
+  if (!data) return PUSH_FALLBACK;
+  try {
+    const payload = data.json();
+    return {
+      id: typeof payload.id === "string" ? payload.id : undefined,
+      type: typeof payload.type === "string" ? payload.type : undefined,
+      title: typeof payload.title === "string" && payload.title ? payload.title : PUSH_FALLBACK.title,
+      body: typeof payload.body === "string" && payload.body ? payload.body : PUSH_FALLBACK.body,
+      url: typeof payload.url === "string" && payload.url.startsWith("/") ? payload.url : PUSH_FALLBACK.url,
+    };
+  } catch {
+    return PUSH_FALLBACK;
+  }
+}
+
+async function notifyOpenClients(message) {
+  const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  windows.forEach((client) => client.postMessage(message));
+}
+
+self.addEventListener("push", (event) => {
+  const payload = readPushPayload(event.data);
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: payload.id ?? payload.type ?? "impulsate-aviso",
+      data: { url: payload.url },
+    }),
+    // Con la app abierta, la campana se actualiza sin esperar a que el usuario vuelva a la pantalla.
+    notifyOpenClients({ type: "INBOX_UPDATED" }),
+  ]));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url ?? PUSH_FALLBACK.url, self.location.origin).href;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
+    if (open) {
+      await open.focus();
+      if ("navigate" in open) await open.navigate(target);
+      return;
+    }
+    await self.clients.openWindow(target);
+  })());
+});

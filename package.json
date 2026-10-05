@@ -16,7 +16,8 @@
     "test:profile": "node --no-warnings --experimental-strip-types --test tests/profile/*.test.mjs",
     "test:entry": "node --no-warnings --experimental-strip-types --test tests/entry/*.test.mjs",
     "test:help": "node --no-warnings --experimental-strip-types --test tests/entry/helpCenter.test.mjs",
-    "test:pwa": "node --no-warnings --experimental-strip-types --test tests/pwa/*.test.mjs"
+    "test:pwa": "node --no-warnings --experimental-strip-types --test tests/pwa/*.test.mjs",
+    "test:notifications": "node --no-warnings --experimental-strip-types --test tests/notifications/*.test.mjs"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
