@@ -20,6 +20,8 @@ import {
   type SessionStatus,
 } from "@/features/auth";
 import { signOut } from "@/features/auth/session/services/session";
+import { PushNotificationsCard } from "@/features/notifications/push/PushNotificationsCard";
+import { forgetPushSubscriptionOnSignOut } from "@/features/notifications/push/pushNotifications";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { PwaInstallCard } from "@/features/pwa/PwaInstallCard";
 import { MasterOnboardingProfileCard, resetMasterOnboardingPrompt } from "@/features/master-onboarding";
@@ -169,6 +171,8 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
     setSessionStatus("signing-out");
 
     try {
+      // IMOV-442: este teléfono deja de recibir los avisos de esta cuenta antes de cerrar la sesión.
+      await forgetPushSubscriptionOnSignOut();
       await signOut(controller.signal);
       resetMasterOnboardingPrompt();
       router.replace("/");
@@ -322,6 +326,9 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
                     sx={{ mt: 2 }}
                   >
                     <SecurityCard biometricEnabled={showBiometricAccess} />
+                    <Box sx={{ mt: 2 }}>
+                      <PushNotificationsCard />
+                    </Box>
                   </Box>
                   <Box
                     aria-labelledby="profile-tab-install"
