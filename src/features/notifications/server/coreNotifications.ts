@@ -30,14 +30,18 @@ function coreUrl(path: string): string {
 async function requestCore(
   accessToken: string,
   path: string,
-  method: "GET" | "PATCH",
+  method: "GET" | "PATCH" | "PUT" | "DELETE",
   signal: AbortSignal,
+  body?: unknown,
 ): Promise<Response> {
   try {
     return await fetch(coreUrl(path), {
       method,
       cache: "no-store",
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: body === undefined
+        ? { Authorization: `Bearer ${accessToken}` }
+        : { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
       signal,
     });
   } catch (error) {
@@ -90,5 +94,43 @@ export async function patchNotificationInCore(
   signal: AbortSignal,
 ): Promise<void> {
   const response = await requestCore(accessToken, path, "PATCH", signal);
+  await checkResponse(response);
+}
+
+// IMOV-442: notificaciones push.
+
+export type PushSubscriptionPayload = Readonly<{
+  endpoint: string;
+  keys: Readonly<{ p256dh: string; auth: string }>;
+}>;
+
+export async function getPushPublicKeyFromCore(accessToken: string, signal: AbortSignal): Promise<string> {
+  const response = await requestCore(accessToken, "/push/clave-publica", "GET", signal);
+  await checkResponse(response);
+  const body = await readJson(response);
+  const publicKey = typeof body === "object" && body !== null && "publicKey" in body
+    ? (body as { publicKey: unknown }).publicKey
+    : null;
+  if (typeof publicKey !== "string" || publicKey.length === 0) {
+    throw new CoreNotificationsError("protocol", response.status, JSON.stringify(body).slice(0, 500));
+  }
+  return publicKey;
+}
+
+export async function putPushSubscriptionInCore(
+  accessToken: string,
+  subscription: PushSubscriptionPayload,
+  signal: AbortSignal,
+): Promise<void> {
+  const response = await requestCore(accessToken, "/push/suscripcion", "PUT", signal, subscription);
+  await checkResponse(response);
+}
+
+export async function deletePushSubscriptionInCore(
+  accessToken: string,
+  endpoint: string,
+  signal: AbortSignal,
+): Promise<void> {
+  const response = await requestCore(accessToken, "/push/suscripcion", "DELETE", signal, { endpoint });
   await checkResponse(response);
 }
