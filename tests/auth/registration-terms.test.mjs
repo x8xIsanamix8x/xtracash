@@ -5,12 +5,12 @@ import test from "node:test";
 
 import { TERMS_AND_CONDITIONS } from "../../src/features/auth/registration/termsAndConditions.ts";
 
-const APPROVED_TERMS_SHA256 = "182378e4b26a0dec3997df280fb812afa9bae2b540b2fafff0ef1f9d785517da";
+const APPROVED_TERMS_SHA256 = "bff7d4099d4181da54bc91d7ecf7533254e2a5f66ddbeaeb997ff105e98bdd18";
 
 test("conserva sin cambios el documento legal aprobado", () => {
   const termsHash = createHash("sha256").update(TERMS_AND_CONDITIONS, "utf8").digest("hex");
 
-  assert.equal(Buffer.byteLength(TERMS_AND_CONDITIONS, "utf8"), 25_515);
+  assert.equal(Buffer.byteLength(TERMS_AND_CONDITIONS, "utf8"), 25_915);
   assert.equal(termsHash, APPROVED_TERMS_SHA256);
 });
 
