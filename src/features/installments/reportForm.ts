@@ -4,7 +4,7 @@ import type { PaymentSelection } from "./paymentOptions";
 import type { CreateInstallmentReportRequest, PaymentReceipt, SourceBank } from "./types";
 
 export const reportPhoneMaxLength = 13;
-export const reportPhonePattern = /^04(12|14|16|22|24|26)\d{7,9}$/;
+export const reportPhonePattern = /^(?=\d{11,13}$)(?:0|580?)4(12|14|16|22|24|26)\d{7,9}$/;
 export const bankReferencePattern = /^\d{4,20}$/;
 /** Lo que acepta Core en `payerDocument` (aquí siempre con guion, como lo muestra el campo). */
 const payerDocumentPattern = /^[VEPJGC]-\d{1,9}$/;
@@ -146,7 +146,7 @@ export function validateReportForm(
     errors.payerDocument = "Ingresa un documento válido (p. ej. V-12345678).";
   }
   if (!reportPhonePattern.test(values.senderPhone)) {
-    errors.senderPhone = "Ingresa un número móvil válido de 11 a 13 dígitos (p. ej. 04141234567).";
+    errors.senderPhone = "Ingresa un número móvil válido de 11 a 13 dígitos que comience por 0 o 58 (p. ej. 04141234567 o 584141234567).";
   }
 
   const amount = parseAmountInput(values.amount);
