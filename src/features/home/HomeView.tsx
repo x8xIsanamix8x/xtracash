@@ -15,6 +15,7 @@ import {
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { getUnreadCount, NotificationsServiceError } from "@/features/notifications/services/notifications";
 import { syncPushSubscription } from "@/features/notifications/push/pushNotifications";
+import { PwaInstallGuide } from "@/features/pwa/PwaInstallGuide";
 
 import { NewBusinessHomeDashboard } from "./components/NewBusinessHomeDashboard";
 import { newBusinessHomeMocks } from "./data/newBusinessHomeMocks";
@@ -34,6 +35,7 @@ export function HomeView() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [homeViewModel, setHomeViewModel] = useState<HomeDashboardViewModel | null>(null);
   const [greeting, setGreeting] = useState("Buenos días");
+  const [isSummaryLoaded, setIsSummaryLoaded] = useState(false);
   const [masterOnboardingProgress, setMasterOnboardingProgress] = useState<
     OnboardingMasterProgress | null
   >(null);
@@ -51,6 +53,7 @@ export function HomeView() {
         ) {
           setMasterOnboardingProgress(summary.onboardingMaster);
         }
+        setIsSummaryLoaded(true);
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -160,6 +163,7 @@ export function HomeView() {
       </Container>
 
       <AppBottomNavigation activeItem="home" />
+      <PwaInstallGuide autoOpen={isSummaryLoaded && homeViewModel !== null && masterOnboardingProgress === null} />
       {masterOnboardingProgress && (
         <MasterOnboardingPrompt
           onClose={() => setMasterOnboardingProgress(null)}
