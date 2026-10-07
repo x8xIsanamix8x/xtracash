@@ -6,6 +6,8 @@ import { parsePaymentSupport } from "./paymentSupportValidation";
 
 const amountPattern = /^(0|[1-9]\d*)\.(\d{2})$/;
 const phonePattern = /^04(12|14|16|22|24|26)\d{7}$/;
+/** Igual que Core: letra V, E, P, J, G o C, guion opcional y de 1 a 9 dígitos. */
+const payerDocumentPattern = /^[VEPJGC]-?\d{1,9}$/;
 const paymentOptions = new Set<PaymentOptionKind>(["PROXIMA", "CUOTAS", "TODAS"]);
 
 function isPositiveAmount(value: unknown): value is string {
@@ -42,6 +44,9 @@ export function validateCreateInstallmentReportRequest(
     || !isAllowedPaymentDate(value.paymentDate, today)
     || typeof value.bankReference !== "string"
     || !bankReferencePattern.test(value.bankReference)
+    || (value.payerDocument !== undefined && (
+      typeof value.payerDocument !== "string" || !payerDocumentPattern.test(value.payerDocument)
+    ))
   ) {
     return { ok: false, error: "invalid_request" };
   }
@@ -77,6 +82,7 @@ export function validateCreateInstallmentReportRequest(
       ...(option === "CUOTAS" ? { installmentCount: count as number } : {}),
       amountBs: value.amountBs as string,
       senderBank: value.senderBank,
+      ...(typeof value.payerDocument === "string" ? { payerDocument: value.payerDocument } : {}),
       senderPhone: value.senderPhone,
       paymentDate: value.paymentDate,
       bankReference: value.bankReference,

@@ -88,17 +88,19 @@ export type SuccessSummaryInput = Readonly<{
   senderBank: string;
   sourceBanks: readonly SourceBank[];
   bankReference: string;
+  payerDocument: string;
   senderPhone: string;
   result: InstallmentReportResult;
 }>;
 
-/** Filas de Figma 18: producto, cuota, banco, referencia, fecha, teléfono y monto reportado. */
+/** Filas de Figma 18: producto, cuota, banco, documento, referencia, fecha, teléfono y monto. */
 export function createSuccessRows(input: SuccessSummaryInput) {
   const bank = input.sourceBanks.find((item) => item.code === input.senderBank);
   return [
     { label: "Producto", value: input.consumptionLabel },
     { label: "Cuota reportada", value: input.installmentsLabel },
     { label: "Banco", value: bank ? bank.name : input.senderBank },
+    { label: "Documento", value: input.payerDocument },
     { label: "Referencia", value: input.bankReference },
     { label: "Fecha", value: formatShortDate(input.result.paymentDate) },
     { label: "Teléfono", value: formatPhone(input.senderPhone) },

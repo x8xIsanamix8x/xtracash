@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const { getPaymentDataFromCore } = await import(
+const { createInstallmentReportInCore, getPaymentDataFromCore } = await import(
   "../../src/features/installments/server/coreInstallments.ts"
 );
 
@@ -68,5 +68,44 @@ test("consulta datos-pago y usa su destino aunque no existan variables de pago",
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }
+  }
+});
+
+test("el reporte manda a Core el documento de quien pagó", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalCoreApiUrl = process.env.CORE_API_URL;
+  const bodies = [];
+  process.env.CORE_API_URL = "https://core.example.test";
+  globalThis.fetch = async (url, init) => {
+    bodies.push(JSON.parse(init.body));
+    return Response.json({
+      id: "01a0d7be-27a2-7e3a-9927-2193fa628468",
+      amount: { bs: "34372.09", usd: "40.23" },
+      reportedAmount: "34372.09",
+      paymentDate: "2026-09-24",
+    }, { status: 201 });
+  };
+
+  const report = {
+    option: "PROXIMA",
+    amountBs: "34372.09",
+    senderBank: "0105",
+    senderPhone: "04141234567",
+    paymentDate: "2026-09-24",
+    bankReference: "000123456789",
+  };
+  try {
+    const consumptionId = "01a0cb0e-8dcf-70d3-a1cf-bd74d4efaeb3";
+    const signal = new AbortController().signal;
+    await createInstallmentReportInCore("token", consumptionId, { ...report, payerDocument: "E-84123456" }, signal);
+    await createInstallmentReportInCore("token", consumptionId, report, signal);
+
+    assert.equal(bodies[0].payerDocument, "E-84123456");
+    // Sin documento no se manda el campo: Core usa el del cliente.
+    assert.equal("payerDocument" in bodies[1], false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalCoreApiUrl === undefined) delete process.env.CORE_API_URL;
+    else process.env.CORE_API_URL = originalCoreApiUrl;
   }
 });
