@@ -171,6 +171,7 @@ export async function createInstallmentReportInCore(
         : {}),
       amount: Number(report.amountBs),
       senderBank: report.senderBank,
+      ...(report.payerDocument ? { payerDocument: report.payerDocument } : {}),
       senderPhone: report.senderPhone,
       paymentDate: report.paymentDate,
       bankReference: report.bankReference,

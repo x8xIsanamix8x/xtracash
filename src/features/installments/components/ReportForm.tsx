@@ -87,6 +87,7 @@ export function ReportForm({
   const bankRef = useRef<HTMLInputElement>(null);
   const referenceRef = useRef<HTMLInputElement>(null);
   const dateRef = useRef<HTMLInputElement>(null);
+  const documentRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
   const confirmedRef = useRef<HTMLInputElement>(null);
@@ -97,6 +98,7 @@ export function ReportForm({
       senderBank: bankRef,
       bankReference: referenceRef,
       paymentDate: dateRef,
+      payerDocument: documentRef,
       senderPhone: phoneRef,
       amount: amountRef,
       confirmed: confirmedRef,
@@ -172,6 +174,24 @@ export function ReportForm({
           sx={fieldSx}
           type="date"
           value={values.paymentDate}
+          variant="filled"
+        />
+
+        <TextField
+          autoComplete="off"
+          error={Boolean(errors.payerDocument)}
+          fullWidth
+          helperText={errors.payerDocument
+            ?? "Si pagaste desde la cuenta de otra persona, coloca su documento."}
+          inputRef={documentRef}
+          label="Documento de identidad"
+          onChange={(event) => onChange("payerDocument", event.target.value)}
+          placeholder="V-000000000"
+          required
+          // La etiqueta queda arriba para que se vea el formato aunque el campo esté vacío.
+          slotProps={{ htmlInput: { autoCapitalize: "characters", maxLength: 11 }, inputLabel: { shrink: true } }}
+          sx={fieldSx}
+          value={values.payerDocument}
           variant="filled"
         />
 

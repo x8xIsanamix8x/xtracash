@@ -46,6 +46,15 @@ type CoreDetailBody = {
   debt: Record<string, unknown>;
 };
 
+/** `GET /api/profile/personal-info`: el cliente de las pruebas (prellena el documento del reporte). */
+export const profilePersonalInfo = {
+  fullName: "Leonardo Prueba",
+  documentType: "V",
+  documentNumber: "12345678",
+  email: "leonardo@example.test",
+  phone: "04141234567",
+};
+
 /** Respuesta de `GET /api/installments/[id]` (Clínica), armada con el código del BFF. */
 export function consumptionDetail(edit: (core: CoreDetailBody) => void = () => {}) {
   const core = coreFixture<CoreDetailBody>("consumo-detalle");
@@ -145,6 +154,7 @@ export const test = base.extend<{ bff: BffMock }>({
       return route.fulfill({ status: 503, json: { error: "service_unavailable" } });
     });
     await context.route("**/api/home/summary", (route) => route.fulfill({ json: coreFixture("resumen") }));
+    await context.route("**/api/profile/personal-info", (route) => route.fulfill({ json: profilePersonalInfo }));
 
     await provide({
       respond: async (pattern, response) => {

@@ -15,6 +15,7 @@ import {
 } from "./paymentSupport";
 import { encodePaymentSupportFile } from "./services/paymentSupport";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
+import { getProfilePersonalInfo } from "@/features/profile/services/profile";
 
 import { InstallmentsHeader } from "./components/InstallmentsHeader";
 import { InstallmentsScreen, panelSlotSx, panelToBottomSx } from "./components/InstallmentsScreen";
@@ -41,6 +42,8 @@ import type { PaymentSelection } from "./paymentOptions";
 import { createConsumptionDetailViewModel } from "./presentation";
 import {
   formatAmountInput,
+  formatPayerDocument,
+  normalizeDocumentInput,
   normalizePhoneInput,
   normalizeReferenceInput,
   parseAmountInput,
@@ -100,11 +103,15 @@ export function PaymentReportView({ consumptionId, requestedSelection, origin }:
     senderBank: "",
     bankReference: "",
     paymentDate: today,
+    payerDocument: "",
     senderPhone: "",
     amount: "",
     confirmed: false,
   });
   const [amountTouched, setAmountTouched] = useState(false);
+  // Documento del cliente para prellenar; no pisa lo que el usuario ya escribió.
+  const [profileDocument, setProfileDocument] = useState<string | null>(null);
+  const [documentTouched, setDocumentTouched] = useState(false);
   const [errors, setErrors] = useState<ReportFormErrors>({});
   const [focusRequest, setFocusRequest] = useState(0);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -125,6 +132,15 @@ export function PaymentReportView({ consumptionId, requestedSelection, origin }:
   const needsDatedQuote = todayQuote !== null
     && dateIsValid
     && values.paymentDate !== todayQuote.paymentDate;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getProfilePersonalInfo(controller.signal)
+      .then((info) => setProfileDocument(formatPayerDocument(info.documentType, info.documentNumber)))
+      // Sin perfil el campo queda vacío y el usuario lo escribe.
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
 
   // Con otra fecha, el monto se recalcula con la tasa de ese día (pausa corta al escribir).
   useEffect(() => {
@@ -200,15 +216,19 @@ export function PaymentReportView({ consumptionId, requestedSelection, origin }:
   const amountInput = amountTouched
     ? values.amount
     : expectedAmountBs ? formatAmountInput(expectedAmountBs) : "";
+  const documentInput = documentTouched ? values.payerDocument : profileDocument ?? "";
 
   const change = (field: ReportFormField, value: string | boolean) => {
     setFormMessage("");
     if (field === "amount") setAmountTouched(true);
+    if (field === "payerDocument") setDocumentTouched(true);
     const nextValue = field === "bankReference"
       ? normalizeReferenceInput(String(value))
       : field === "senderPhone"
         ? normalizePhoneInput(String(value))
-        : value;
+        : field === "payerDocument"
+          ? normalizeDocumentInput(String(value))
+          : value;
     setValues((current) => ({ ...current, [field]: nextValue }));
     setErrors((current) => {
       const next = { ...current, [field]: undefined };
@@ -240,7 +260,7 @@ export function PaymentReportView({ consumptionId, requestedSelection, origin }:
     ) {
       return;
     }
-    const formValues: ReportFormValues = { ...values, amount: amountInput };
+    const formValues: ReportFormValues = { ...values, amount: amountInput, payerDocument: documentInput };
     const nextErrors = validateReportForm(formValues, {
       sourceBanks: todayData.data.sourceBanks,
       today,
@@ -273,6 +293,7 @@ export function PaymentReportView({ consumptionId, requestedSelection, origin }:
         senderBank: formValues.senderBank,
         sourceBanks: todayData.data.sourceBanks,
         bankReference: formValues.bankReference,
+        payerDocument: formValues.payerDocument,
         senderPhone: formValues.senderPhone,
         result,
       }));
@@ -427,7 +448,7 @@ export function PaymentReportView({ consumptionId, requestedSelection, origin }:
             sourceBanks={todayData.data.sourceBanks}
             submitting={phase === "submitting"}
             today={today}
-            values={values}
+            values={{ ...values, payerDocument: documentInput }}
           />
         </CardContent>
       </Card>

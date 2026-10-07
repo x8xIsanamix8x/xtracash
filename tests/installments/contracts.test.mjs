@@ -340,12 +340,25 @@ test("valida el cuerpo del reporte antes de llamar a Core", () => {
     { ...validReport, paymentDate: "2026-09-25" },
     { ...validReport, bankReference: "123" },
     { ...validReport, bankReference: "12a456" },
+    { ...validReport, payerDocument: "" },
+    { ...validReport, payerDocument: "X-123" },
+    { ...validReport, payerDocument: "V-1234567890" },
+    { ...validReport, payerDocument: 12345678 },
   ];
   for (const body of invalid) {
     assert.deepEqual(
       validateCreateInstallmentReportRequest(body, today),
       { ok: false, error: "invalid_request" },
       JSON.stringify(body),
+    );
+  }
+
+  // Documento de quien pagó: opcional, con o sin guion (como Core).
+  for (const payerDocument of ["V-12345678", "V12345678", "J-500887043"]) {
+    assert.deepEqual(
+      validateCreateInstallmentReportRequest({ ...validReport, payerDocument }, today),
+      { ok: true, value: { ...validReport, payerDocument } },
+      payerDocument,
     );
   }
 

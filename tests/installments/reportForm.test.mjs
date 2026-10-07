@@ -6,6 +6,8 @@ const {
   compareAmounts,
   firstErrorField,
   formatAmountInput,
+  formatPayerDocument,
+  normalizeDocumentInput,
   normalizePhoneInput,
   normalizeReferenceInput,
   parseAmountInput,
@@ -25,6 +27,7 @@ const valid = {
   senderBank: "0105",
   bankReference: "000123456789",
   paymentDate: "2026-09-24",
+  payerDocument: "V-12345678",
   senderPhone: "04141234567",
   amount: "34372,09",
   confirmed: true,
@@ -67,6 +70,7 @@ test("marca cada campo inválido y el foco va al primero", () => {
     senderBank: "9999",
     bankReference: "12",
     paymentDate: "2026-09-25",
+    payerDocument: "X-12",
     senderPhone: "0299123",
     amount: "abc",
     confirmed: false,
@@ -76,12 +80,14 @@ test("marca cada campo inválido y el foco va al primero", () => {
     "amount",
     "bankReference",
     "confirmed",
+    "payerDocument",
     "paymentDate",
     "senderBank",
     "senderPhone",
   ]);
   assert.equal(firstErrorField(errors), "senderBank");
   assert.equal(firstErrorField({ amount: "x", senderPhone: "y" }), "senderPhone");
+  assert.equal(firstErrorField({ senderPhone: "x", payerDocument: "y" }), "payerDocument");
   assert.equal(firstErrorField({}), null);
 });
 
@@ -107,6 +113,7 @@ test("arma el reporte para el BFF según la opción", () => {
     option: "PROXIMA",
     amountBs: "34372.09",
     senderBank: "0105",
+    payerDocument: "V-12345678",
     senderPhone: "04141234567",
     paymentDate: "2026-09-24",
     bankReference: "000123456789",
@@ -124,4 +131,36 @@ test("arma el reporte para el BFF según la opción", () => {
 
   assert.equal("installmentCount" in toCreateReportRequest(valid, { option: "TODAS" }), false);
   assert.throws(() => toCreateReportRequest({ ...valid, amount: "x" }, { option: "PROXIMA" }));
+});
+
+test("documento: se normaliza mientras se escribe", () => {
+  assert.equal(normalizeDocumentInput("v12345678"), "V-12345678");
+  assert.equal(normalizeDocumentInput("V-12.345.678"), "V-12345678");
+  assert.equal(normalizeDocumentInput("12345678"), "V-12345678");
+  assert.equal(normalizeDocumentInput("e 84.123.456"), "E-84123456");
+  assert.equal(normalizeDocumentInput("J5008870431234"), "J-500887043");
+  assert.equal(normalizeDocumentInput("V"), "V");
+  assert.equal(normalizeDocumentInput("V-"), "V");
+  assert.equal(normalizeDocumentInput(""), "");
+  // Una letra que Core no acepta queda para que la validación la marque.
+  assert.equal(normalizeDocumentInput("x123"), "X-123");
+});
+
+test("documento: obligatorio y con formato de Core", () => {
+  const errorFor = (payerDocument) => validateReportForm({ ...valid, payerDocument }, context).payerDocument;
+  assert.equal(errorFor(""), "Ingresa el documento de identidad de quien hizo el pago.");
+  assert.equal(errorFor("V"), "Ingresa un documento válido (p. ej. V-12345678).");
+  assert.equal(errorFor("X-123"), "Ingresa un documento válido (p. ej. V-12345678).");
+  assert.equal(errorFor("V-1234567890"), "Ingresa un documento válido (p. ej. V-12345678).");
+  for (const document of ["V-1", "E-84123456", "P-123456789", "J-500887043", "G-200000001", "C-12345"]) {
+    assert.equal(errorFor(document), undefined, document);
+  }
+});
+
+test("documento: prellenado desde el perfil", () => {
+  assert.equal(formatPayerDocument("V", "12345678"), "V-12345678");
+  assert.equal(formatPayerDocument(" e ", " 84123456 "), "E-84123456");
+  assert.equal(formatPayerDocument("CI", "12345678"), null);
+  assert.equal(formatPayerDocument("V", "12.345.678"), null);
+  assert.equal(formatPayerDocument("V", "1234567890"), null);
 });
