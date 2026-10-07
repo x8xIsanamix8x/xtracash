@@ -57,17 +57,25 @@ test("compara montos al céntimo", () => {
 test("normaliza referencia y teléfono mientras se escriben", () => {
   assert.equal(normalizeReferenceInput("00-12 34ab5678901234567890123"), "00123456789012345678");
   assert.equal(normalizePhoneInput("0414-123.45.67 999"), "0414123456799");
+  assert.equal(normalizePhoneInput("+58 (414) 123-4567"), "584141234567");
 });
 
-test("acepta teléfonos de 11 a 13 dígitos y conserva el número completo en el reporte", () => {
-  for (const senderPhone of ["04141234567", "041412345678", "0414123456789"]) {
+test("acepta teléfonos con 0 o 58 de hasta 13 dígitos y conserva el número completo en el reporte", () => {
+  for (const senderPhone of [
+    "04141234567", "041412345678", "0414123456789",
+    "584141234567", "5841412345678", "5804141234567",
+    "584121234567", "584161234567", "584221234567", "584241234567", "584261234567",
+  ]) {
     const values = { ...valid, senderPhone };
     assert.equal(normalizePhoneInput(senderPhone), senderPhone);
     assert.deepEqual(validateReportForm(values, context), {}, senderPhone);
     assert.equal(toCreateReportRequest(values, { option: "PROXIMA" }).senderPhone, senderPhone);
   }
 
-  for (const senderPhone of ["0414123456", "04141234567890", "04141234567ab", "0499123456789"]) {
+  for (const senderPhone of [
+    "0414123456", "04141234567890", "04141234567ab", "0499123456789",
+    "58414123456", "58414123456789", "574141234567", "584991234567", "58414123456a",
+  ]) {
     assert.ok(validateReportForm({ ...valid, senderPhone }, context).senderPhone, senderPhone);
   }
 });

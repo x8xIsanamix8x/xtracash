@@ -321,7 +321,10 @@ test("valida el cuerpo del reporte antes de llamar a Core", () => {
     value: validReport,
   });
 
-  for (const senderPhone of ["041412345678", "0414123456789"]) {
+  for (const senderPhone of [
+    "041412345678", "0414123456789", "584141234567", "5841412345678", "5804141234567",
+    "584121234567", "584161234567", "584221234567", "584241234567", "584261234567",
+  ]) {
     const body = { ...validReport, senderPhone };
     assert.deepEqual(validateCreateInstallmentReportRequest(body, today), {
       ok: true,
@@ -348,6 +351,11 @@ test("valida el cuerpo del reporte antes de llamar a Core", () => {
     { ...validReport, senderPhone: "0414123456" },
     { ...validReport, senderPhone: "04141234567890" },
     { ...validReport, senderPhone: "04141234567ab" },
+    { ...validReport, senderPhone: "58414123456" },
+    { ...validReport, senderPhone: "58414123456789" },
+    { ...validReport, senderPhone: "574141234567" },
+    { ...validReport, senderPhone: "584991234567" },
+    { ...validReport, senderPhone: "58414123456a" },
     { ...validReport, paymentDate: "2026-09-25" },
     { ...validReport, bankReference: "123" },
     { ...validReport, bankReference: "12a456" },
