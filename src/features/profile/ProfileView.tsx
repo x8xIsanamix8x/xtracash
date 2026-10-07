@@ -52,7 +52,10 @@ const profileTabs: readonly Readonly<{
   { id: "install", label: "Instalar" },
 ];
 
-export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEnabled?: boolean }>) {
+export function ProfileView({ biometricEnabled = false, initialTab = "information" }: Readonly<{
+  biometricEnabled?: boolean;
+  initialTab?: ProfileTab;
+}>) {
   const router = useRouter();
   const showBiometricAccess = biometricEnabled;
   const [status, setStatus] = useState<ProfileStatus>("loading");
@@ -60,7 +63,7 @@ export function ProfileView({ biometricEnabled = false }: Readonly<{ biometricEn
     null,
   );
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("active");
-  const [activeProfileTab, setActiveProfileTab] = useState<ProfileTab>("information");
+  const [activeProfileTab, setActiveProfileTab] = useState<ProfileTab>(initialTab);
   const [isSignOutOpen, setIsSignOutOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [announcement, setAnnouncement] = useState("");

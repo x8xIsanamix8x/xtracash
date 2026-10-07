@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NotificationsActiveOutlined } from "@mui/icons-material";
 import { Alert, Box, Button, Card, CardContent, FormControlLabel, Stack, Switch, Typography } from "@mui/material";
 
 import type { PushStatus } from "./pushContract";
 import { disablePushNotifications, enablePushNotifications, getPushStatus } from "./pushNotifications";
+import { PushNotificationsGuide } from "./PushNotificationsGuide";
 
 const DESCRIPTIONS: Record<PushStatus, string> = {
   on: "Te avisaremos en este dispositivo de tus pagos, vencimientos y financiamientos.",
@@ -19,6 +20,7 @@ function usePushNotifications() {
   const [status, setStatus] = useState<PushStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const busyRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -27,6 +29,8 @@ function usePushNotifications() {
   }, []);
 
   const run = useCallback(async (action: () => Promise<PushStatus>) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setFailed(false);
     try {
@@ -34,6 +38,7 @@ function usePushNotifications() {
     } catch {
       setFailed(true);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }, []);
@@ -50,9 +55,10 @@ function usePushNotifications() {
 type PushNotificationsCardProps = Readonly<{
   /** "banner": aviso compacto que solo aparece si se pueden activar. "card": la sección completa del perfil. */
   variant?: "banner" | "card";
+  autoOpenGuide?: boolean;
 }>;
 
-export function PushNotificationsCard({ variant = "card" }: PushNotificationsCardProps) {
+export function PushNotificationsCard({ variant = "card", autoOpenGuide = false }: PushNotificationsCardProps) {
   const { status, busy, failed, enable, disable } = usePushNotifications();
 
   if (status === null) return null;
@@ -60,13 +66,16 @@ export function PushNotificationsCard({ variant = "card" }: PushNotificationsCar
   if (variant === "banner") {
     if (status !== "off") return null;
     return (
-      <Alert
-        icon={<NotificationsActiveOutlined />}
-        severity="info"
-        action={<Button color="inherit" disabled={busy} onClick={() => void enable()} size="small">Activar</Button>}
-      >
-        {failed ? "No pudimos activar las notificaciones. Inténtalo nuevamente." : "Activa las notificaciones para enterarte al momento."}
-      </Alert>
+      <>
+        <PushNotificationsGuide autoOpen={autoOpenGuide} busy={busy} failed={failed} onEnable={enable} />
+        <Alert
+          icon={<NotificationsActiveOutlined />}
+          severity="info"
+          action={<Button color="inherit" disabled={busy} onClick={() => void enable()} size="small">Activar</Button>}
+        >
+          {failed ? "No pudimos activar las notificaciones. Inténtalo nuevamente." : "Activa las notificaciones para enterarte al momento."}
+        </Alert>
+      </>
     );
   }
 
