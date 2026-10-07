@@ -77,7 +77,7 @@ export function ConfirmationStep({
         <Typography sx={{ color: themeTokens.color.preLoginMuted, fontSize: "0.875rem" }}>
           Al crear tu cuenta, recibirás en tu correo las instrucciones para verificarla.
         </Typography>
-        <Stack direction="row" sx={{ alignItems: "flex-start", ml: -1 }}>
+        <Stack direction="row" sx={{ alignItems: "center", ml: -1 }}>
           <Checkbox
             checked={termsAccepted}
             disabled={isSubmitting}
@@ -91,11 +91,12 @@ export function ConfirmationStep({
               },
             }}
             sx={{
+              flexShrink: 0,
               color: themeTokens.color.preLoginMuted,
               "&.Mui-checked": { color: themeTokens.color.preLoginPrimary },
             }}
           />
-          <Box sx={{ minWidth: 0, pt: "9px" }}>
+          <Box sx={{ minWidth: 0, lineHeight: 1.5 }}>
             <Typography
               component="label"
               htmlFor="registration-terms-accepted"
@@ -113,6 +114,7 @@ export function ConfirmationStep({
               variant="text"
               sx={{
                 minWidth: 0,
+                minHeight: 0,
                 p: 0,
                 color: themeTokens.color.preLoginPrimary,
                 fontSize: "1rem",

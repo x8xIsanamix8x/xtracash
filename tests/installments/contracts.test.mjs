@@ -321,6 +321,14 @@ test("valida el cuerpo del reporte antes de llamar a Core", () => {
     value: validReport,
   });
 
+  for (const senderPhone of ["041412345678", "0414123456789"]) {
+    const body = { ...validReport, senderPhone };
+    assert.deepEqual(validateCreateInstallmentReportRequest(body, today), {
+      ok: true,
+      value: body,
+    });
+  }
+
   const cuotas = validateCreateInstallmentReportRequest(
     { ...validReport, option: "CUOTAS", installmentCount: 2 },
     today,
@@ -337,6 +345,9 @@ test("valida el cuerpo del reporte antes de llamar a Core", () => {
     { ...validReport, amountBs: "34372.1" },
     { ...validReport, senderBank: "105" },
     { ...validReport, senderPhone: "04991234567" },
+    { ...validReport, senderPhone: "0414123456" },
+    { ...validReport, senderPhone: "04141234567890" },
+    { ...validReport, senderPhone: "04141234567ab" },
     { ...validReport, paymentDate: "2026-09-25" },
     { ...validReport, bankReference: "123" },
     { ...validReport, bankReference: "12a456" },
