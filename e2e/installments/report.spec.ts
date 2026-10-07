@@ -55,6 +55,7 @@ async function fillValidForm(page: Page) {
 }
 
 const amountField = (page: Page) => page.getByRole("textbox", { name: /Monto \(Bs\.\)/ });
+const documentField = (page: Page) => page.getByRole("textbox", { name: /Documento de identidad/ });
 const submitButton = (page: Page) => page.getByRole("button", { name: "Reportar pago" });
 
 test.describe("SPEC-06/07 · Reporte de pago", () => {
@@ -74,6 +75,7 @@ test.describe("SPEC-06/07 · Reporte de pago", () => {
       "Clínica",
       "Cuotas 01 a 02",
       "Mercantil",
+      "V-12345678",
       "000123456789",
       /^24 sep/,
       "0414 123 4567",
@@ -85,6 +87,7 @@ test.describe("SPEC-06/07 · Reporte de pago", () => {
       installmentCount: 2,
       amountBs: "68744.18",
       senderBank: "0105",
+      payerDocument: "V-12345678",
       senderPhone: "04141234567",
       paymentDate: "2026-09-24",
       bankReference: "000123456789",
@@ -97,6 +100,73 @@ test.describe("SPEC-06/07 · Reporte de pago", () => {
     await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(2);
     expect(bff.calls("/api/installments")).toBeGreaterThanOrEqual(1);
     expect(bff.calls(detailPath)).toBeGreaterThanOrEqual(detailCalls);
+  });
+
+  test("SPEC-09 · el documento viene prellenado con el del cliente", async ({ page, bff }) => {
+    await openReport(page, bff);
+
+    await expect(documentField(page)).toHaveValue("V-12345678");
+    await expect(documentField(page)).toHaveAttribute("placeholder", "V-000000000");
+    await expect(page.getByText("Si pagaste desde la cuenta de otra persona, coloca su documento.")).toBeVisible();
+    expect(bff.calls("/api/profile/personal-info")).toBe(1);
+  });
+
+  test("SPEC-09 · se puede cambiar por el de otra persona y se envía ese", async ({ page, bff }) => {
+    await bff.respond(`**${reportsPath}`, { status: 201, body: created });
+    await openReport(page, bff);
+    await fillValidForm(page);
+
+    await documentField(page).fill("");
+    await documentField(page).pressSequentially("e84.123.456");
+    await expect(documentField(page)).toHaveValue("E-84123456");
+    await submitButton(page).click();
+
+    await expect(page.getByRole("heading", { name: "¡Pago reportado!" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "¡Pago reportado!" })).toContainText("E-84123456");
+    expect(bff.sentBodies(reportsPath)).toEqual([expect.objectContaining({ payerDocument: "E-84123456" })]);
+  });
+
+  test("SPEC-09 · vacío o inválido no deja enviar y enfoca el documento", async ({ page, bff }) => {
+    await openReport(page, bff);
+    await fillValidForm(page);
+
+    await documentField(page).fill("");
+    await submitButton(page).click();
+    await expect(page.getByText("Ingresa el documento de identidad de quien hizo el pago.")).toBeVisible();
+    await expect(documentField(page)).toBeFocused();
+
+    await documentField(page).fill("X123");
+    await submitButton(page).click();
+    await expect(page.getByText("Ingresa un documento válido (p. ej. V-12345678).")).toBeVisible();
+    expect(bff.sentBodies(reportsPath)).toHaveLength(0);
+  });
+
+  test("SPEC-09 · si el perfil no carga, el documento queda vacío y obligatorio", async ({ page, bff }) => {
+    await bff.respond("**/api/profile/personal-info", { status: 503, body: { error: "service_unavailable" } });
+    await openReport(page, bff);
+
+    await expect(documentField(page)).toHaveValue("");
+    await expect(amountField(page)).toHaveValue("68744,18");
+    await fillValidForm(page);
+    await submitButton(page).click();
+    await expect(page.getByText("Ingresa el documento de identidad de quien hizo el pago.")).toBeVisible();
+    expect(bff.sentBodies(reportsPath)).toHaveLength(0);
+  });
+
+  test("SPEC-09 · lo que escribe el usuario no se pisa si el perfil llega tarde", async ({ page, bff }) => {
+    let releaseProfile = () => {};
+    const profileArrived = new Promise<void>((resolve) => { releaseProfile = resolve; });
+    await page.route("**/api/profile/personal-info", async (route) => {
+      await profileArrived;
+      await route.fulfill({ json: { fullName: "Leonardo Prueba", documentType: "V", documentNumber: "12345678", email: "leonardo@example.test", phone: "04141234567" } });
+    });
+    await openReport(page, bff);
+
+    await documentField(page).pressSequentially("v999");
+    releaseProfile();
+    await expect.poll(() => bff.calls("/api/profile/personal-info")).toBe(1);
+    await page.waitForTimeout(300);
+    await expect(documentField(page)).toHaveValue("V-999");
   });
 
   test("no envía con campos vacíos y enfoca el primero con error", async ({ page, bff }) => {
@@ -204,6 +274,38 @@ test.describe("SPEC-06/07 · Reporte de pago", () => {
     await submitButton(page).click();
 
     await expect(page.getByText("Ocurrió un problema al enviar el reporte. Inténtalo nuevamente.")).toBeVisible();
+  });
+
+  test("SPEC-09 · tras un error al enviar se conserva el documento editado", async ({ page, bff }) => {
+    let fail = true;
+    await bff.respond(`**${reportsPath}`, () => (
+      fail ? { status: 502, body: { error: "upstream_error" } } : { status: 201, body: created }
+    ));
+    await openReport(page, bff);
+    await fillValidForm(page);
+    await documentField(page).fill("E84123456");
+    await submitButton(page).click();
+    await expect(page.getByText("Ocurrió un problema al enviar el reporte. Inténtalo nuevamente.")).toBeVisible();
+
+    // "Intentar nuevamente" vuelve al formulario con lo que ya estaba escrito.
+    await page.getByRole("button", { name: "Intentar nuevamente" }).click();
+    await expect(documentField(page)).toHaveValue("E-84123456");
+    fail = false;
+    await submitButton(page).click();
+    await expect(page.getByRole("heading", { name: "¡Pago reportado!" })).toBeVisible();
+    expect(bff.sentBodies(reportsPath).map((body) => (body as { payerDocument: string }).payerDocument))
+      .toEqual(["E-84123456", "E-84123456"]);
+  });
+
+  test("SPEC-09 · si Core rechaza los datos, se puede corregir y reenviar", async ({ page, bff }) => {
+    await bff.respond(`**${reportsPath}`, { status: 400, body: { error: "invalid_request" } });
+    await openReport(page, bff);
+    await fillValidForm(page);
+    await submitButton(page).click();
+
+    await expect(page.getByText("Revisa los datos e inténtalo nuevamente.")).toBeVisible();
+    await expect(documentField(page)).toHaveValue("V-12345678");
+    await expect(submitButton(page)).toBeEnabled();
   });
 
   test("comprobante: rechaza tipos no permitidos y envía uno válido", async ({ page, bff }) => {

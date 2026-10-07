@@ -66,6 +66,7 @@ test("resumen del reporte exitoso (Figma 18)", () => {
     senderBank: "0105",
     sourceBanks: [{ code: "0105", name: "Mercantil" }],
     bankReference: "000123456789",
+    payerDocument: "V-12345678",
     senderPhone: "04141234567",
     result: {
       reportId: "r1",
@@ -80,6 +81,7 @@ test("resumen del reporte exitoso (Figma 18)", () => {
     "Producto",
     "Cuota reportada",
     "Banco",
+    "Documento",
     "Referencia",
     "Fecha",
     "Teléfono",
@@ -87,10 +89,11 @@ test("resumen del reporte exitoso (Figma 18)", () => {
   ]);
   assert.equal(rows[1].value, "Cuotas 01 a 02");
   assert.equal(rows[2].value, "Mercantil");
-  assert.match(rows[4].value, /^24 sep/);
-  assert.equal(rows[5].value, "0414 123 4567");
+  assert.equal(rows[3].value, "V-12345678");
+  assert.match(rows[5].value, /^24 sep/);
+  assert.equal(rows[6].value, "0414 123 4567");
   // Se muestra lo que el usuario dijo haber transferido.
-  assert.equal(rows[6].value, "Bs. 70.000,00");
+  assert.equal(rows[7].value, "Bs. 70.000,00");
 });
 
 test("número de cuotas reportadas", () => {
