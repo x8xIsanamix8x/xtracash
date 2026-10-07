@@ -71,7 +71,7 @@ test("consulta datos-pago y usa su destino aunque no existan variables de pago",
   }
 });
 
-test("el reporte manda a Core el documento de quien pagó", async () => {
+test("el reporte manda a Core el documento y teléfono completos de quien pagó", async () => {
   const originalFetch = globalThis.fetch;
   const originalCoreApiUrl = process.env.CORE_API_URL;
   const bodies = [];
@@ -99,10 +99,14 @@ test("el reporte manda a Core el documento de quien pagó", async () => {
     const signal = new AbortController().signal;
     await createInstallmentReportInCore("token", consumptionId, { ...report, payerDocument: "E-84123456" }, signal);
     await createInstallmentReportInCore("token", consumptionId, report, signal);
+    await createInstallmentReportInCore("token", consumptionId, { ...report, senderPhone: "5841412345678" }, signal);
+    await createInstallmentReportInCore("token", consumptionId, { ...report, senderPhone: "5804141234567" }, signal);
 
     assert.equal(bodies[0].payerDocument, "E-84123456");
     // Sin documento no se manda el campo: Core usa el del cliente.
     assert.equal("payerDocument" in bodies[1], false);
+    assert.equal(bodies[2].senderPhone, "5841412345678");
+    assert.equal(bodies[3].senderPhone, "5804141234567");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalCoreApiUrl === undefined) delete process.env.CORE_API_URL;
