@@ -1,11 +1,10 @@
 import { getCaracasCalendarDate, isAllowedPaymentDate } from "../calendarDate";
 import { isRecord } from "../contractValidation";
-import { bankReferencePattern } from "../reportForm";
+import { bankReferencePattern, reportPhonePattern } from "../reportForm";
 import type { CreateInstallmentReportRequest, PaymentOptionKind } from "../types";
 import { parsePaymentSupport } from "./paymentSupportValidation";
 
 const amountPattern = /^(0|[1-9]\d*)\.(\d{2})$/;
-const phonePattern = /^04(12|14|16|22|24|26)\d{7}$/;
 /** Igual que Core: letra V, E, P, J, G o C, guion opcional y de 1 a 9 dígitos. */
 const payerDocumentPattern = /^[VEPJGC]-?\d{1,9}$/;
 const paymentOptions = new Set<PaymentOptionKind>(["PROXIMA", "CUOTAS", "TODAS"]);
@@ -39,7 +38,7 @@ export function validateCreateInstallmentReportRequest(
     || typeof value.senderBank !== "string"
     || !/^\d{4}$/.test(value.senderBank)
     || typeof value.senderPhone !== "string"
-    || !phonePattern.test(value.senderPhone)
+    || !reportPhonePattern.test(value.senderPhone)
     || typeof value.paymentDate !== "string"
     || !isAllowedPaymentDate(value.paymentDate, today)
     || typeof value.bankReference !== "string"

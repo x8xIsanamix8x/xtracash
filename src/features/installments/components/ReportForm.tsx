@@ -23,7 +23,7 @@ import { formatBolivars } from "@/features/home/presentation";
 
 import type { ConsumptionDetailViewModel } from "../presentation";
 import type { ReportFormErrors, ReportFormField, ReportFormValues } from "../reportForm";
-import { firstErrorField } from "../reportForm";
+import { firstErrorField, reportPhoneMaxLength } from "../reportForm";
 import type { SourceBank } from "../types";
 import { ConsumptionSummary, installmentsPrimary } from "./ConsumptionSummary";
 import { PaymentSupportField } from "./PaymentSupportField";
@@ -204,7 +204,7 @@ export function ReportForm({
           label="Número de teléfono"
           onChange={(event) => onChange("senderPhone", event.target.value)}
           required
-          slotProps={{ htmlInput: { inputMode: "numeric", maxLength: 11 } }}
+          slotProps={{ htmlInput: { inputMode: "numeric", maxLength: reportPhoneMaxLength } }}
           sx={fieldSx}
           type="tel"
           value={values.senderPhone}

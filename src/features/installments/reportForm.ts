@@ -3,7 +3,8 @@ import { isAllowedPaymentDate, isCalendarDate } from "./calendarDate";
 import type { PaymentSelection } from "./paymentOptions";
 import type { CreateInstallmentReportRequest, PaymentReceipt, SourceBank } from "./types";
 
-const phonePattern = /^04(12|14|16|22|24|26)\d{7}$/;
+export const reportPhoneMaxLength = 13;
+export const reportPhonePattern = /^04(12|14|16|22|24|26)\d{7,9}$/;
 export const bankReferencePattern = /^\d{4,20}$/;
 /** Lo que acepta Core en `payerDocument` (aquí siempre con guion, como lo muestra el campo). */
 const payerDocumentPattern = /^[VEPJGC]-\d{1,9}$/;
@@ -40,7 +41,7 @@ export function normalizeReferenceInput(value: string): string {
 }
 
 export function normalizePhoneInput(value: string): string {
-  return value.replace(/\D/g, "").slice(0, 11);
+  return value.replace(/\D/g, "").slice(0, reportPhoneMaxLength);
 }
 
 /**
@@ -144,8 +145,8 @@ export function validateReportForm(
   } else if (!payerDocumentPattern.test(values.payerDocument)) {
     errors.payerDocument = "Ingresa un documento válido (p. ej. V-12345678).";
   }
-  if (!phonePattern.test(values.senderPhone)) {
-    errors.senderPhone = "Ingresa un número móvil válido de 11 dígitos (p. ej. 04141234567).";
+  if (!reportPhonePattern.test(values.senderPhone)) {
+    errors.senderPhone = "Ingresa un número móvil válido de 11 a 13 dígitos (p. ej. 04141234567).";
   }
 
   const amount = parseAmountInput(values.amount);
