@@ -5,11 +5,15 @@ import type { CreateInstallmentReportRequest, PaymentReceipt, SourceBank } from 
 
 const phonePattern = /^04(12|14|16|22|24|26)\d{7}$/;
 export const bankReferencePattern = /^\d{4,20}$/;
+/** Lo que acepta Core en `payerDocument` (aquí siempre con guion, como lo muestra el campo). */
+const payerDocumentPattern = /^[VEPJGC]-\d{1,9}$/;
 
 export type ReportFormValues = Readonly<{
   senderBank: string;
   bankReference: string;
   paymentDate: string;
+  /** Documento de quien pagó, p. ej. "V-12345678" (puede no ser el cliente). */
+  payerDocument: string;
   senderPhone: string;
   /** Tal como lo escribe el usuario, p. ej. "68744,18". */
   amount: string;
@@ -25,6 +29,7 @@ export const reportFormFieldOrder: readonly ReportFormField[] = [
   "senderBank",
   "bankReference",
   "paymentDate",
+  "payerDocument",
   "senderPhone",
   "amount",
   "confirmed",
@@ -36,6 +41,26 @@ export function normalizeReferenceInput(value: string): string {
 
 export function normalizePhoneInput(value: string): string {
   return value.replace(/\D/g, "").slice(0, 11);
+}
+
+/**
+ * Documento mientras se escribe: letra en mayúscula (V si solo escribe números), guion
+ * automático y hasta 9 dígitos. "v12345678" → "V-12345678", "12345678" → "V-12345678".
+ * Una letra que Core no acepta se deja tal cual para que la validación la marque.
+ */
+export function normalizeDocumentInput(value: string): string {
+  const text = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!text) return "";
+  const hasLetter = /^[A-Z]/.test(text);
+  const letter = hasLetter ? text[0] : "V";
+  const digits = (hasLetter ? text.slice(1) : text).replace(/\D/g, "").slice(0, 9);
+  return digits ? `${letter}-${digits}` : letter;
+}
+
+/** Documento del perfil ("V" y "12345678") como lo muestra el campo; nulo si no sirve. */
+export function formatPayerDocument(documentType: string, documentNumber: string): string | null {
+  const document = `${documentType.trim().toUpperCase()}-${documentNumber.trim()}`;
+  return payerDocumentPattern.test(document) ? document : null;
 }
 
 /**
@@ -114,6 +139,11 @@ export function validateReportForm(
   }
   const dateError = validatePaymentDate(values.paymentDate, context);
   if (dateError) errors.paymentDate = dateError;
+  if (!values.payerDocument) {
+    errors.payerDocument = "Ingresa el documento de identidad de quien hizo el pago.";
+  } else if (!payerDocumentPattern.test(values.payerDocument)) {
+    errors.payerDocument = "Ingresa un documento válido (p. ej. V-12345678).";
+  }
   if (!phonePattern.test(values.senderPhone)) {
     errors.senderPhone = "Ingresa un número móvil válido de 11 dígitos (p. ej. 04141234567).";
   }
@@ -149,6 +179,7 @@ export function toCreateReportRequest(
     ...(selection.option === "CUOTAS" ? { installmentCount: selection.installmentCount } : {}),
     amountBs,
     senderBank: values.senderBank,
+    payerDocument: values.payerDocument,
     senderPhone: values.senderPhone,
     paymentDate: values.paymentDate,
     bankReference: values.bankReference,

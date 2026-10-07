@@ -141,6 +141,8 @@ export type CreateInstallmentReportRequest = Readonly<{
   installmentCount?: number;
   amountBs: string;
   senderBank: string;
+  /** Documento de quien pagó ("V-12345678"). Sin él, Core usa el del cliente. */
+  payerDocument?: string;
   senderPhone: string;
   paymentDate: string;
   bankReference: string;
