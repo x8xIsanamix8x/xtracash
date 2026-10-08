@@ -174,7 +174,7 @@ test.describe("SPEC-06/07 · Reporte de pago", () => {
     await submitButton(page).click();
 
     await expect(page.getByText("Selecciona el banco desde el que pagaste.")).toBeVisible();
-    await expect(page.getByText("Ingresa el número de referencia completo (solo números).")).toBeVisible();
+    await expect(page.getByText("Ingresa los últimos 6 dígitos del número de referencia (solo números).")).toBeVisible();
     await expect(page.getByText(/Ingresa un número móvil válido/)).toBeVisible();
     await expect(page.getByText("Confirma que el monto corresponde a la opción seleccionada.")).toBeVisible();
     await expect(page.getByRole("combobox", { name: /Banco desde el que pagaste/ })).toBeFocused();
