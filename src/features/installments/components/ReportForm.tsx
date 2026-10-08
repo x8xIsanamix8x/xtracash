@@ -151,7 +151,7 @@ export function ReportForm({
         <TextField
           error={Boolean(errors.bankReference)}
           fullWidth
-          helperText={errors.bankReference ?? "El número completo que te dio el banco."}
+          helperText={errors.bankReference ?? "Ingresa los últimos 6 dígitos del número de referencia."}
           inputRef={referenceRef}
           label="Referencia de pago"
           onChange={(event) => onChange("bankReference", event.target.value)}

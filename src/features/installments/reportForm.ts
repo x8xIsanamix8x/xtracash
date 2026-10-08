@@ -136,7 +136,7 @@ export function validateReportForm(
     errors.senderBank = "Selecciona el banco desde el que pagaste.";
   }
   if (!bankReferencePattern.test(values.bankReference)) {
-    errors.bankReference = "Ingresa el número de referencia completo (solo números).";
+    errors.bankReference = "Ingresa los últimos 6 dígitos del número de referencia (solo números).";
   }
   const dateError = validatePaymentDate(values.paymentDate, context);
   if (dateError) errors.paymentDate = dateError;
