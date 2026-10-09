@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "../support/app";
+import { newBusinessHomeMocks } from "../../src/features/home/data/newBusinessHomeMocks";
 
 const guideName = "Activa tus notificaciones";
 const seenKey = "impulsate:push-notifications-guide:v1";
@@ -75,13 +76,14 @@ async function mockPush(page: Page, options: PushMockOptions = {}) {
   });
 }
 
-async function openNotifications(page: Page) {
-  await page.goto("/notifications");
-  await expect(page.getByText("No tienes notificaciones disponibles por ahora.")).toBeVisible();
+async function openHome(page: Page) {
+  await page.goto("/home");
+  await expect(page.locator("main h1")).toBeVisible();
   await expect.poll(() => page.evaluate(() => Reflect.get(window, "testPush").registrationChecks)).toBeGreaterThanOrEqual(2);
 }
 
 test.beforeEach(async ({ bff }) => {
+  await bff.respond("**/api/home/summary", { body: newBusinessHomeMocks.newcomer });
   await bff.respond("**/api/notifications?*", { body: { items: [], page: 0, size: 20, total: 0 } });
   await bff.respond("**/api/notifications/unread-count", { body: { count: 0 } });
   await bff.respond(`**${publicKeyPath}`, {
@@ -93,7 +95,7 @@ test.beforeEach(async ({ bff }) => {
 for (const permission of ["default", "granted"] as const) {
   test(`permiso ${permission}: muestra el aviso y solo activa push al pulsar el botón`, async ({ page, bff }) => {
     await mockPush(page, { permission });
-    await openNotifications(page);
+    await openHome(page);
     const guide = page.getByRole("dialog", { name: guideName });
     await expect(guide).toBeVisible();
     expect(await page.evaluate(() => Reflect.get(window, "testPush").permissionCalls)).toBe(0);
@@ -112,13 +114,14 @@ for (const permission of ["default", "granted"] as const) {
 
 test("recuerda el primer aviso y permite activar push desde el botón habitual después", async ({ page, bff }) => {
   await mockPush(page);
-  await openNotifications(page);
+  await openHome(page);
   const guide = page.getByRole("dialog", { name: guideName });
   await expect(guide).toBeVisible();
   await guide.getByRole("button", { name: "Ahora no" }).click();
   await expect(guide).not.toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), seenKey)).toBe("true");
-  await openNotifications(page);
+  await page.goto("/notifications");
+  await expect(page.getByText("No tienes notificaciones disponibles por ahora.")).toBeVisible();
   await expect(guide).not.toBeVisible();
   await page.getByRole("button", { name: "Activar", exact: true }).click();
   await expect.poll(() => bff.calls(subscriptionPath)).toBe(1);
@@ -127,12 +130,56 @@ test("recuerda el primer aviso y permite activar push desde el botón habitual d
 
 test("recargar mientras el aviso está abierto también cuenta como la primera visita", async ({ page }) => {
   await mockPush(page);
-  await openNotifications(page);
+  await openHome(page);
   const guide = page.getByRole("dialog", { name: guideName });
   await expect(guide).toBeVisible();
-  await openNotifications(page);
-  await expect(page.getByRole("button", { name: "Activar", exact: true })).toBeVisible();
+  await openHome(page);
   await expect(guide).not.toBeVisible();
+  await page.goto("/notifications");
+  await expect(page.getByRole("button", { name: "Activar", exact: true })).toBeVisible();
+});
+
+test("la bandeja conserva su botón habitual y el primer modal aparece en Home", async ({ page }) => {
+  await mockPush(page);
+  await page.goto("/notifications");
+  await expect(page.getByRole("button", { name: "Activar", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: guideName })).not.toBeVisible();
+  expect(await page.evaluate((key) => localStorage.getItem(key), seenKey)).toBeNull();
+  await openHome(page);
+  await expect(page.getByRole("dialog", { name: guideName })).toBeVisible();
+});
+
+test("ordena onboarding, notificaciones e instalación sin superponer los modales", async ({ page, bff }) => {
+  await bff.respond("**/api/home/summary", {
+    body: {
+      name: "Usuario Prueba",
+      accountStatus: "ACTIVE",
+      product: { limitBs: "500000.00", availableBs: "500000.00" },
+      payments: { hasPendingPayment: false, nextCutoffDate: null, currentDebtBs: null, minimumPaymentBs: null, delinquencyStage: "AL_DIA" },
+      movements: [],
+      onboardingMaster: { completedPhases: 1 },
+    },
+  });
+  await mockPush(page);
+  await page.goto("/home?scenario=newcomer");
+  await expect(page.getByRole("link", { name: "Continuar mi onboarding" })).toBeVisible();
+  await page.evaluate(() => window.dispatchEvent(Object.assign(new Event("beforeinstallprompt", { cancelable: true }), {
+    prompt: async () => {},
+    userChoice: Promise.resolve({ outcome: "accepted" }),
+  })));
+  const push = page.getByRole("dialog", { name: guideName });
+  const install = page.getByRole("dialog", { name: "Instala Impúlsate Móvil" });
+  await expect(push).not.toBeVisible();
+  await expect(install).not.toBeVisible();
+  expect(await page.evaluate((key) => localStorage.getItem(key), seenKey)).toBeNull();
+  await page.getByRole("button", { name: "Ahora no" }).click();
+  await expect(push).toBeVisible();
+  await expect(install).not.toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await push.getByRole("button", { name: "Ahora no" }).click();
+  await expect(push).not.toBeVisible();
+  await expect(install).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
 });
 
 for (const scenario of [
@@ -143,7 +190,7 @@ for (const scenario of [
 ] satisfies ReadonlyArray<{ name: string; options: PushMockOptions }>) {
   test(`no muestra ni registra el aviso: ${scenario.name}`, async ({ page }) => {
     await mockPush(page, scenario.options);
-    await openNotifications(page);
+    await openHome(page);
     await expect(page.getByRole("dialog", { name: guideName })).not.toBeVisible();
     await expect(page.getByRole("button", { name: "Activar", exact: true })).not.toBeVisible();
     expect(await page.evaluate((key) => localStorage.getItem(key), seenKey)).toBeNull();
@@ -153,7 +200,7 @@ for (const scenario of [
 
 test("respeta el rechazo del permiso y cierra el aviso sin suscribir el dispositivo", async ({ page, bff }) => {
   await mockPush(page, { permissionResult: "denied" });
-  await openNotifications(page);
+  await openHome(page);
   const guide = page.getByRole("dialog", { name: guideName });
   await expect(guide).toBeVisible();
   await guide.getByRole("button", { name: "Activar notificaciones", exact: true }).click();
@@ -166,7 +213,7 @@ test("respeta el rechazo del permiso y cierra el aviso sin suscribir el disposit
 test("si falla el registro muestra el error y permite reintentar", async ({ page, bff }) => {
   await bff.respond(`**${subscriptionPath}`, { status: 503, body: { error: "service_unavailable" } });
   await mockPush(page);
-  await openNotifications(page);
+  await openHome(page);
   const guide = page.getByRole("dialog", { name: guideName });
   await expect(guide).toBeVisible();
   await guide.getByRole("button", { name: "Activar notificaciones", exact: true }).click();
@@ -183,7 +230,7 @@ test("la imagen y los controles caben en móvil pequeño y escritorio; Escape pe
   await page.setViewportSize({ width: 320, height: 568 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockPush(page);
-  await openNotifications(page);
+  await openHome(page);
   const guide = page.getByRole("dialog", { name: guideName });
   await expect(guide).toBeVisible();
   const image = guide.getByRole("img", { name: /Nuestra mascota/ });
