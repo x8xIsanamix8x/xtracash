@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowBackRounded, LockResetRounded } from "@mui/icons-material";
+import { ArrowBackRounded, LockOpenRounded, LockResetRounded } from "@mui/icons-material";
 import {
   Alert,
   Box,
@@ -39,7 +39,7 @@ const initialData: RecoveryData = {
   identifier: "",
 };
 
-function getRecoveryErrorMessage(error: unknown): string {
+function getRecoveryErrorMessage(error: unknown, isActivation: boolean): string {
   if (!(error instanceof RecoveryServiceError)) {
     return "No pudimos procesar la solicitud. Inténtalo nuevamente.";
   }
@@ -52,10 +52,13 @@ function getRecoveryErrorMessage(error: unknown): string {
     return "No pudimos procesar la solicitud. Inténtalo nuevamente más tarde.";
   }
 
-  return "La recuperación no está disponible en este momento. Inténtalo nuevamente más tarde.";
+  return isActivation
+    ? "La activación no está disponible en este momento. Inténtalo nuevamente más tarde."
+    : "La recuperación no está disponible en este momento. Inténtalo nuevamente más tarde.";
 }
 
-export function RecoveryView() {
+export function RecoveryView({ mode = "recovery" }: Readonly<{ mode?: "recovery" | "activation" }>) {
+  const isActivation = mode === "activation";
   const router = useRouter();
   const [data, setData] = useState<RecoveryData>(initialData);
   const [fieldError, setFieldError] = useState("");
@@ -164,7 +167,7 @@ export function RecoveryView() {
         return;
       }
 
-      setRequestError(getRecoveryErrorMessage(error));
+      setRequestError(getRecoveryErrorMessage(error, isActivation));
     } finally {
       submissionRef.current = false;
       if (abortControllerRef.current === controller) {
@@ -227,7 +230,7 @@ export function RecoveryView() {
       >
         <Stack sx={{ alignItems: "center", textAlign: "center" }}>
           <Box sx={{ "@media (max-height: 700px)": { transform: "scale(0.73)" } }}>
-            <PreLoginIconBadge icon={LockResetRounded} />
+            <PreLoginIconBadge icon={isActivation ? LockOpenRounded : LockResetRounded} />
           </Box>
           <Typography
             component="h1"
@@ -241,7 +244,7 @@ export function RecoveryView() {
               lineHeight: 1.2,
             }}
           >
-            Recupera tu acceso
+            {isActivation ? "Activa tu cuenta" : "Recupera tu acceso"}
           </Typography>
           <Typography
             sx={{
@@ -253,7 +256,9 @@ export function RecoveryView() {
               lineHeight: 1.4,
             }}
           >
-            Ingresa el correo electrónico asociado a tu cuenta para recibir las instrucciones de recuperación.
+            {isActivation
+              ? "Ingresa el correo electrónico con el que recibiste tu invitación para crear tu contraseña y activar tu cuenta."
+              : "Ingresa el correo electrónico asociado a tu cuenta para recibir las instrucciones de recuperación."}
           </Typography>
         </Stack>
 
@@ -312,7 +317,7 @@ export function RecoveryView() {
             type="submit"
             variant="contained"
           >
-            Enviar enlace
+            {isActivation ? "Enviar enlace de activación" : "Enviar enlace"}
           </Button>
         </Box>
       </Box>

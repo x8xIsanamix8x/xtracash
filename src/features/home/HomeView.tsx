@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Container } from "@mui/material";
 
@@ -15,6 +15,7 @@ import {
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { getUnreadCount, NotificationsServiceError } from "@/features/notifications/services/notifications";
 import { syncPushSubscription } from "@/features/notifications/push/pushNotifications";
+import { PushNotificationsGuide } from "@/features/notifications/push/PushNotificationsGuide";
 import { PwaInstallGuide } from "@/features/pwa/PwaInstallGuide";
 
 import { NewBusinessHomeDashboard } from "./components/NewBusinessHomeDashboard";
@@ -36,6 +37,8 @@ export function HomeView() {
   const [homeViewModel, setHomeViewModel] = useState<HomeDashboardViewModel | null>(null);
   const [greeting, setGreeting] = useState("Buenos días");
   const [isSummaryLoaded, setIsSummaryLoaded] = useState(false);
+  const [isPushGuideFinished, setIsPushGuideFinished] = useState(false);
+  const finishPushGuide = useCallback(() => setIsPushGuideFinished(true), []);
   const [masterOnboardingProgress, setMasterOnboardingProgress] = useState<
     OnboardingMasterProgress | null
   >(null);
@@ -141,6 +144,8 @@ export function HomeView() {
     return () => window.cancelAnimationFrame(animationFrame);
   }, []);
 
+  const canShowGuides = isSummaryLoaded && homeViewModel !== null && masterOnboardingProgress === null;
+
   return (
     <Box
       component="main"
@@ -163,7 +168,8 @@ export function HomeView() {
       </Container>
 
       <AppBottomNavigation activeItem="home" />
-      <PwaInstallGuide autoOpen={isSummaryLoaded && homeViewModel !== null && masterOnboardingProgress === null} />
+      <PushNotificationsGuide autoOpen={canShowGuides && !isPushGuideFinished} onFinished={finishPushGuide} />
+      <PwaInstallGuide autoOpen={canShowGuides && isPushGuideFinished} />
       {masterOnboardingProgress && (
         <MasterOnboardingPrompt
           onClose={() => setMasterOnboardingProgress(null)}

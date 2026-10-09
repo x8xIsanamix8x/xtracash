@@ -287,7 +287,7 @@ export function NotificationsView() {
             )}
           </Stack>
 
-          {!isDetail && <PushNotificationsCard autoOpenGuide={status === "ready"} variant="banner" />}
+          {!isDetail && <PushNotificationsCard variant="banner" />}
 
           {isDetail && selected ? (
             <Card component="article" variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
