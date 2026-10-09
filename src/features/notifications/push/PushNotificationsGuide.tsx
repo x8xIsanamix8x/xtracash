@@ -20,31 +20,33 @@ import {
 import { themeTokens } from "@/theme/tokens";
 
 import { hasSeenPushGuide, markPushGuideSeen } from "./pushGuidePreference";
+import { usePushNotifications } from "./usePushNotifications";
 
 type PushNotificationsGuideProps = Readonly<{
   autoOpen: boolean;
-  busy: boolean;
-  failed: boolean;
-  onEnable: () => Promise<void>;
+  onFinished: () => void;
 }>;
 
-export function PushNotificationsGuide({ autoOpen, busy, failed, onEnable }: PushNotificationsGuideProps) {
+export function PushNotificationsGuide({ autoOpen, onFinished }: PushNotificationsGuideProps) {
+  const { status, busy, failed, enable } = usePushNotifications();
   const [open, setOpen] = useState(false);
   const preferenceCheckedRef = useRef(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 
   useEffect(() => {
-    if (!autoOpen || preferenceCheckedRef.current) return;
+    if (!autoOpen || status === null || preferenceCheckedRef.current) return;
     const timeout = window.setTimeout(() => {
       preferenceCheckedRef.current = true;
-      if (!hasSeenPushGuide()) {
+      if (status === "off" && !hasSeenPushGuide()) {
         setOpen(true);
         markPushGuideSeen();
+      } else {
+        onFinished();
       }
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [autoOpen]);
+  }, [autoOpen, onFinished, status]);
 
   const closeGuide = () => {
     if (!busy) setOpen(false);
@@ -57,7 +59,7 @@ export function PushNotificationsGuide({ autoOpen, busy, failed, onEnable }: Pus
       fullWidth
       maxWidth="xs"
       onClose={closeGuide}
-      open={open && autoOpen}
+      open={open && autoOpen && status === "off"}
       transitionDuration={prefersReducedMotion ? 0 : undefined}
       slotProps={{
         backdrop: { sx: { bgcolor: "rgba(2, 0, 40, 0.6)", backdropFilter: "blur(4px)" } },
@@ -75,7 +77,10 @@ export function PushNotificationsGuide({ autoOpen, busy, failed, onEnable }: Pus
             "& .MuiButtonBase-root:focus-visible": { outline: "2px solid #fff", outlineOffset: 2 },
           },
         },
-        transition: { onEntered: () => titleRef.current?.focus({ preventScroll: true }) },
+        transition: {
+          onEntered: () => titleRef.current?.focus({ preventScroll: true }),
+          onExited: onFinished,
+        },
       }}
     >
       <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", px: 2.5, pt: 1.5, pb: 1, flexShrink: 0 }}>
@@ -136,7 +141,7 @@ export function PushNotificationsGuide({ autoOpen, busy, failed, onEnable }: Pus
         <Button
           disabled={busy}
           fullWidth
-          onClick={() => void onEnable()}
+          onClick={() => void enable()}
           startIcon={busy ? <CircularProgress color="inherit" size={18} /> : <NotificationsActiveOutlined />}
           type="button"
           variant="contained"

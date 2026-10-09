@@ -200,7 +200,7 @@ export function ReviewStep({
                   id="mobile-payment-interest-free-title"
                   sx={{ fontSize: "1.125rem", fontWeight: 800, lineHeight: 1.3 }}
                 >
-                  {formatDays(financing.interestFreeDays)} sin comisión por intereses
+                  {formatDays(financing.interestFreeDays)} sin intereses
                 </Typography>
                 <Typography sx={{ mt: 0.75, fontSize: 14, lineHeight: 1.5 }}>
                   Luego de este periodo, se comenzarán a generar los intereses correspondientes.

@@ -27,6 +27,7 @@ import type {
 } from "@/lib/accessNotificationNavigation";
 import { resetMasterOnboardingPrompt } from "@/features/master-onboarding";
 import { themeTokens } from "@/theme/tokens";
+import { ActivationWelcomeGuide } from "./ActivationWelcomeGuide";
 
 type AccessViewProps = Readonly<{
   biometricEnabled?: boolean;
@@ -243,6 +244,7 @@ export function AccessView({
         </Stack>
       </Box>
 
+      <ActivationWelcomeGuide autoOpen={!isSignInOpen && !accessRequest} />
       <SignInSheet
         biometricEnabled={biometricEnabled}
         notification={(
