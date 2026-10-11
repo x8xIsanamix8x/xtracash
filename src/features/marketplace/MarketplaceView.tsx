@@ -1,23 +1,96 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowBackRounded, StorefrontRounded } from "@mui/icons-material";
-import { Alert, Box, Container, IconButton, Stack, Typography } from "@mui/material";
+import {
+  SearchRounded,
+  VisibilityOffRounded,
+  VisibilityRounded,
+} from "@mui/icons-material";
+import {
+  Alert,
+  Box,
+  Container,
+  IconButton,
+  InputAdornment,
+  OutlinedInput,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { useRouter } from "next/navigation";
 
 import { APP_BOTTOM_NAVIGATION_HEIGHT, AppBottomNavigation } from "@/components/AppBottomNavigation";
 import { getProfilePersonalInfo, ProfileServiceError } from "@/features/profile/services/profile";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
+import { getNewBusinessHomeData } from "@/features/home/services/newBusinessHome";
+import { createNewBusinessHomeViewModel } from "@/features/home/newBusinessViewModel";
+import type { HomeDashboardViewModel } from "@/features/home/newBusinessTypes";
 
 import { canAccessMarketplace } from "../home/marketplaceAccess";
 import { homeVisualTokens } from "../home/homeVisualTokens";
+import { SolarProductArtwork } from "./components/SolarProductArtwork";
+import { marketplaceProducts } from "./products";
 
 type AccessState = "checking" | "allowed" | "unavailable";
+
+function CatalogProductCard({ product }: Readonly<{ product: (typeof marketplaceProducts)[number] }>) {
+  return (
+    <Box
+      component={Link}
+      href={`/marketplace/${product.id}`}
+      aria-label={`Ver ${product.name}, ${product.price}`}
+      sx={{
+        minWidth: 0,
+        overflow: "hidden",
+        border: "1px solid #DADAE4",
+        borderRadius: "12px",
+        bgcolor: homeVisualTokens.color.white,
+        color: homeVisualTokens.color.navy,
+        textDecoration: "none",
+        transition: "transform 160ms ease, box-shadow 160ms ease",
+        "&:hover": { transform: "translateY(-2px)", boxShadow: "0 8px 22px rgba(0, 0, 75, .11)" },
+        "&:focus-visible": { outline: `3px solid ${homeVisualTokens.color.violet}`, outlineOffset: 3 },
+      }}
+    >
+      <Box sx={{ position: "relative", aspectRatio: "1.12 / 1", overflow: "hidden" }}>
+        <SolarProductArtwork variant={product.imageVariant} />
+        <Box
+          component="span"
+          sx={{
+            position: "absolute",
+            left: 10,
+            bottom: 10,
+            px: 1.1,
+            py: 0.35,
+            borderRadius: "999px",
+            bgcolor: homeVisualTokens.color.orange,
+            color: homeVisualTokens.color.black,
+            fontSize: "0.72rem",
+            fontWeight: 800,
+          }}
+        >
+          -50%
+        </Box>
+      </Box>
+      <Stack spacing={0.25} sx={{ px: 1.25, pt: 1, pb: 1.25 }}>
+        <Typography sx={{ color: homeVisualTokens.color.navy, fontSize: "0.95rem", lineHeight: 1.3, fontWeight: 500 }}>
+          {product.name}
+        </Typography>
+        <Typography sx={{ color: "#20202A", fontSize: "1.22rem", fontWeight: 800, lineHeight: 1.25 }}>
+          {product.price}
+        </Typography>
+      </Stack>
+    </Box>
+  );
+}
 
 export function MarketplaceView() {
   const router = useRouter();
   const [access, setAccess] = useState<AccessState>("checking");
+  const [search, setSearch] = useState("");
+  const [isAvailableVisible, setIsAvailableVisible] = useState(false);
+  const [balance, setBalance] = useState<HomeDashboardViewModel["balance"] | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -25,8 +98,20 @@ export function MarketplaceView() {
     void getProfilePersonalInfo(controller.signal)
       .then(({ email }) => {
         if (controller.signal.aborted) return;
-        if (canAccessMarketplace(email)) setAccess("allowed");
-        else router.replace("/home");
+        if (!canAccessMarketplace(email)) {
+          router.replace("/home");
+          return;
+        }
+        setAccess("allowed");
+        void getNewBusinessHomeData(controller.signal)
+          .then((data) => {
+            if (!controller.signal.aborted) {
+              setBalance(createNewBusinessHomeViewModel(data).balance);
+            }
+          })
+          .catch(() => {
+            // El catálogo sigue disponible si el resumen financiero no responde.
+          });
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -40,64 +125,113 @@ export function MarketplaceView() {
     return () => controller.abort();
   }, [router]);
 
+  const filteredProducts = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase("es-VE");
+    if (!query) return marketplaceProducts;
+    return marketplaceProducts.filter((product) =>
+      `${product.name} ${product.category} UVU Energy`.toLocaleLowerCase("es-VE").includes(query),
+    );
+  }, [search]);
+
   return (
     <Box
       component="main"
       sx={{
         minHeight: "100dvh",
         bgcolor: homeVisualTokens.color.surfaceTint,
-        pt: "calc(12px + env(safe-area-inset-top))",
-        pb: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 32}px + env(safe-area-inset-bottom))`,
+        pt: "calc(10px + env(safe-area-inset-top))",
+        pb: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`,
       }}
     >
       <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 } }}>
-        <Stack spacing={3}>
+        <Stack spacing={2.2}>
           {access !== "checking" && (
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <IconButton aria-label="Volver al inicio" component={Link} href="/home" sx={{ color: homeVisualTokens.color.navy }}>
-                <ArrowBackRounded />
-              </IconButton>
-              <Typography component="h1" sx={{ color: homeVisualTokens.color.navy, fontSize: "1.375rem", fontWeight: 800 }}>
-                Impulsa Place
+            <Stack component="header" direction="row" sx={{ minHeight: 52, alignItems: "center", justifyContent: "space-between" }}>
+              <Box sx={{ width: 42, height: 42, display: "grid", placeItems: "center", borderRadius: "50%", bgcolor: "white" }}>
+                <Image alt="" aria-hidden="true" src="/entry/isotipo-impulsa.png" width={26} height={32} style={{ objectFit: "contain" }} />
+              </Box>
+              <Typography component="h1" sx={{ color: "#111111", fontSize: "1rem", fontWeight: 500 }}>
+                Impúlsate
               </Typography>
+              <Box sx={{ width: 42 }} aria-hidden="true" />
             </Stack>
           )}
 
           {access === "allowed" && (
-            <Stack
-              component="section"
-              aria-labelledby="marketplace-title"
-              spacing={2}
-              sx={{
-                alignItems: "center",
-                px: { xs: 2.5, sm: 4 },
-                py: { xs: 6, sm: 8 },
-                borderRadius: 3,
-                bgcolor: homeVisualTokens.color.white,
-                textAlign: "center",
-              }}
-            >
-              <Box
-                aria-hidden="true"
+            <>
+              <OutlinedInput
+                fullWidth
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Busca un producto"
+                inputProps={{ "aria-label": "Buscar productos" }}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <SearchRounded sx={{ color: "#151515" }} />
+                  </InputAdornment>
+                }
                 sx={{
-                  width: 72,
-                  height: 72,
-                  display: "grid",
-                  placeItems: "center",
-                  borderRadius: 2.5,
-                  bgcolor: homeVisualTokens.color.surfaceTint,
-                  color: homeVisualTokens.color.violet,
+                  minHeight: 54,
+                  borderRadius: "14px",
+                  bgcolor: homeVisualTokens.color.white,
+                  fontSize: "1rem",
+                  "& fieldset": { border: 0 },
+                }}
+              />
+
+              <Box
+                component="section"
+                aria-label="Disponible de financiamiento"
+                sx={{
+                  minHeight: 180,
+                  px: { xs: 2.5, sm: 3 },
+                  py: 2.5,
+                  borderRadius: "14px",
+                  bgcolor: "#2751E6",
+                  color: "#FFFFFF",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
                 }}
               >
-                <StorefrontRounded sx={{ fontSize: 38 }} />
+                <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+                  <Typography sx={{ fontSize: "0.95rem" }}>Disponible</Typography>
+                  <IconButton
+                    aria-label={isAvailableVisible ? "Ocultar disponible" : "Mostrar disponible"}
+                    aria-pressed={isAvailableVisible}
+                    onClick={() => setIsAvailableVisible((current) => !current)}
+                    sx={{ color: "#FFFFFF", mr: -1 }}
+                  >
+                    {isAvailableVisible ? <VisibilityRounded /> : <VisibilityOffRounded />}
+                  </IconButton>
+                </Stack>
+                <Typography
+                  aria-live="polite"
+                  sx={{ fontSize: "clamp(2rem, 9vw, 2.75rem)", lineHeight: 1.15, fontWeight: 400, letterSpacing: "-0.04em" }}
+                >
+                  {isAvailableVisible ? (balance?.available ?? "Bs. --") : "Bs. ••••••"}
+                </Typography>
+                <Typography sx={{ mt: 1.6, fontSize: "0.875rem" }}>
+                  Línea total {isAvailableVisible ? (balance?.totalCredit ?? "Bs. --") : "Bs. ••••••"}
+                </Typography>
               </Box>
-              <Typography id="marketplace-title" component="h2" sx={{ color: homeVisualTokens.color.navy, fontSize: "1.375rem", fontWeight: 800 }}>
-                Estamos preparando Impulsa Place
-              </Typography>
-              <Typography color="text.secondary" sx={{ maxWidth: 360 }}>
-                Muy pronto podrás explorar productos disponibles y conocer sus opciones de financiamiento.
-              </Typography>
-            </Stack>
+
+              <Box component="section" aria-label="Catálogo de productos">
+                {filteredProducts.length > 0 ? (
+                  <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 1.25 }}>
+                    {filteredProducts.map((product) => <CatalogProductCard key={product.id} product={product} />)}
+                  </Box>
+                ) : (
+                  <Stack
+                    spacing={1}
+                    sx={{ minHeight: 190, alignItems: "center", justifyContent: "center", bgcolor: "white", borderRadius: 3, textAlign: "center", px: 3 }}
+                  >
+                    <Typography sx={{ color: homeVisualTokens.color.navy, fontWeight: 800 }}>No encontramos productos</Typography>
+                    <Typography color="text.secondary" variant="body2">Prueba con otro nombre o palabra clave.</Typography>
+                  </Stack>
+                )}
+              </Box>
+            </>
           )}
 
           {access === "unavailable" && (
