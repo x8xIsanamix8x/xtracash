@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowBackRounded,
-  CheckCircleOutlineRounded,
   ChevronLeftRounded,
   ChevronRightRounded,
 } from "@mui/icons-material";
@@ -15,7 +14,6 @@ import {
   Button,
   Container,
   IconButton,
-  Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
@@ -25,6 +23,7 @@ import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 
 import { canAccessMarketplace } from "../home/marketplaceAccess";
 import { homeVisualTokens } from "../home/homeVisualTokens";
+import { PurchasePlanFlow } from "./components/PurchasePlanFlow";
 import { SolarProductArtwork } from "./components/SolarProductArtwork";
 import type { MarketplaceProduct } from "./products";
 
@@ -35,7 +34,6 @@ export function MarketplaceProductView({ product }: Readonly<{ product: Marketpl
   const [access, setAccess] = useState<AccessState>("checking");
   const [imageIndex, setImageIndex] = useState(0);
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const [noticeOpen, setNoticeOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -137,19 +135,10 @@ export function MarketplaceProductView({ product }: Readonly<{ product: Marketpl
                 </Box>
               </Box>
 
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={() => setNoticeOpen(true)}
-                sx={{ position: "fixed", zIndex: (theme) => theme.zIndex.appBar, left: "50%", bottom: "calc(14px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", width: "min(calc(100% - 48px), 440px)", minHeight: 58, borderRadius: "14px", bgcolor: "#2751E6", fontSize: "1rem", fontWeight: 800, boxShadow: "0 4px 12px rgba(39,81,230,.22)", "&:hover": { bgcolor: "#2751E6" } }}
-              >
-                Ir a plan de compra
-              </Button>
-              <Snackbar open={noticeOpen} autoHideDuration={3200} onClose={() => setNoticeOpen(false)} anchorOrigin={{ vertical: "top", horizontal: "center" }}>
-                <Alert icon={<CheckCircleOutlineRounded />} onClose={() => setNoticeOpen(false)} severity="info" sx={{ width: "100%" }}>
-                  El plan de compra estará disponible próximamente.
-                </Alert>
-              </Snackbar>
+              <PurchasePlanFlow
+                productName={product.id === "kit-solar-3kw" ? "Equipo UVU de 3 KW" : product.name}
+                imageVariant={product.imageVariant}
+              />
             </>
           )}
 
