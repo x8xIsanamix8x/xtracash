@@ -33,6 +33,7 @@ test("el promocional del Home abre el catálogo de Impulsa Place y conserva el a
   assert.match(marketplace, /router\.replace\("\/home"\)/);
   assert.match(marketplace, /Busca un producto/);
   assert.match(marketplace, /#2751E6/);
-  assert.match(marketplace, /getNewBusinessHomeData\(controller\.signal\)/);
+  assert.match(marketplace, /getMarketplaceLimit\(controller\.signal\)/);
+  assert.match(marketplace, /getCatalog\(search, page/);
   assert.match(marketplace, /AppBottomNavigation activeItem="home"/);
 });
