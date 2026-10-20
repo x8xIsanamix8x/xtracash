@@ -10,8 +10,12 @@ import {
 const projectUrl = new URL("../../", import.meta.url);
 
 test("el allowlist del promocional contiene al usuario de prueba y falla cerrado", () => {
-  assert.deepEqual(MARKETPLACE_ALLOWED_EMAILS, ["lmelo@impulsatechs.com"]);
+  assert.deepEqual(MARKETPLACE_ALLOWED_EMAILS, [
+    "lmelo@impulsatechs.com",
+    "molinagabriel9678@gmail.com",
+  ]);
   assert.equal(canAccessMarketplace(" LMELO@ImpulsaTechs.com "), true);
+  assert.equal(canAccessMarketplace(" MOLINAGABRIEL9678@GMAIL.COM "), true);
   assert.equal(canAccessMarketplace("otro@impulsatechs.com"), false);
   assert.equal(canAccessMarketplace(null), false);
 });
