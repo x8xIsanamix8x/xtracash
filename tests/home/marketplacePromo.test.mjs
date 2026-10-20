@@ -16,7 +16,7 @@ test("el allowlist del promocional contiene al usuario de prueba y falla cerrado
   assert.equal(canAccessMarketplace(null), false);
 });
 
-test("el promocional del Home navega a la pantalla independiente Impulsa Place", async () => {
+test("el promocional del Home abre el catálogo de Impulsa Place y conserva el acceso restringido", async () => {
   const [home, dashboard, promo, marketplace] = await Promise.all([
     readFile(new URL("src/features/home/HomeView.tsx", projectUrl), "utf8"),
     readFile(new URL("src/features/home/components/NewBusinessHomeDashboard.tsx", projectUrl), "utf8"),
@@ -31,5 +31,9 @@ test("el promocional del Home navega a la pantalla independiente Impulsa Place",
   assert.match(promo, /href="\/marketplace"/);
   assert.match(marketplace, /canAccessMarketplace\(email\)/);
   assert.match(marketplace, /router\.replace\("\/home"\)/);
-  assert.match(marketplace, /Estamos preparando Impulsa Place/);
+  assert.match(marketplace, /Busca un producto/);
+  assert.match(marketplace, /#2751E6/);
+  assert.match(marketplace, /getMarketplaceLimit\(controller\.signal\)/);
+  assert.match(marketplace, /getCatalog\(search, page/);
+  assert.match(marketplace, /AppBottomNavigation activeItem="home"/);
 });
