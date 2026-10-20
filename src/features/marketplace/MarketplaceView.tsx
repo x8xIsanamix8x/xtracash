@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -11,10 +11,13 @@ import {
 import {
   Alert,
   Box,
+  Button,
   Container,
   IconButton,
   InputAdornment,
+  MenuItem,
   OutlinedInput,
+  TextField,
   Stack,
   Typography,
 } from "@mui/material";
@@ -23,23 +26,26 @@ import { useRouter } from "next/navigation";
 import { APP_BOTTOM_NAVIGATION_HEIGHT, AppBottomNavigation } from "@/components/AppBottomNavigation";
 import { getProfilePersonalInfo, ProfileServiceError } from "@/features/profile/services/profile";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
-import { getNewBusinessHomeData } from "@/features/home/services/newBusinessHome";
-import { createNewBusinessHomeViewModel } from "@/features/home/newBusinessViewModel";
-import type { HomeDashboardViewModel } from "@/features/home/newBusinessTypes";
 
 import { canAccessMarketplace } from "../home/marketplaceAccess";
 import { homeVisualTokens } from "../home/homeVisualTokens";
-import { SolarProductArtwork } from "./components/SolarProductArtwork";
-import { marketplaceProducts } from "./products";
+import { MarketplaceProductImage } from "./components/MarketplaceProductImage";
+import { getCatalog, getCatalogCategories, getMarketplaceLimit, MarketplaceServiceError, type CatalogCategory, type CatalogProduct, type MarketplaceLimit } from "./services/marketplace";
 
 type AccessState = "checking" | "allowed" | "unavailable";
 
-function CatalogProductCard({ product }: Readonly<{ product: (typeof marketplaceProducts)[number] }>) {
+function formatMoney(value: number | string | undefined, currency = "Bs.") {
+  if (value === undefined) return "Precio no disponible";
+  const numeric = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(numeric) ? `${currency} ${new Intl.NumberFormat("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numeric)}` : `${currency} ${value}`;
+}
+
+function CatalogProductCard({ product }: Readonly<{ product: CatalogProduct }>) {
   return (
     <Box
       component={Link}
       href={`/marketplace/${product.id}`}
-      aria-label={`Ver ${product.name}, ${product.price}`}
+      aria-label={`Ver ${product.nombre}, ${formatMoney(product.precio?.usdt, product.moneda ?? "USDT")}`}
       sx={{
         minWidth: 0,
         overflow: "hidden",
@@ -54,31 +60,14 @@ function CatalogProductCard({ product }: Readonly<{ product: (typeof marketplace
       }}
     >
       <Box sx={{ position: "relative", aspectRatio: "1.12 / 1", overflow: "hidden" }}>
-        <SolarProductArtwork variant={product.imageVariant} />
-        <Box
-          component="span"
-          sx={{
-            position: "absolute",
-            left: 10,
-            bottom: 10,
-            px: 1.1,
-            py: 0.35,
-            borderRadius: "999px",
-            bgcolor: homeVisualTokens.color.orange,
-            color: homeVisualTokens.color.black,
-            fontSize: "0.72rem",
-            fontWeight: 800,
-          }}
-        >
-          -50%
-        </Box>
+        <MarketplaceProductImage url={product.imagenPrincipal} productId={product.id} alt={product.nombre} />
       </Box>
       <Stack spacing={0.25} sx={{ px: 1.25, pt: 1, pb: 1.25 }}>
         <Typography sx={{ color: homeVisualTokens.color.navy, fontSize: "0.95rem", lineHeight: 1.3, fontWeight: 500 }}>
-          {product.name}
+          {product.nombre}
         </Typography>
         <Typography sx={{ color: "#20202A", fontSize: "1.22rem", fontWeight: 800, lineHeight: 1.25 }}>
-          {product.price}
+          {formatMoney(product.precio?.usdt, product.moneda ?? "USDT")}
         </Typography>
       </Stack>
     </Box>
@@ -90,7 +79,15 @@ export function MarketplaceView() {
   const [access, setAccess] = useState<AccessState>("checking");
   const [search, setSearch] = useState("");
   const [isAvailableVisible, setIsAvailableVisible] = useState(false);
-  const [balance, setBalance] = useState<HomeDashboardViewModel["balance"] | null>(null);
+  const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+  const [categories, setCategories] = useState<CatalogCategory[]>([]);
+  const [categoryId, setCategoryId] = useState("");
+  const [limit, setLimit] = useState<MarketplaceLimit | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogReload, setCatalogReload] = useState(0);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -103,15 +100,8 @@ export function MarketplaceView() {
           return;
         }
         setAccess("allowed");
-        void getNewBusinessHomeData(controller.signal)
-          .then((data) => {
-            if (!controller.signal.aborted) {
-              setBalance(createNewBusinessHomeViewModel(data).balance);
-            }
-          })
-          .catch(() => {
-            // El catálogo sigue disponible si el resumen financiero no responde.
-          });
+        void getMarketplaceLimit(controller.signal).then(({ data }) => { if (!controller.signal.aborted) setLimit(data); }).catch(() => undefined);
+        void getCatalogCategories(controller.signal).then(({ data }) => { if (!controller.signal.aborted) setCategories(data); }).catch(() => undefined);
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -124,14 +114,22 @@ export function MarketplaceView() {
 
     return () => controller.abort();
   }, [router]);
-
-  const filteredProducts = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase("es-VE");
-    if (!query) return marketplaceProducts;
-    return marketplaceProducts.filter((product) =>
-      `${product.name} ${product.category} UVU Energy`.toLocaleLowerCase("es-VE").includes(query),
-    );
-  }, [search]);
+  useEffect(() => {
+    if (access !== "allowed") return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      setCatalogLoading(true);
+      void getCatalog(search, page, controller.signal, categoryId || undefined).then(({ data }) => {
+        setCatalog(data.items ?? []); setTotalPages(data.totalPages ?? 0); setCatalogError(null);
+      }).catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setCatalogError(error instanceof MarketplaceServiceError && error.status === 403 ? "El marketplace no está habilitado para tu cuenta." : "No pudimos cargar el catálogo. Inténtalo nuevamente.");
+      }).finally(() => { if (!controller.signal.aborted) setCatalogLoading(false); });
+    }, 250);
+    return () => { window.clearTimeout(timeout); controller.abort(); };
+  }, [access, catalogReload, categoryId, page, search]);
+  const availableBs = limit?.disponible?.bs;
+  const totalBs = limit?.limite?.bs;
 
   return (
     <Box
@@ -162,7 +160,7 @@ export function MarketplaceView() {
               <OutlinedInput
                 fullWidth
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setPage(0); }}
                 placeholder="Busca un producto"
                 inputProps={{ "aria-label": "Buscar productos" }}
                 startAdornment={
@@ -178,6 +176,10 @@ export function MarketplaceView() {
                   "& fieldset": { border: 0 },
                 }}
               />
+              {categories.length > 0 && <TextField select fullWidth label="Categoría" value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(0); }} size="small" sx={{ bgcolor: "white", borderRadius: "12px" }}>
+                <MenuItem value="">Todas las categorías</MenuItem>
+                {categories.map((category) => <MenuItem key={category.id} value={category.id}>{category.nombre}</MenuItem>)}
+              </TextField>}
 
               <Box
                 component="section"
@@ -209,27 +211,30 @@ export function MarketplaceView() {
                   aria-live="polite"
                   sx={{ fontSize: "clamp(2rem, 9vw, 2.75rem)", lineHeight: 1.15, fontWeight: 400, letterSpacing: "-0.04em" }}
                 >
-                  {isAvailableVisible ? (balance?.available ?? "Bs. --") : "Bs. ••••••"}
+                  {isAvailableVisible ? formatMoney(availableBs) : "Bs. ••••••"}
                 </Typography>
                 <Typography sx={{ mt: 1.6, fontSize: "0.875rem" }}>
-                  Línea total {isAvailableVisible ? (balance?.totalCredit ?? "Bs. --") : "Bs. ••••••"}
+                  Línea total {isAvailableVisible ? formatMoney(totalBs) : "Bs. ••••••"}
                 </Typography>
               </Box>
 
+              {(limit?.estado === "BLOQUEADA" || limit?.estado === "SUSPENDIDA") && <Alert severity="warning">{limit.estado === "BLOQUEADA" ? "El uso de tu cupo del marketplace está bloqueado." : "El marketplace está suspendido temporalmente."} Puedes consultar el catálogo; el servicio validará si una compra puede continuar.</Alert>}
+
               <Box component="section" aria-label="Catálogo de productos">
-                {filteredProducts.length > 0 ? (
+                {catalogError ? <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => setCatalogReload((v) => v + 1)}>Reintentar</Button>}>{catalogError}</Alert> : catalogLoading && catalog.length === 0 ? <Typography role="status" sx={{ py: 5, textAlign: "center" }}>Cargando productos…</Typography> : catalog.length > 0 ? (
                   <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 1.25 }}>
-                    {filteredProducts.map((product) => <CatalogProductCard key={product.id} product={product} />)}
+                    {catalog.map((product) => <CatalogProductCard key={product.id} product={product} />)}
                   </Box>
                 ) : (
                   <Stack
                     spacing={1}
                     sx={{ minHeight: 190, alignItems: "center", justifyContent: "center", bgcolor: "white", borderRadius: 3, textAlign: "center", px: 3 }}
                   >
-                    <Typography sx={{ color: homeVisualTokens.color.navy, fontWeight: 800 }}>No encontramos productos</Typography>
+                    <Typography sx={{ color: homeVisualTokens.color.navy, fontWeight: 800 }}>No hay productos para mostrar</Typography>
                     <Typography color="text.secondary" variant="body2">Prueba con otro nombre o palabra clave.</Typography>
                   </Stack>
                 )}
+                {totalPages > 1 && <Stack direction="row" sx={{ mt: 1.5, justifyContent: "space-between" }}><Button disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>Anterior</Button><Typography sx={{ alignSelf: "center" }}>Página {page + 1} de {totalPages}</Typography><Button disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>Siguiente</Button></Stack>}
               </Box>
             </>
           )}

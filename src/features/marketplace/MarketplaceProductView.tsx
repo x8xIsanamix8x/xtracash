@@ -3,148 +3,128 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ArrowBackRounded,
-  ChevronLeftRounded,
-  ChevronRightRounded,
-} from "@mui/icons-material";
-import {
-  Alert,
-  Box,
-  Button,
-  Container,
-  IconButton,
-  Stack,
-  Typography,
-} from "@mui/material";
-
+import { ArrowBackRounded } from "@mui/icons-material";
+import { Alert, Box, Button, Container, IconButton, Stack, Typography } from "@mui/material";
 import { ProfileServiceError, getProfilePersonalInfo } from "@/features/profile/services/profile";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
-
 import { canAccessMarketplace } from "../home/marketplaceAccess";
 import { homeVisualTokens } from "../home/homeVisualTokens";
+import { getProduct, MarketplaceServiceError, type CatalogProduct } from "./services/marketplace";
 import { PurchasePlanFlow } from "./components/PurchasePlanFlow";
-import { SolarProductArtwork } from "./components/SolarProductArtwork";
-import type { MarketplaceProduct } from "./products";
+import { MarketplaceProductImage } from "./components/MarketplaceProductImage";
 
 type AccessState = "checking" | "allowed" | "unavailable";
+function formatMoney(value: number | string | undefined, currency = "Bs.") {
+  if (value === undefined) return "Precio no disponible";
+  const n = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(n) ? `${currency} ${new Intl.NumberFormat("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}` : `${currency} ${value}`;
+}
 
-export function MarketplaceProductView({ product }: Readonly<{ product: MarketplaceProduct | undefined }>) {
+function textValue(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return null;
+}
+
+function categoryName(value: CatalogProduct["categoria"]): string | null {
+  return typeof value === "string" ? textValue(value) : textValue(value?.nombre);
+}
+
+function readableLabel(value: string): string {
+  return value.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function ProductDataSection({ title, rows }: Readonly<{ title: string; rows: ReadonlyArray<readonly [string, string | null]> }>) {
+  const visibleRows = rows.filter((row): row is readonly [string, string] => Boolean(row[1]));
+  if (!visibleRows.length) return null;
+
+  return <Box component="section" aria-label={title} sx={{ p: 2.25, border: "1px solid #DADAE4", borderRadius: "20px", bgcolor: "white" }}>
+    <Typography component="h3" sx={{ mb: 1.25, fontSize: "1.15rem", lineHeight: 1.3, fontWeight: 800 }}>{title}</Typography>
+    <Stack spacing={1.15}>
+      {visibleRows.map(([label, value]) => <Box key={label} sx={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", columnGap: 1.5, alignItems: "start" }}>
+        <Typography sx={{ fontSize: "0.94rem", lineHeight: 1.4, fontWeight: 600 }}>{label}</Typography>
+        <Typography sx={{ fontSize: "0.94rem", lineHeight: 1.4, overflowWrap: "anywhere" }}>{value}</Typography>
+      </Box>)}
+    </Stack>
+  </Box>;
+}
+
+export function MarketplaceProductView({ productId }: Readonly<{ productId: string }>) {
   const router = useRouter();
   const [access, setAccess] = useState<AccessState>("checking");
+  const [product, setProduct] = useState<CatalogProduct | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
-  const [showFullDescription, setShowFullDescription] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
-    void getProfilePersonalInfo(controller.signal)
-      .then(({ email }) => {
+    void getProfilePersonalInfo(controller.signal).then(({ email }) => {
+      if (controller.signal.aborted) return;
+      if (!canAccessMarketplace(email)) { router.replace("/home"); return; }
+      setAccess("allowed");
+      void getProduct(productId, controller.signal).then(({ data }) => { if (!controller.signal.aborted) setProduct(data); }).catch((e: unknown) => {
         if (controller.signal.aborted) return;
-        if (canAccessMarketplace(email)) setAccess("allowed");
-        else router.replace("/home");
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        if (error instanceof ProfileServiceError && error.type === "unauthenticated") {
-          router.replace(sessionExpiredUrl);
-          return;
-        }
-        setAccess("unavailable");
+        setError(e instanceof MarketplaceServiceError && e.status === 404 ? "Este producto ya no está disponible." : "No pudimos cargar el producto. Inténtalo nuevamente.");
       });
+    }).catch((e: unknown) => {
+      if (controller.signal.aborted) return;
+      if (e instanceof ProfileServiceError && e.type === "unauthenticated") { router.replace(sessionExpiredUrl); return; }
+      setAccess("unavailable");
+    });
     return () => controller.abort();
-  }, [router]);
+  }, [productId, router]);
 
-  if (!product) {
-    return (
-      <Box component="main" sx={{ minHeight: "100dvh", bgcolor: homeVisualTokens.color.surfaceTint, pt: "calc(24px + env(safe-area-inset-top))" }}>
-        <Container maxWidth="sm">
-          <Stack spacing={2}>
-            <IconButton aria-label="Volver al catálogo" component={Link} href="/marketplace" sx={{ alignSelf: "flex-start", color: homeVisualTokens.color.navy }}>
-              <ArrowBackRounded />
-            </IconButton>
-            <Alert severity="info">Este producto no está disponible en el catálogo de muestra.</Alert>
-          </Stack>
-        </Container>
-      </Box>
-    );
-  }
-
-  return (
-    <Box
-      component="main"
-      sx={{
-        minHeight: "100dvh",
-        bgcolor: homeVisualTokens.color.surfaceTint,
-        pt: "calc(10px + env(safe-area-inset-top))",
-        pb: "calc(112px + env(safe-area-inset-bottom))",
-      }}
-    >
-      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 } }}>
-        <Stack spacing={2}>
-          {access !== "checking" && (
-            <Stack component="header" direction="row" sx={{ minHeight: 52, alignItems: "center", justifyContent: "space-between" }}>
-              <IconButton aria-label="Volver al catálogo" component={Link} href="/marketplace" sx={{ color: homeVisualTokens.color.navy, ml: -1 }}>
-                <ArrowBackRounded />
-              </IconButton>
-              <Typography component="h1" sx={{ color: "#111111", fontSize: "1rem", fontWeight: 600 }}>
-                Impúlsate
-              </Typography>
-              <Box sx={{ width: 40 }} aria-hidden="true" />
-            </Stack>
-          )}
-
-          {access === "allowed" && (
-            <>
-              <Box sx={{ position: "relative", overflow: "hidden", aspectRatio: "1 / 0.9", borderRadius: "14px", bgcolor: "#e5ece8" }}>
-                <SolarProductArtwork variant={(product.imageVariant + imageIndex) % 4} />
-                <IconButton
-                  aria-label="Imagen anterior"
-                  onClick={() => setImageIndex((current) => (current + 2) % 3)}
-                  sx={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", bgcolor: "rgba(255,255,255,.8)", color: homeVisualTokens.color.navy, "&:hover": { bgcolor: "white" } }}
-                >
-                  <ChevronLeftRounded />
-                </IconButton>
-                <IconButton
-                  aria-label="Imagen siguiente"
-                  onClick={() => setImageIndex((current) => (current + 1) % 3)}
-                  sx={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", bgcolor: "rgba(255,255,255,.8)", color: homeVisualTokens.color.navy, "&:hover": { bgcolor: "white" } }}
-                >
-                  <ChevronRightRounded />
-                </IconButton>
-                <Stack direction="row" spacing={0.75} sx={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", alignItems: "center", borderRadius: 99, px: 1, py: 0.5, bgcolor: "rgba(0,0,0,.45)" }}>
-                  {[0, 1, 2].map((index) => (
-                    <Box key={index} component="button" type="button" aria-label={`Ver imagen ${index + 1}`} aria-pressed={imageIndex === index} onClick={() => setImageIndex(index)} sx={{ width: 8, height: 8, p: 0, border: 0, borderRadius: "50%", bgcolor: imageIndex === index ? "white" : "rgba(0,0,0,.8)", cursor: "pointer" }} />
-                  ))}
-                </Stack>
-              </Box>
-
-              <Box component="section" sx={{ p: 2.25, border: "1px solid #DADAE4", borderRadius: "14px", bgcolor: "white" }}>
-                <Stack spacing={0.5}>
-                  <Typography component="h2" sx={{ color: "#151515", fontSize: "1.25rem", lineHeight: 1.3 }}>{product.name}</Typography>
-                  <Typography sx={{ color: "#171717", fontSize: "1.65rem", fontWeight: 800, lineHeight: 1.2 }}>{product.price}</Typography>
-                  <Typography sx={{ color: "#171717", fontWeight: 700 }}>UVU Energy</Typography>
-                </Stack>
-                <Box sx={{ mt: 2.5 }}>
-                  <Typography sx={{ mb: 0.75, color: "#171717", fontWeight: 700 }}>Descripción</Typography>
-                  <Typography sx={{ color: "#252525", fontSize: "0.94rem", lineHeight: 1.45, display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: showFullDescription ? "unset" : 4, overflow: "hidden" }}>
-                    {product.description}
-                  </Typography>
-                  <Button onClick={() => setShowFullDescription((current) => !current)} size="small" sx={{ minWidth: 0, px: 0, mt: 0.5, textDecoration: "underline", textUnderlineOffset: 2 }}>
-                    {showFullDescription ? "Ver menos" : "Ver más detalles"}
-                  </Button>
-                </Box>
-              </Box>
-
-              <PurchasePlanFlow
-                productName={product.id === "kit-solar-3kw" ? "Equipo UVU de 3 KW" : product.name}
-                imageVariant={product.imageVariant}
-              />
-            </>
-          )}
-
-          {access === "unavailable" && <Alert severity="warning">No pudimos validar tu acceso a Impulsa Place. Vuelve al inicio e inténtalo nuevamente.</Alert>}
-        </Stack>
-      </Container>
-    </Box>
-  );
+  const images = product?.imagenes ?? [];
+  const activeImage = images[imageIndex];
+  const merchant = textValue(product?.comercio?.nombre) ?? textValue(product?.marca);
+  const description = textValue(product?.descripcion) ?? textValue(product?.descripcionCorta);
+  const detailRows: ReadonlyArray<readonly [string, string | null]> = product ? [
+    ["Marca", textValue(product.marca)],
+    ["Modelo", textValue(product.modelo)],
+    ["Código del producto", textValue(product.sku)],
+    ["Categoría", categoryName(product.categoria)],
+    ["Subcategoría", categoryName(product.subcategoria)],
+    ["Condición", textValue(product.condicion)],
+    ["Disponibilidad", textValue(product.disponibilidad)],
+    ["Unidades disponibles", typeof product.stock === "number" ? String(product.stock) : null],
+  ] : [];
+  const deliveryRows: ReadonlyArray<readonly [string, string | null]> = product ? [
+    ["Modalidad de entrega", textValue(product.entrega?.modalidad)],
+    ["Tiempo de entrega", textValue(product.entrega?.tiempo)],
+    ["Zona de entrega", textValue(product.entrega?.zona)],
+    ["Costo de entrega", textValue(product.entrega?.costoUsdt) ? `${product.entrega?.costoUsdt} USDT` : null],
+    ["Garantía", textValue(product.garantia)],
+  ] : [];
+  const specificationRows: ReadonlyArray<readonly [string, string | null]> = product ? [
+    ...Object.entries(product.atributos ?? {}).map(([key, value]) => [readableLabel(key), textValue(value)] as const),
+    ...deliveryRows,
+  ] : [];
+  return <Box component="main" sx={{ minHeight: "100dvh", bgcolor: homeVisualTokens.color.surfaceTint, pt: "calc(10px + env(safe-area-inset-top))", pb: "calc(112px + env(safe-area-inset-bottom))" }}>
+    <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 } }}>
+      <Stack spacing={2}>
+        <Stack component="header" direction="row" sx={{ minHeight: 52, alignItems: "center", justifyContent: "space-between" }}><IconButton aria-label="Volver al catálogo" component={Link} href="/marketplace"><ArrowBackRounded /></IconButton><Typography component="h1" sx={{ fontSize: "1rem", fontWeight: 600 }}>Impúlsate</Typography><Box sx={{ width: 40 }} /></Stack>
+        {access === "checking" && <Typography role="status">Cargando producto…</Typography>}
+        {access === "unavailable" && <Alert severity="warning">No pudimos validar tu acceso al marketplace.</Alert>}
+        {error && <Alert severity="error">{error}</Alert>}
+        {product && <>
+          <Box sx={{ overflow: "hidden", aspectRatio: "1 / 0.9", borderRadius: "14px", bgcolor: "#E7E7EE" }}>
+            <MarketplaceProductImage url={activeImage?.url} productId={product.id} alt={product.nombre} />
+          </Box>
+          {images.length > 1 && <Stack direction="row" spacing={1} sx={{ justifyContent: "center" }}>{images.map((image, i) => <Button key={image.id} onClick={() => setImageIndex(i)} aria-label={`Ver imagen ${i + 1}`} aria-pressed={i === imageIndex} sx={{ minWidth: 16, width: 16, height: 16, p: 0, borderRadius: "50%", bgcolor: i === imageIndex ? "#20202A" : "#AAA" }} />)}</Stack>}
+          <Box component="section" sx={{ p: 2.25, border: "1px solid #DADAE4", borderRadius: "20px", bgcolor: "white" }}>
+            <Typography component="h2" sx={{ fontSize: "1.25rem", lineHeight: 1.3 }}>{product.nombre}</Typography>
+            <Typography sx={{ fontSize: "1.55rem", fontWeight: 800 }}>{formatMoney(product.precio?.usdt, product.moneda ?? "USDT")}</Typography>
+            {merchant && <Typography sx={{ mt: 0.4, color: "#2751E6", fontWeight: 700 }}>{merchant}</Typography>}
+          </Box>
+          <ProductDataSection title="Detalles del producto" rows={detailRows} />
+          <ProductDataSection title="Especificaciones del producto" rows={specificationRows} />
+          {description && <Box component="section" sx={{ p: 2.25, border: "1px solid #DADAE4", borderRadius: "20px", bgcolor: "white" }}>
+            <Typography component="h3" sx={{ mb: 1, fontSize: "1.15rem", fontWeight: 800 }}>Descripción</Typography>
+            <Typography sx={{ fontSize: "0.94rem", lineHeight: 1.5, whiteSpace: "pre-line" }}>{description}</Typography>
+          </Box>}
+          <PurchasePlanFlow productId={product.id} productName={product.nombre} productImageUrl={activeImage?.url ?? product.imagenPrincipal} productSubtitle={textValue(product.descripcionCorta) ?? undefined} />
+        </>}
+      </Stack>
+    </Container>
+  </Box>;
 }

@@ -1,480 +1,234 @@
 "use client";
 
-import { useState } from "react";
-import {
-  AccountBalanceWalletRounded,
-  CheckCircleRounded,
-  CloseRounded,
-  ContentCopyRounded,
-  CreditCardRounded,
-  ReceiptLongRounded,
-  VerifiedRounded,
-} from "@mui/icons-material";
-import {
-  Alert,
-  Box,
-  Button,
-  Checkbox,
-  Dialog,
-  IconButton,
-  MenuItem,
-  Select,
-  Slide,
-  Snackbar,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { useEffect, useState } from "react";
+import { AccountBalanceWalletRounded, CloseRounded, InfoOutlined, LocalAtmRounded, LocalOfferRounded, RequestQuoteRounded, SavingsRounded } from "@mui/icons-material";
+import { Alert, Box, Button, Dialog, IconButton, MenuItem, Select, Slide, Stack, TextField, Typography } from "@mui/material";
 import type { TransitionProps } from "@mui/material/transitions";
 import { forwardRef } from "react";
+import { createPurchase, getMarketplaceHours, getProductPlan, getPurchases, getPurchase, getPurchaseContract, payC2p, reportInitialPayment, requestC2pOtp, MarketplaceServiceError } from "../services/marketplace";
+import { MarketplaceProductImage } from "./MarketplaceProductImage";
 
-import { SolarProductArtwork } from "./SolarProductArtwork";
+const blue = "#2751E6";
+const surface = "#F0EFFF";
+// Core publica las respuestas de compra como esquemas abiertos; se mantiene este
+// único límite dinámico mientras se valida cada campo usado en la vista.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyRecord = Record<string, any>;
+type Stage = "plan" | "payment" | "report" | "c2p" | "status";
+const SlideUp = forwardRef(function SlideUp(props: TransitionProps & { children: React.ReactElement }, ref: React.Ref<unknown>) { return <Slide direction="up" ref={ref} {...props} />; });
+const get = (value: unknown, key: string): AnyRecord => value && typeof value === "object" ? (value as AnyRecord)[key] ?? {} : {};
+function fmt(value: unknown, currency = "USDT") { if (value === undefined || value === null || value === "") return "—"; const n = Number(value); return Number.isFinite(n) ? `${currency} ${new Intl.NumberFormat("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}` : `${currency} ${String(value)}`; }
+function venezuelaDate() { const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date()); const value = (type: string) => parts.find((part) => part.type === type)?.value ?? ""; return `${value("year")}-${value("month")}-${value("day")}`; }
+function formatError(error: unknown) { if (error instanceof MarketplaceServiceError) { const code = get(error.body, "diagnostic").code ?? get(error.body, "code"); if (code === "COMPRA_ABIERTA") return "Ya tienes una compra abierta. Estamos recuperando su estado."; if (code === "MONTO_NO_CUADRA") return "El monto del plan cambió. Actualiza el plan antes de continuar."; if (error.status === 403) return "Esta operación no está habilitada en este momento."; if (error.status === 409) return "La operación no puede continuar con el estado actual."; } return "No pudimos completar la operación. Revisa tu conexión e inténtalo nuevamente."; }
+function setAttemptedC2p(id: string, attempted: boolean) { try { const key = `marketplace:c2p-attempt:${id}`; if (attempted) sessionStorage.setItem(key, "1"); else sessionStorage.removeItem(key); } catch { /* El estado del servidor sigue siendo la fuente de verdad. */ } }
+function hasAttemptedC2p(id: string) { try { return sessionStorage.getItem(`marketplace:c2p-attempt:${id}`) === "1"; } catch { return false; } }
 
-const marketplaceBlue = "#2751E6";
-const modalBackground = "#F0EFFF";
+function FlowHeader({ title, onClose }: { title: string; onClose: () => void }) { return <Stack direction="row" sx={{ minHeight: 48, alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}><IconButton aria-label="Cerrar" onClick={onClose} sx={{ width: 42, height: 42, border: "1.5px solid #171717" }}><CloseRounded /></IconButton><Typography id="purchase-flow-title" component="h2" sx={{ fontWeight: 700 }}>{title}</Typography><Box sx={{ width: 42 }} /></Stack>; }
+function Primary({ children, onClick, disabled = false }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) { return <Button fullWidth variant="contained" onClick={onClick} disabled={disabled} sx={{ minHeight: 56, flexShrink: 0, borderRadius: "14px", bgcolor: blue, fontSize: "1rem", fontWeight: 800, "&:hover": { bgcolor: blue } }}>{children}</Button>; }
 
-type PaymentMethod = "mobile" | "transfer";
-type FlowStep = "plan" | "payment" | "report" | "validation" | "success";
-
-const SlideUpTransition = forwardRef(function SlideUpTransition(
-  props: TransitionProps & { children: React.ReactElement },
-  ref: React.Ref<unknown>,
-) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
-
-function FlowHeader({
-  title,
-  onClose,
-}: Readonly<{ title: string; onClose: () => void }>) {
-  return (
-    <Stack direction="row" sx={{ minHeight: 48, alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-      <IconButton
-        aria-label="Cerrar plan de compra"
-        onClick={onClose}
-        sx={{ width: 42, height: 42, color: "#171717", border: "1.5px solid #171717" }}
-      >
-        <CloseRounded sx={{ fontSize: 22 }} />
-      </IconButton>
-      <Typography id="purchase-flow-title" component="h2" sx={{ color: "#171717", fontSize: "1rem", fontWeight: 700, textAlign: "center" }}>
-        {title}
+function OffHoursNotice({ isOpen, nextOpening }: Readonly<{ isOpen: boolean | undefined; nextOpening?: unknown }>) {
+  const openingDate = typeof nextOpening === "string" ? new Date(nextOpening) : null;
+  const openingLabel = openingDate && Number.isFinite(openingDate.getTime())
+    ? new Intl.DateTimeFormat("es-VE", { timeZone: "America/Caracas", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(openingDate)
+    : null;
+  return <Box role="status" sx={{ display: "flex", alignItems: "flex-start", gap: 1.25, p: 1.5, border: "1px solid #B8E4F2", borderRadius: "14px", bgcolor: "#E7F7FC", color: "#174A63" }}>
+    <InfoOutlined sx={{ mt: "2px", flexShrink: 0, color: "#168FC1" }} fontSize="small" />
+    <Box>
+      <Typography sx={{ fontSize: "0.92rem", lineHeight: 1.45, fontWeight: 700 }}>{isOpen === false ? "Fuera del horario de atención" : "Verificando el horario de atención"}</Typography>
+      <Typography sx={{ mt: 0.25, fontSize: "0.88rem", lineHeight: 1.45 }}>
+        {isOpen === false ? "Puedes iniciar la compra ahora; el pago inicial estará disponible cuando abra el servicio." : "Consulta el estado de la compra en un momento para habilitar el pago inicial."}
       </Typography>
-      <Box sx={{ width: 42 }} aria-hidden="true" />
-    </Stack>
-  );
-}
-
-function ActionButton({ children, onClick }: Readonly<{ children: React.ReactNode; onClick: () => void }>) {
-  return (
-  <Button
-      fullWidth
-      variant="contained"
-      onClick={onClick}
-      sx={{
-        position: "sticky",
-        bottom: 0,
-        zIndex: 2,
-        minHeight: 58,
-        flexShrink: 0,
-        borderRadius: "14px",
-        bgcolor: marketplaceBlue,
-        color: "white",
-        fontSize: "1.1rem",
-        fontWeight: 800,
-        boxShadow: "0 3px 0 rgba(0,0,0,.14), inset 0 2px 0 rgba(255,255,255,.24)",
-        "&:hover": { bgcolor: marketplaceBlue },
-      }}
-    >
-      {children}
-    </Button>
-  );
-}
-
-function PlanAmount({ label, value }: Readonly<{ label: string; value: string }>) {
-  return (
-    <Box sx={{ minHeight: 92, display: "flex", flexDirection: "column", justifyContent: "space-between", p: 1.4, border: "1px solid #D6D6D6", borderRadius: "15px", bgcolor: "#fff" }}>
-      <Typography sx={{ color: "#1A1A1A", fontSize: "0.91rem" }}>{label}</Typography>
-      <Typography sx={{ color: marketplaceBlue, fontSize: "1.35rem", fontWeight: 800, lineHeight: 1.1 }}>{value}</Typography>
+      {openingLabel && <Typography sx={{ mt: 0.6, fontSize: "0.88rem", lineHeight: 1.4, fontWeight: 700 }}>Próxima apertura: {openingLabel}</Typography>}
     </Box>
-  );
+  </Box>;
 }
 
-function PlanStep({ productName, imageVariant, onPay }: Readonly<{ productName: string; imageVariant: number; onPay: () => void }>) {
-  return (
-    <>
-      <Box sx={{ p: 1.25, display: "flex", gap: 1.25, alignItems: "center", borderRadius: "15px", border: "1px solid #D6D6D6", bgcolor: "#fff" }}>
-        <Box sx={{ width: 76, height: 76, flexShrink: 0, overflow: "hidden", borderRadius: "9px" }}>
-          <SolarProductArtwork variant={imageVariant} />
-        </Box>
-        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-          <Typography sx={{ color: "#242424", fontSize: "1.17rem", lineHeight: 1.15, fontWeight: 800 }}>{productName}</Typography>
-          <Typography sx={{ color: "#1F1F1F", lineHeight: 1.3 }}>Inversor + batería de litio</Typography>
-          <Typography sx={{ color: "#1F1F1F", lineHeight: 1.3 }}>Orden #1234</Typography>
-        </Stack>
-      </Box>
-
-      <Box sx={{ p: 1.4, borderRadius: "15px", border: "1px solid #D6D6D6", bgcolor: "#fff" }}>
-        <Typography sx={{ mb: 1, color: "#1B1B1B", fontSize: "1.03rem", fontWeight: 800 }}>Tu plan de compra</Typography>
-        <Stack spacing={1}>
-          <PlanAmount label="Precio del equipo" value="1.000 usdt" />
-          <PlanAmount label="Monto a financiar" value="800 usdt" />
-        </Stack>
-      </Box>
-
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 1.2 }}>
-        <Box sx={{ minHeight: 174, p: 1.35, borderRadius: "15px", border: "1px solid #D6D6D6", bgcolor: "white", display: "flex", flexDirection: "column" }}>
-          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-            <Typography sx={{ fontWeight: 800 }}>Inicial</Typography>
-            <Box sx={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: "50%", color: marketplaceBlue, bgcolor: "#F0EFFF" }}><CreditCardRounded fontSize="small" /></Box>
-          </Stack>
-          <Typography sx={{ mt: "auto", color: "#929292", fontSize: "0.9rem", fontWeight: 600 }}>Costo de gestión - $25</Typography>
-          <Typography sx={{ mt: 0.4, color: marketplaceBlue, fontSize: "1.35rem", fontWeight: 800 }}>225 usdt</Typography>
-        </Box>
-        <Box sx={{ minHeight: 174, p: 1.35, borderRadius: "15px", border: "1px solid #D6D6D6", bgcolor: "white", display: "flex", flexDirection: "column" }}>
-          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-            <Typography sx={{ fontWeight: 800 }}>6 Cuotas</Typography>
-            <Box sx={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: "50%", color: marketplaceBlue, bgcolor: "#F0EFFF" }}><ReceiptLongRounded fontSize="small" /></Box>
-          </Stack>
-          <Typography sx={{ mt: "auto", color: marketplaceBlue, fontSize: "1.35rem", fontWeight: 800 }}>200 usdt</Typography>
-        </Box>
-      </Box>
-      <Box sx={{ flex: 1, minHeight: 0 }} />
-      <ActionButton onClick={onPay}>Pagar</ActionButton>
-    </>
-  );
-}
-
-function AmountSummary() {
-  return (
-    <Box sx={{ p: 1.5, borderRadius: "12px", bgcolor: marketplaceBlue, color: "white" }}>
-      <Typography sx={{ fontSize: "0.86rem" }}>Monto a pagar</Typography>
-      <Typography sx={{ fontSize: "1.55rem", lineHeight: 1.25 }}>Bs.30.981,51</Typography>
-      <Typography sx={{ mt: 0.7, fontSize: "0.82rem" }}>Mascota - Cuota 03 - hasta el 9 nov.</Typography>
+function PlanAmountCard({ title, amount, note, icon }: Readonly<{ title: string; amount: unknown; note?: string; icon: React.ReactNode }>) {
+  if (amount === undefined || amount === null || amount === "") return null;
+  return <Box sx={{ minWidth: 0, minHeight: 144, p: 1.45, border: "1px solid #D9D9E1", borderRadius: "16px", bgcolor: "#fff", display: "flex", flexDirection: "column" }}>
+    <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+      <Typography sx={{ fontSize: "0.92rem", fontWeight: 700, lineHeight: 1.25 }}>{title}</Typography>
+      <Box sx={{ width: 38, height: 38, flexShrink: 0, display: "grid", placeItems: "center", color: blue, bgcolor: "#F0EFFF", borderRadius: "50%" }}>{icon}</Box>
+    </Stack>
+    <Box sx={{ mt: "auto", pt: 1.2 }}>
+      {note && <Typography sx={{ mb: 0.65, color: "#888", fontSize: "0.82rem", lineHeight: 1.25, fontWeight: 600 }}>{note}</Typography>}
+      <Typography sx={{ color: blue, fontSize: "1.18rem", lineHeight: 1.2, fontWeight: 800, overflowWrap: "anywhere" }}>{fmt(amount)}</Typography>
     </Box>
-  );
+  </Box>;
 }
 
-function PaymentTabs({ value, onChange }: Readonly<{ value: PaymentMethod; onChange: (method: PaymentMethod) => void }>) {
-  return (
-    <Stack direction="row" role="tablist" aria-label="Método de pago" sx={{ p: 0.75, borderRadius: "17px", border: "1px solid #D9D9E1", bgcolor: modalBackground }}>
-      {(["mobile", "transfer"] as const).map((method) => {
-        const selected = value === method;
-        return (
-          <Button
-            key={method}
-            role="tab"
-            aria-selected={selected}
-            onClick={() => onChange(method)}
-            sx={{ flex: 1, minHeight: 43, borderRadius: "13px", color: selected ? "white" : "#171717", bgcolor: selected ? marketplaceBlue : "transparent", boxShadow: selected ? "inset 0 0 0 1px rgba(255,255,255,.75)" : "none", fontWeight: 700, "&:hover": { bgcolor: selected ? marketplaceBlue : "rgba(39,81,230,.06)" } }}
-          >
-            {method === "mobile" ? "Pago móvil" : "Transferencia"}
-          </Button>
-        );
-      })}
+function PlanValueCard({ title, value, icon }: Readonly<{ title: string; value: AnyRecord; icon: React.ReactNode }>) {
+  const amount = value?.usdt;
+  if (amount === undefined || amount === null || amount === "") return null;
+  return <Box sx={{ minHeight: 108, p: 1.45, border: "1px solid #D9D9E1", borderRadius: "16px", bgcolor: "white" }}>
+    <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", gap: 1 }}>
+      <Typography sx={{ fontSize: "0.92rem", fontWeight: 600 }}>{title}</Typography>
+      <Box sx={{ width: 34, height: 34, display: "grid", placeItems: "center", color: blue, bgcolor: "#F0EFFF", borderRadius: "50%" }}>{icon}</Box>
     </Stack>
-  );
+    <Typography sx={{ mt: 1, color: blue, fontSize: "1.18rem", lineHeight: 1.2, fontWeight: 800 }}>{fmt(amount)}</Typography>
+  </Box>;
 }
 
-function CopyableRow({
-  label,
-  value,
-  emphasize = false,
-  onCopy,
-}: Readonly<{ label: string; value: string; emphasize?: boolean; onCopy: (value: string) => void }>) {
-  return (
-    <Stack direction="row" sx={{ minHeight: 56, alignItems: "center", justifyContent: "space-between", gap: 1, px: 1.5, py: 0.65, borderBottom: "1px solid #D5D5DC", bgcolor: modalBackground, "&:last-of-type": { borderBottom: 0 } }}>
-      <Stack spacing={0.05} sx={{ minWidth: 0 }}>
-        <Typography sx={{ color: "#757575", fontSize: "0.72rem", lineHeight: 1.2 }}>{label}</Typography>
-        <Typography sx={{ color: "#101010", fontSize: emphasize ? "1.1rem" : "0.96rem", lineHeight: 1.25, fontWeight: emphasize ? 800 : 500, overflowWrap: "anywhere" }}>{value}</Typography>
-      </Stack>
-      <IconButton
-        aria-label={`Copiar ${label.toLocaleLowerCase("es-VE")}`}
-        onClick={() => onCopy(value)}
-        size="small"
-        sx={{ flexShrink: 0, color: marketplaceBlue }}
-      >
-        <ContentCopyRounded fontSize="small" />
-      </IconButton>
-    </Stack>
-  );
-}
-
-function PaymentStep({
-  method,
-  onMethodChange,
-  onPaid,
-  onCopy,
-}: Readonly<{ method: PaymentMethod; onMethodChange: (method: PaymentMethod) => void; onPaid: () => void; onCopy: (text: string) => void }>) {
-  const mobilePaymentRows = [
-    ["Banco destino", "Banesco"],
-    ["RIF", "J-00000000"],
-    ["Nro de teléfono", "0424-000-0000"],
-    ["Monto", "Bs. 17.590,76"],
-  ] as const;
-  const transferRows = [
-    ["Banco destino", "Banesco"],
-    ["Titular", "Impulsa Venture Capital C.A"],
-    ["RIF", "J-00000000"],
-    ["Nro de cuenta", "0171 0000 0000 0000 0000"],
-    ["Tipo de cuenta", "Corriente"],
-    ["Monto", "Bs. 17.590,76"],
-  ] as const;
-  const rows = method === "mobile" ? mobilePaymentRows : transferRows;
-
-  return (
-    <>
-      <Typography component="h3" sx={{ color: "#242424", fontSize: "1.35rem", fontWeight: 800 }}>Realiza el pago</Typography>
-      <AmountSummary />
-      <Alert severity="info" sx={{ p: 0.2, borderRadius: "12px", bgcolor: "white", color: "#191919", border: "1px solid #D9D9D9", fontSize: "0.8rem", "& .MuiAlert-icon": { color: marketplaceBlue, mr: 0.8 } }}>
-        Si pagas otro día, el monto puede cambiar. Al reportar usa la fecha real de tu pago.
-      </Alert>
-      <Box sx={{ p: 1.5, border: "1px solid #D9D9D9", borderRadius: "15px", bgcolor: "white" }}>
-        <PaymentTabs value={method} onChange={onMethodChange} />
-        <Box sx={{ mt: 0.8, overflow: "hidden", border: "1px solid #D9D9D9", borderRadius: "17px" }}>
-          {rows.map(([label, value]) => <CopyableRow key={label} label={label} value={value} emphasize={label === "Monto"} onCopy={onCopy} />)}
-        </Box>
-        <Button
-          fullWidth
-          startIcon={<ContentCopyRounded />}
-          onClick={() => onCopy(rows.map(([label, value]) => `${label}: ${value}`).join("\n"))}
-          sx={{ minHeight: 42, mt: 0.8, borderRadius: "13px", bgcolor: "#F8F8FA", color: marketplaceBlue, fontWeight: 700, boxShadow: "0 1px 2px rgba(0,0,0,.2)", "&:hover": { bgcolor: "#F2F2F6" } }}
-        >
-          Copiar todos los datos
-        </Button>
-      </Box>
-      <Box sx={{ flex: 1, minHeight: 0 }} />
-      <ActionButton onClick={onPaid}>Listo - Ya pagué</ActionButton>
-    </>
-  );
-}
-
-function ReadOnlyField({ label, value, trailing, compact = false }: Readonly<{ label?: string; value: string; trailing?: React.ReactNode; compact?: boolean }>) {
-  return (
-    <Stack direction="row" sx={{ minHeight: compact ? 50 : 58, alignItems: "center", justifyContent: "space-between", gap: 1.25, px: compact ? 1.4 : 1.7, py: compact ? 0.55 : 0.9, borderBottom: "1px solid #D5D5DC", bgcolor: modalBackground, "&:last-child": { borderBottom: 0 } }}>
-      <Stack spacing={0.05} sx={{ minWidth: 0, flex: 1 }}>
-        {label && <Typography sx={{ color: "#717171", fontSize: "0.72rem", lineHeight: 1.2 }}>{label}</Typography>}
-        <Typography sx={{ color: label ? "#161616" : "#777", fontSize: "0.91rem", overflowWrap: "anywhere" }}>{value}</Typography>
-      </Stack>
-      {trailing}
-    </Stack>
-  );
-}
-
-function ReportStep({ onReport, onBack, productName }: Readonly<{ onReport: () => void; onBack: () => void; productName: string }>) {
-  const [selectedBank, setSelectedBank] = useState("Mercantil Banco");
-  const [reference, setReference] = useState("004512398765");
-  const [paymentDate, setPaymentDate] = useState("2026-10-10");
-  const [documentId, setDocumentId] = useState("V-5416169");
-  const [phone, setPhone] = useState("");
-  const [receiptAttached, setReceiptAttached] = useState(false);
-  const [amountMatches, setAmountMatches] = useState(true);
-
-  return (
-    <>
-      <Typography component="h3" sx={{ ml: 0, mt: 0.15, mb: 0.35, color: "#242424", fontSize: "1.25rem", lineHeight: 1.2, fontWeight: 800 }}>Reporta el pago</Typography>
-      <Box sx={{ p: 1.3, borderRadius: "13px", border: "1px solid #D8D8D8", bgcolor: "white" }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
-          <Box sx={{ width: 40, height: 40, display: "grid", flexShrink: 0, placeItems: "center", borderRadius: "50%", bgcolor: "#F0EFFF", color: marketplaceBlue }}>
-            <AccountBalanceWalletRounded />
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0, pb: 0.25 }}>
-            <Typography sx={{ fontSize: "0.88rem", lineHeight: 1.2, fontWeight: 800 }}>{productName}</Typography>
-            <Typography sx={{ mt: 0.35, fontSize: "1.18rem", lineHeight: 1.2, fontWeight: 800 }}>Bs. 17.590,76</Typography>
-          </Box>
-          <Box sx={{ px: 0.7, py: 0.3, display: "inline-flex", alignItems: "center", gap: 0.2, borderRadius: "7px", bgcolor: "#0AED81", color: "#07180E", fontSize: "0.62rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-            <CheckCircleRounded sx={{ fontSize: 14 }} /> Al día
-          </Box>
-        </Stack>
-      </Box>
-      <Box sx={{ px: 1.4, py: 0.85, border: "1px solid #D8D8D8", borderRadius: "12px", bgcolor: "white" }}>
-        <Typography sx={{ fontSize: "0.78rem" }}>Pagar inicial: $225 | 3 cuotas - cada 15 días.</Typography>
-      </Box>
-
-      <Box sx={{ p: 1.3, border: "1px solid #D8D8D8", borderRadius: "15px", bgcolor: "white" }}>
-        <Box sx={{ overflow: "hidden", border: "1px solid #D8D8D8", borderRadius: "16px" }}>
-          <Select
-            fullWidth
-            value={selectedBank}
-            onChange={(event) => setSelectedBank(event.target.value)}
-            displayEmpty
-            sx={{ minHeight: 50, bgcolor: modalBackground, borderRadius: 0, "& fieldset": { border: 0 }, "& .MuiSelect-select": { whiteSpace: "normal", fontSize: "0.84rem", py: 1.2 } }}
-          >
-            <MenuItem value="Mercantil Banco">Banco desde el que pagaste: Mercantil Banco</MenuItem>
-            <MenuItem value="Banesco">Banco desde el que pagaste: Banesco</MenuItem>
-            <MenuItem value="Banco de Venezuela">Banco desde el que pagaste: Banco de Venezuela</MenuItem>
-          </Select>
-          <TextField fullWidth size="small" variant="standard" label="Referencia de pago" placeholder="Ej. 004512398765" value={reference} onChange={(event) => setReference(event.target.value)} slotProps={{ input: { disableUnderline: true }, inputLabel: { shrink: true, sx: { left: 14, top: 11, transform: "none" } } }} sx={{ minHeight: 60, px: 1.5, bgcolor: modalBackground, borderTop: "1px solid #D5D5DC", "& .MuiInput-root": { height: 60, position: "relative" }, "& input": { boxSizing: "border-box", position: "absolute", top: 29, left: 0, height: 22, p: 0, fontSize: "0.96rem", lineHeight: 1.25 }, "& label": { fontSize: "0.72rem", lineHeight: 1.2 } }} />
-          <TextField fullWidth size="small" type="date" variant="standard" label="Fecha de pago" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} slotProps={{ input: { disableUnderline: true }, inputLabel: { shrink: true, sx: { left: 14, top: 11, transform: "none" } } }} sx={{ minHeight: 60, px: 1.5, bgcolor: modalBackground, borderTop: "1px solid #D5D5DC", "& .MuiInput-root": { height: 60, position: "relative" }, "& input": { boxSizing: "border-box", position: "absolute", top: 29, left: 0, height: 22, p: 0, fontSize: "0.96rem", lineHeight: 1.25 }, "& label": { fontSize: "0.72rem", lineHeight: 1.2 } }} />
-          <TextField fullWidth size="small" variant="standard" label="Documento de identidad" value={documentId} onChange={(event) => setDocumentId(event.target.value)} slotProps={{ input: { disableUnderline: true }, inputLabel: { shrink: true, sx: { left: 14, top: 11, transform: "none" } } }} sx={{ minHeight: 60, px: 1.5, bgcolor: modalBackground, borderTop: "1px solid #D5D5DC", "& .MuiInput-root": { height: 60, position: "relative" }, "& input": { boxSizing: "border-box", position: "absolute", top: 29, left: 0, height: 22, p: 0, fontSize: "0.96rem", lineHeight: 1.25 }, "& label": { fontSize: "0.72rem", lineHeight: 1.2 } }} />
-          <TextField fullWidth size="small" variant="standard" label="Número de teléfono" placeholder="Ej. 0424-000-0000" value={phone} onChange={(event) => setPhone(event.target.value)} slotProps={{ htmlInput: { inputMode: "tel" }, input: { disableUnderline: true }, inputLabel: { shrink: true, sx: { left: 14, top: 11, transform: "none" } } }} sx={{ minHeight: 60, px: 1.5, bgcolor: modalBackground, borderTop: "1px solid #D5D5DC", "& .MuiInput-root": { height: 60, position: "relative" }, "& input": { boxSizing: "border-box", position: "absolute", top: 29, left: 0, height: 22, p: 0, fontSize: "0.96rem", lineHeight: 1.25 }, "& label": { fontSize: "0.72rem", lineHeight: 1.2 } }} />
-          <ReadOnlyField label="Monto" value="17.590,76" compact />
-        </Box>
-      </Box>
-
-      <Button
-        fullWidth
-        startIcon={receiptAttached ? <CheckCircleRounded /> : <ReceiptLongRounded />}
-        onClick={() => setReceiptAttached((current) => !current)}
-        sx={{ minHeight: 42, borderRadius: "12px", bgcolor: "#F8F8FA", color: marketplaceBlue, fontWeight: 700, boxShadow: "0 1px 2px rgba(0,0,0,.18)", "&:hover": { bgcolor: "#F2F2F6" } }}
-      >
-        {receiptAttached ? "Comprobante adjunto" : "Adjuntar comprobante"}
-      </Button>
-      <Stack direction="row" sx={{ minHeight: 28, alignItems: "center", mt: 0.5 }}>
-        <Checkbox checked={amountMatches} onChange={(event) => setAmountMatches(event.target.checked)} size="small" sx={{ p: 0.35, color: marketplaceBlue, "&.Mui-checked": { color: marketplaceBlue } }} />
-        <Typography sx={{ fontSize: "0.76rem" }}>El monto corresponde al producto e indicación indicada</Typography>
-      </Stack>
-      <Box sx={{ flex: 1, minHeight: 0 }} />
-      <ActionButton onClick={onReport}>Reportar pago</ActionButton>
-      <Button fullWidth onClick={onBack} sx={{ minHeight: 42, borderRadius: "12px", bgcolor: "#F8F8FA", color: marketplaceBlue, fontWeight: 700, boxShadow: "0 1px 2px rgba(0,0,0,.18)", "&:hover": { bgcolor: "#F2F2F6" } }}>
-        Volver a cuotas
-      </Button>
-    </>
-  );
-}
-
-function ValidationStep({ onComplete }: Readonly<{ onComplete: () => void }>) {
-  return (
-    <Stack spacing={3} sx={{ mt: "auto", mb: -2.5, mx: -2, p: 2.5, pt: 4, alignItems: "center", bgcolor: "white", borderRadius: "16px 16px 0 0", textAlign: "center" }}>
-      <Box>
-        <Typography sx={{ color: "#202020", fontSize: "1.13rem", fontWeight: 800 }}>Estamos validando tu pago</Typography>
-        <Typography sx={{ mt: 0.7, fontSize: "0.82rem" }}>El monto corresponde a la opción seleccionada</Typography>
-      </Box>
-      <ActionButton onClick={onComplete}>Listo - Reportar pago</ActionButton>
-    </Stack>
-  );
-}
-
-function SuccessStep({ onClose, productName }: Readonly<{ onClose: () => void; productName: string }>) {
-  const details = [
-    ["Producto", productName],
-    ["Cuota reportada", "Cuota 03"],
-    ["Banco", "Mercantil Banco"],
-    ["Documento", "V-5416169"],
-    ["Referencia", "004512398765"],
-    ["Fecha", "10 oct."],
-    ["Teléfono", "0422 285 5007"],
-    ["Monto reportado", "Bs. 17.590,76"],
-  ] as const;
-
-  return (
-    <>
-      <Stack spacing={1.2} sx={{ alignItems: "center", textAlign: "center", pt: 1 }}>
-        <Box sx={{ width: 88, height: 88, display: "grid", placeItems: "center", borderRadius: "50%", bgcolor: "#BDEFE1" }}>
-          <Box sx={{ width: 62, height: 62, display: "grid", placeItems: "center", borderRadius: "50%", bgcolor: "#0AED81", color: "#05054F" }}>
-            <VerifiedRounded sx={{ fontSize: 40 }} />
-          </Box>
-        </Box>
-        <Typography component="h3" sx={{ color: "#05054F", fontSize: "1.7rem", fontWeight: 800 }}>¡Pago reportado!</Typography>
-        <Typography sx={{ color: "#05054F", fontSize: "0.9rem" }}>Tu reporte fue enviado correctamente y será validado por el equipo.</Typography>
-      </Stack>
-      <Stack spacing={0} sx={{ p: 1.5, borderRadius: "18px", bgcolor: "white" }}>
-        {details.map(([label, value]) => (
-          <Stack key={label} direction="row" sx={{ py: 0.8, alignItems: "center", justifyContent: "space-between", gap: 2, borderBottom: "1px solid #E4E4E8", "&:last-child": { border: 0 } }}>
-            <Typography sx={{ color: "#05054F", fontSize: "0.83rem" }}>{label}</Typography>
-            <Typography sx={{ color: "#05054F", fontSize: "0.83rem", fontWeight: 700, textAlign: "right" }}>{value}</Typography>
-          </Stack>
-        ))}
-      </Stack>
-      <Typography sx={{ color: "#777", fontSize: "0.82rem", textAlign: "center" }}>
-        Tu cuota aparecerá como “En revisión” hasta que el pago sea aprobado.
-      </Typography>
-      <Box sx={{ flex: 1, minHeight: 0 }} />
-      <ActionButton onClick={onClose}>Ver mis cuotas</ActionButton>
-    </>
-  );
-}
-
-export function PurchasePlanFlow({
-  productName,
-  imageVariant,
-}: Readonly<{ productName: string; imageVariant: number }>) {
+export function PurchasePlanFlow({ productId, productName, productImageUrl, productSubtitle }: Readonly<{ productId: string; productName: string; productImageUrl?: string; productSubtitle?: string }>) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<FlowStep>("plan");
-  const [method, setMethod] = useState<PaymentMethod>("mobile");
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [stage, setStage] = useState<Stage>("plan");
+  const [plan, setPlan] = useState<AnyRecord | null>(null);
+  const [purchase, setPurchase] = useState<AnyRecord | null>(null);
+  const [method, setMethod] = useState("PAGO_MOVIL");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hours, setHours] = useState<AnyRecord | null>(null);
+  const [bank, setBank] = useState(""); const [phone, setPhone] = useState(""); const [documentId, setDocumentId] = useState(""); const [reference, setReference] = useState(""); const [date, setDate] = useState(venezuelaDate); const [otp, setOtp] = useState(""); const [otpSent, setOtpSent] = useState(false); const [c2pAttempted, setC2pAttempted] = useState(false);
 
-  const copyText = (text: string) => {
-    void navigator.clipboard?.writeText(text).catch(() => undefined);
-    setSnackbarOpen(true);
+  useEffect(() => { if (!open) return; const c = new AbortController();
+    void Promise.allSettled([getProductPlan(productId, c.signal), getMarketplaceHours(c.signal), getPurchases(c.signal)]).then(async ([p, h, all]) => {
+      if (c.signal.aborted) return;
+      if (p.status === "rejected") { setError(formatError(p.reason)); return; }
+      setPlan(p.value.data);
+      if (h.status === "fulfilled") setHours(h.value.data);
+      if (all.status === "rejected") return;
+      const list = Array.isArray(all.value.data) ? all.value.data : Array.isArray(get(all.value.data, "items")) ? get(all.value.data, "items") : [];
+      const opened = list.find((item: AnyRecord) => item?.producto?.id === productId && !["PAGAR_CUOTAS", "CANCELADA", "VENCIDA"].includes(item?.etapa));
+      if (opened?.id) { const current = await getPurchase(opened.id, c.signal); if (!c.signal.aborted) { setPurchase(current.data); setC2pAttempted(hasAttemptedC2p(String(opened.id))); } }
+      else setPurchase(null);
+    }).catch((e: unknown) => { if (!c.signal.aborted) setError(formatError(e)); }).finally(() => { if (!c.signal.aborted) setBusy(false); });
+    return () => c.abort();
+  }, [open, productId]);
+
+  const close = () => { setOpen(false); setStage("plan"); setPurchase(null); setPlan(null); setError(null); };
+  const resumePurchase = () => {
+    if (!purchase) return;
+    setStage(purchase.etapa === "PAGAR_INICIAL" ? "payment" : "status");
   };
+  const withBusy = async (fn: () => Promise<void>) => { setBusy(true); setError(null); try { await fn(); } catch (e) { setError(c2pAttempted ? "No podemos confirmar el resultado del cobro. No lo reintentes; actualiza el estado de compra." : formatError(e)); } finally { setBusy(false); } };
+  const create = () => withBusy(async () => {
+    const p = get(plan, "plan");
+    const initial = get(p, "pagoInicial");
+    const amount = Number(initial.usdt ?? p.pagoInicialUsdt);
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error("plan_missing");
+    try {
+      const result = await createPurchase(productId, amount);
+      let id = result.data.id ?? result.data.compraId;
+      if (!id) {
+        const listed = await getPurchases(); const raw = Array.isArray(listed.data) ? listed.data : get(listed.data, "items");
+        const items = Array.isArray(raw) ? raw : [];
+        id = items.find((item: AnyRecord) => item?.producto?.id === productId && item?.etapa === "PAGAR_INICIAL")?.id;
+      }
+      if (!id) throw new Error("purchase_created_without_id");
+      const current = await getPurchase(String(id)); setPurchase(current.data); setStage(current.data.etapa === "PAGAR_INICIAL" ? "payment" : "status");
+    }
+    catch (e) {
+      const info = e instanceof MarketplaceServiceError ? get(e.body, "diagnostic") : {};
+      if (info.code !== "COMPRA_ABIERTA") throw e;
+      const listed = await getPurchases(); const raw = Array.isArray(listed.data) ? listed.data : get(listed.data, "items"); const items = Array.isArray(raw) ? raw : [];
+      const existing = items.find((item: AnyRecord) => item?.producto?.id === productId && item?.id);
+      if (!existing) throw e;
+      const current = await getPurchase(existing.id); setPurchase(current.data); setC2pAttempted(hasAttemptedC2p(String(existing.id)));
+    }
+  });
+  const refreshPurchase = async () => { if (purchase?.id) { const updated = await getPurchase(purchase.id); setPurchase(updated.data); setStage(updated.data.etapa === "PAGAR_INICIAL" ? "payment" : "status"); if (updated.data.etapa !== "PAGAR_INICIAL") { setAttemptedC2p(purchase.id, false); setC2pAttempted(false); } else if (hasAttemptedC2p(purchase.id)) setC2pAttempted(true); } };
+  const downloadContract = () => withBusy(async () => {
+    if (!purchase?.id) throw new Error("purchase_missing");
+    const { data } = await getPurchaseContract(purchase.id);
+    if (!data.base64 || !data.contentType) throw new Error("contract_invalid");
+    const bytes = Uint8Array.from(atob(data.base64), (character) => character.charCodeAt(0));
+    const blob = new Blob([bytes], { type: data.contentType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a"); link.href = url;
+    link.download = /^[\w.-]+$/.test(data.nombreArchivo ?? "") ? data.nombreArchivo : "contrato-compra.docx";
+    link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  const submitReport = () => withBusy(async () => {
+    if (!purchase?.id) throw new Error("purchase_missing");
+    const initial = get(purchase, "pagoInicial");
+    const amount = Number(initial.bs);
+    await reportInitialPayment(purchase.id, { metodo: method, bancoOrigen: bank, telefonoOrigen: phone.replaceAll("-", ""), ...(documentId ? { documentoPagador: documentId } : {}), referencia: reference, fechaPago: date, montoBs: amount });
+    await refreshPurchase();
+  });
+  const sendOtp = () => withBusy(async () => { if (!purchase?.id) throw new Error("purchase_missing"); await requestC2pOtp(purchase.id, { bancoOrigen: bank, telefonoOrigen: phone.replaceAll("-", ""), ...(documentId ? { documentoPagador: documentId } : {}) }); setOtpSent(true); });
+  const charge = () => withBusy(async () => { if (!purchase?.id || c2pAttempted) throw new Error("c2p_result_must_be_checked"); setC2pAttempted(true); setAttemptedC2p(purchase.id, true); await payC2p(purchase.id, { bancoOrigen: bank, telefonoOrigen: phone.replaceAll("-", ""), ...(documentId ? { documentoPagador: documentId } : {}), otp }); await refreshPurchase(); });
 
-  const closeFlow = () => {
-    setOpen(false);
-    setStep("plan");
-  };
-
-  return (
-    <>
-      <Button
-        fullWidth
-        variant="contained"
-        onClick={() => setOpen(true)}
-        sx={{ position: "fixed", zIndex: (theme) => theme.zIndex.appBar, left: "50%", bottom: "calc(14px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", width: "min(calc(100% - 48px), 440px)", minHeight: 58, borderRadius: "14px", bgcolor: marketplaceBlue, fontSize: "1rem", fontWeight: 800, boxShadow: "0 4px 12px rgba(39,81,230,.22)", "&:hover": { bgcolor: marketplaceBlue } }}
-      >
-        Ir a plan de compra
-      </Button>
-
-      <Dialog
-        open={open}
-        onClose={closeFlow}
-        aria-labelledby="purchase-flow-title"
-        fullWidth
-        maxWidth="sm"
-        scroll="paper"
-        slots={{ transition: SlideUpTransition }}
-        slotProps={{
-          backdrop: { sx: { bgcolor: "rgba(0,0,0,.76)" } },
-          container: { sx: { alignItems: "flex-end", pb: "max(8px, env(safe-area-inset-bottom))" } },
-        }}
-        sx={{
-          "& .MuiDialog-paper": {
-            width: "calc(100% - 24px)",
-            maxWidth: 548,
-            height: "min(95dvh, 850px)",
-            maxHeight: "calc(100dvh - 28px - env(safe-area-inset-top))",
-            m: 0,
-            overflow: "hidden",
-            borderRadius: "24px",
-            bgcolor: modalBackground,
-            color: "#171717",
-            boxShadow: "0 20px 64px rgba(0,0,0,.28)",
-          },
-        }}
-      >
-        <Stack sx={{ height: "100%", minHeight: 0, overflowY: step === "plan" ? "auto" : "hidden", px: { xs: 2, sm: 3 }, pt: { xs: 2.5, sm: 3 }, pb: { xs: 2.5, sm: 3 }, gap: 1.7 }}>
-          <FlowHeader title={step === "plan" ? "Plan de compra" : step === "report" || step === "validation" ? "Último paso" : step === "success" ? "Reporte de pago" : "Realizar pago"} onClose={closeFlow} />
-
-          {step === "plan" && <PlanStep productName={productName} imageVariant={imageVariant} onPay={() => setStep("payment")} />}
-
-          {step === "payment" && (
-            <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, gap: 0.8 }}>
-              <Box sx={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 0.8, minHeight: 0, flex: 1, pb: 0.25 }}>
-                <PaymentStep method={method} onMethodChange={setMethod} onPaid={() => setStep("report")} onCopy={copyText} />
+  const p = get(plan, "plan"); const initial = get(p, "pagoInicial"); const initialBs = get(purchase, "pagoInicial").bs ?? initial.bs;
+  const horarioOpen = hours?.abierto ?? hours?.estaAbierto;
+  const paymentEnabled = horarioOpen === true;
+  const phoneValid = /^04(12|14|16|22|24|26)\d{7}$/.test(phone.replaceAll("-", ""));
+  const documentValid = !documentId || /^[VEPJGCvepjgc]-?[0-9]{1,9}$/.test(documentId);
+  const bankValid = /^\d{1,4}$/.test(bank);
+  return <>
+    <Button fullWidth variant="contained" onClick={() => { setBusy(true); setError(null); setPurchase(null); setPlan(null); setStage("plan"); setOpen(true); }} sx={{ position: "fixed", zIndex: (theme) => theme.zIndex.appBar, left: "50%", bottom: "calc(14px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", width: "min(calc(100% - 48px), 440px)", minHeight: 58, borderRadius: "14px", bgcolor: blue, fontWeight: 800, "&:hover": { bgcolor: blue } }}>Ir a plan de compra</Button>
+    <Dialog open={open} onClose={close} aria-labelledby="purchase-flow-title" fullWidth maxWidth="sm" scroll="paper" slots={{ transition: SlideUp }} slotProps={{ backdrop: { sx: { bgcolor: "rgba(0,0,0,.76)" } }, container: { sx: { alignItems: "flex-end", pb: "max(8px, env(safe-area-inset-bottom))" } } }} sx={{ "& .MuiDialog-paper": { width: "calc(100% - 24px)", maxWidth: 548, height: "min(95dvh, 850px)", maxHeight: "calc(100dvh - 28px - env(safe-area-inset-top))", m: 0, overflow: "hidden", borderRadius: "24px", bgcolor: surface, color: "#171717" } }}>
+      <Stack sx={{ height: "100%", minHeight: 0, overflowY: "auto", px: { xs: 2, sm: 3 }, pt: 2.5, pb: 2.5, gap: 1.4 }}>
+        <FlowHeader title={stage === "plan" ? "Plan de compra" : stage === "payment" || stage === "report" || stage === "c2p" ? "Realizar pago" : "Estado de compra"} onClose={close} />
+        {error && <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => void withBusy(refreshPurchase)}>Actualizar</Button>}>{error}</Alert>}
+        {busy && <Typography role="status">Consultando información…</Typography>}
+        {stage === "plan" && plan && <>
+          {(!p || plan.plan === null) ? <Alert severity="info">Este producto no tiene un plan de financiamiento disponible.</Alert> : <>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.4, p: 1.2, borderRadius: "20px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
+              <Box sx={{ width: 76, height: 76, flexShrink: 0, overflow: "hidden", borderRadius: "14px", bgcolor: "#F2F2F7" }}>
+                <MarketplaceProductImage url={productImageUrl} productId={productId} alt="" />
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontSize: "1.08rem", lineHeight: 1.25, fontWeight: 800 }}>{productName}</Typography>
+                {productSubtitle && <Typography sx={{ mt: 0.3, fontSize: "0.92rem", lineHeight: 1.3 }}>{productSubtitle}</Typography>}
+                {plan.product && <Typography sx={{ mt: 0.25, fontSize: "0.88rem", color: "text.secondary" }}>{plan.product}</Typography>}
               </Box>
             </Box>
-          )}
-
-          {step === "report" && (
-            <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, gap: 0.8, overflowY: "auto" }}>
-              <ReportStep onReport={() => setStep("validation")} onBack={() => setStep("payment")} productName={productName} />
+            <Box sx={{ p: 1.5, borderRadius: "18px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
+              <Typography sx={{ fontWeight: 800, mb: 1.2 }}>Tu plan de compra</Typography>
+              <Stack spacing={1.2}>
+                {get(plan, "precio").usdt != null && <Box sx={{ position: "relative", p: 1.4, minHeight: 92, display: "flex", flexDirection: "column", justifyContent: "space-between", border: "1px solid #D9D9E1", borderRadius: "15px" }}>
+                  <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start" }}><Typography sx={{ fontSize: "0.92rem" }}>Precio del equipo</Typography><LocalOfferRounded sx={{ color: blue, bgcolor: "#F0EFFF", borderRadius: "50%", p: 0.8, boxSizing: "content-box" }} /></Stack>
+                  <Typography sx={{ mt: 1, color: blue, fontSize: "1.2rem", lineHeight: 1.2, fontWeight: 800 }}>{fmt(get(plan, "precio").usdt)}</Typography>
+                </Box>}
+                {get(p, "aFinanciar").usdt != null && <Box sx={{ p: 1.4, minHeight: 92, display: "flex", flexDirection: "column", justifyContent: "space-between", border: "1px solid #D9D9E1", borderRadius: "15px" }}>
+                  <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start" }}><Typography sx={{ fontSize: "0.92rem" }}>Monto a financiar</Typography><RequestQuoteRounded sx={{ color: blue, bgcolor: "#F0EFFF", borderRadius: "50%", p: 0.8, boxSizing: "content-box" }} /></Stack>
+                  <Typography sx={{ mt: 1, color: blue, fontSize: "1.2rem", lineHeight: 1.2, fontWeight: 800 }}>{fmt(get(p, "aFinanciar").usdt)}</Typography>
+                </Box>}
+              </Stack>
             </Box>
-          )}
-
-          {step === "validation" && <ValidationStep onComplete={() => setStep("success")} />}
-
-          {step === "success" && (
-            <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, gap: 1.5, overflowY: "auto" }}>
-              <SuccessStep onClose={closeFlow} productName={productName} />
+            <Box sx={{ p: 1.25, borderRadius: "18px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 1.1 }}>
+                <PlanAmountCard title="Inicial" amount={get(p, "inicial").usdt} note={p.inicialPorcentaje != null ? `${p.inicialPorcentaje}% del valor del producto` : undefined} icon={<LocalAtmRounded fontSize="small" />} />
+                <PlanAmountCard title="Cuotas" amount={get(p, "montoCuota").usdt} note={[p.cuotas != null ? `${p.cuotas} cuotas` : null, p.frecuencia].filter(Boolean).join(" · ") || undefined} icon={<AccountBalanceWalletRounded fontSize="small" />} />
+                <PlanValueCard title="Servicio legal" value={get(p, "servicioLegal")} icon={<SavingsRounded fontSize="small" />} />
+                <PlanValueCard title="Servicio administrativo" value={get(p, "servicioAdministrativo")} icon={<RequestQuoteRounded fontSize="small" />} />
+              </Box>
+              {Array.isArray(p.calendario) && <details style={{ margin: "14px 4px 2px" }}><summary>Ver calendario estimado</summary>{p.calendario.map((item: AnyRecord) => <Typography key={item.numero} sx={{ mt: 0.75 }}>Cuota {item.numero}: {item.vence} · {fmt(get(item, "monto").usdt)}</Typography>)}</details>}
             </Box>
-          )}
-        </Stack>
-      </Dialog>
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={2400}
-        onClose={() => setSnackbarOpen(false)}
-        message="Datos copiados"
-      />
-    </>
-  );
+            {plan.alcanzaCupo === false || p.alcanzaCupo === false || plan.cupoUsable === false ? <Alert severity="warning">El cupo disponible no alcanza o no está habilitado para este plan.</Alert> : null}
+            {horarioOpen === false && <OffHoursNotice isOpen={false} nextOpening={hours?.proximaApertura} />}
+          </>}
+          {purchase ? <Box sx={{ p: 1.5, border: "1px solid #C7D3FF", borderRadius: "16px", bgcolor: "#F7F8FF" }}>
+            <Typography sx={{ fontWeight: 800 }}>Tienes una compra pendiente</Typography>
+            <Typography sx={{ mt: 0.35, mb: 1.2, color: "text.secondary", fontSize: "0.9rem" }}>Revisa este plan y elige cuándo quieres retomar tu compra.</Typography>
+            <Button fullWidth variant="contained" disabled={busy} onClick={resumePurchase} sx={{ minHeight: 50, borderRadius: "13px", bgcolor: blue, fontWeight: 800, "&:hover": { bgcolor: blue } }}>Continuar compra</Button>
+          </Box> : p && <Primary disabled={busy || plan.alcanzaCupo === false || p.alcanzaCupo === false || plan.cupoUsable === false} onClick={() => void create()}>Iniciar compra</Primary>}
+        </>}
+        {stage === "payment" && purchase && <>
+          <Typography component="h3" sx={{ fontWeight: 800, fontSize: "1.25rem" }}>Pagar inicial</Typography>
+          <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: blue, color: "white" }}><Typography>Monto congelado</Typography><Typography sx={{ fontSize: "1.5rem", fontWeight: 700 }}>{fmt(initialBs, "Bs.")}</Typography></Box>
+          {purchase.pagarA && <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: "white" }}><Typography sx={{ fontWeight: 800 }}>Datos de pago móvil</Typography><Typography>{purchase.pagarA.nombre}</Typography><Typography>{purchase.pagarA.documento}</Typography><Typography>{purchase.pagarA.telefono}</Typography><Typography>{purchase.pagarA.banco}</Typography></Box>}
+          <Select value={method} onChange={(e) => setMethod(e.target.value)}><MenuItem value="PAGO_MOVIL">Pago móvil</MenuItem><MenuItem value="TRANSFERENCIA">Transferencia</MenuItem><MenuItem value="C2P">C2P</MenuItem></Select>
+          {!paymentEnabled && <OffHoursNotice isOpen={horarioOpen} nextOpening={hours?.proximaApertura} />}
+          {method === "C2P" ? <><TextField label="Código del banco" value={bank} onChange={(e) => setBank(e.target.value)} error={Boolean(bank) && !bankValid} helperText={Boolean(bank) && !bankValid ? "Ingresa el código bancario de hasta 4 dígitos." : ""} /><TextField label="Teléfono del pagador" value={phone} onChange={(e) => setPhone(e.target.value)} error={Boolean(phone) && !phoneValid} helperText={Boolean(phone) && !phoneValid ? "Usa un móvil venezolano válido, por ejemplo 04141122556." : ""} />{!otpSent ? <Primary disabled={busy || !bankValid || !phoneValid || !paymentEnabled} onClick={() => void sendOtp()}>Solicitar OTP</Primary> : <><TextField label="Código OTP" value={otp} onChange={(e) => setOtp(e.target.value)} /><Alert severity="warning">Al confirmar se intentará cobrar el pago inicial. Si el resultado es incierto, no vuelvas a enviar el cobro; actualiza el estado de compra.</Alert>{c2pAttempted && <><Alert severity="info">Este intento no se repetirá desde la pantalla. Actualiza el estado para comprobar el resultado.</Alert><Button disabled={busy} onClick={() => void withBusy(refreshPurchase)}>Actualizar estado de compra</Button></>}<Primary disabled={busy || !otp || c2pAttempted || !paymentEnabled} onClick={() => void charge()}>Confirmar cobro</Primary></>}</> : <>
+            <Typography sx={{ fontWeight: 700 }}>Reporta el pago realizado</Typography>
+            <TextField label="Código del banco de origen" value={bank} onChange={(e) => setBank(e.target.value)} slotProps={{ htmlInput: { maxLength: 4 } }} error={Boolean(bank) && !bankValid} helperText={Boolean(bank) && !bankValid ? "Ingresa entre 1 y 4 dígitos." : ""} />
+            <TextField label="Teléfono de origen" placeholder="04141122556" value={phone} onChange={(e) => setPhone(e.target.value)} error={Boolean(phone) && !phoneValid} helperText={Boolean(phone) && !phoneValid ? "Usa un móvil venezolano válido." : ""} />
+            <TextField label="Documento del pagador (opcional)" value={documentId} onChange={(e) => setDocumentId(e.target.value)} error={!documentValid} helperText={!documentValid ? "Formato esperado: V12345678." : ""} />
+            <TextField label="Referencia" value={reference} onChange={(e) => setReference(e.target.value)} />
+            <TextField label="Fecha de pago" type="date" value={date} onChange={(e) => setDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            {method === "TRANSFERENCIA" && <Alert severity="warning">El contrato de compra no entrega cuenta destino y no está confirmado que los datos bancarios generales sean válidos para la inicial. Por ahora, el reporte de transferencia queda bloqueado hasta confirmar ese flujo con backend.</Alert>}
+            <Alert severity="info">El contrato de pago inicial no recibe comprobante. El envío quedará sujeto al estado que confirme el backend.</Alert>
+            <Primary disabled={busy || !bankValid || !phoneValid || !documentValid || !reference || !date || !paymentEnabled || method === "TRANSFERENCIA"} onClick={() => void submitReport()}>Enviar reporte de inicial</Primary>
+          </>}
+        </>}
+        {stage === "status" && purchase && <>
+          <Box sx={{ p: 2, borderRadius: 2, bgcolor: "white", textAlign: "center" }}><AccountBalanceWalletRounded sx={{ color: blue, fontSize: 42 }} /><Typography component="h3" sx={{ fontSize: "1.25rem", fontWeight: 800 }}>{purchase.etapa === "VALIDANDO_PAGO" ? "Pago en revisión" : purchase.etapa === "PAGAR_CUOTAS" ? "Compra confirmada" : purchase.etapa === "VENCIDA" ? "Compra vencida" : purchase.etapa === "ESPERANDO_FIRMAS" ? "Esperando firmas" : purchase.motivoRechazo ? "Pago rechazado" : purchase.estado ?? "Estado de compra"}</Typography><Typography>{purchase.motivoRechazo ?? `Etapa: ${purchase.etapa ?? "No disponible"}`}</Typography></Box>
+          {purchase.etapa === "ESPERANDO_FIRMAS" && <><Alert severity="info">Descarga y revisa el contrato. La firma electrónica no está definida en esta integración; no enviaremos una confirmación de firma sin el flujo real.</Alert><Button disabled={busy} onClick={() => void downloadContract()}>Descargar contrato</Button></>}
+          {purchase.etapa === "PAGAR_CUOTAS" && purchase.consumoId && <Button component="a" href={`/installments/${encodeURIComponent(purchase.consumoId)}`} variant="contained" sx={{ bgcolor: blue }}>Ir a mis cuotas</Button>}
+          <Button onClick={() => void withBusy(refreshPurchase)}>Actualizar estado</Button>
+        </>}
+      </Stack>
+    </Dialog>
+  </>;
 }
