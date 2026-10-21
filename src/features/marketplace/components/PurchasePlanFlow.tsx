@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AccountBalanceWalletRounded, CloseRounded, InfoOutlined, LocalAtmRounded, LocalOfferRounded, RequestQuoteRounded, SavingsRounded } from "@mui/icons-material";
-import { Alert, Box, Button, Dialog, IconButton, MenuItem, Select, Slide, Stack, TextField, Typography } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { AccountBalanceWalletRounded, CheckRounded, CloseRounded, ContentCopyRounded, InfoOutlined, LocalAtmRounded, LocalOfferRounded, RequestQuoteRounded, SavingsRounded } from "@mui/icons-material";
+import { Alert, Box, Button, Dialog, IconButton, MenuItem, Slide, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import type { TransitionProps } from "@mui/material/transitions";
 import { forwardRef } from "react";
 import { createPurchase, getMarketplaceHours, getProductPlan, getPurchases, getPurchase, getPurchaseContract, payC2p, reportInitialPayment, requestC2pOtp, MarketplaceServiceError } from "../services/marketplace";
+import { createCopyAllText, createInstructionRows } from "../../installments/paymentInstructions";
+import { getMarketplacePaymentMethods, isValidC2pOtp, isValidInitialPayment, parsePurchaseDestination, type MarketplacePaymentMethod } from "../paymentPresentation";
 import { MarketplaceProductImage } from "./MarketplaceProductImage";
+import { getSourceBanks } from "../../installments/services/installments";
+import type { SourceBank } from "../../installments/types";
+import { isActiveMarketplacePurchase, marketplacePurchaseProductId } from "../purchaseAvailability";
 
 const blue = "#2751E6";
 const surface = "#F0EFFF";
@@ -17,11 +23,45 @@ type AnyRecord = Record<string, any>;
 type Stage = "plan" | "payment" | "report" | "c2p" | "status";
 const SlideUp = forwardRef(function SlideUp(props: TransitionProps & { children: React.ReactElement }, ref: React.Ref<unknown>) { return <Slide direction="up" ref={ref} {...props} />; });
 const get = (value: unknown, key: string): AnyRecord => value && typeof value === "object" ? (value as AnyRecord)[key] ?? {} : {};
+function purchaseItems(data: unknown): AnyRecord[] {
+  if (Array.isArray(data)) return data as AnyRecord[];
+  const items = get(data, "items");
+  if (Array.isArray(items)) return items as AnyRecord[];
+  const content = get(data, "content");
+  return Array.isArray(content) ? content as AnyRecord[] : [];
+}
 function fmt(value: unknown, currency = "USDT") { if (value === undefined || value === null || value === "") return "—"; const n = Number(value); return Number.isFinite(n) ? `${currency} ${new Intl.NumberFormat("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}` : `${currency} ${String(value)}`; }
 function venezuelaDate() { const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date()); const value = (type: string) => parts.find((part) => part.type === type)?.value ?? ""; return `${value("year")}-${value("month")}-${value("day")}`; }
-function formatError(error: unknown) { if (error instanceof MarketplaceServiceError) { const code = get(error.body, "diagnostic").code ?? get(error.body, "code"); if (code === "COMPRA_ABIERTA") return "Ya tienes una compra abierta. Estamos recuperando su estado."; if (code === "MONTO_NO_CUADRA") return "El monto del plan cambió. Actualiza el plan antes de continuar."; if (error.status === 403) return "Esta operación no está habilitada en este momento."; if (error.status === 409) return "La operación no puede continuar con el estado actual."; } return "No pudimos completar la operación. Revisa tu conexión e inténtalo nuevamente."; }
-function setAttemptedC2p(id: string, attempted: boolean) { try { const key = `marketplace:c2p-attempt:${id}`; if (attempted) sessionStorage.setItem(key, "1"); else sessionStorage.removeItem(key); } catch { /* El estado del servidor sigue siendo la fuente de verdad. */ } }
-function hasAttemptedC2p(id: string) { try { return sessionStorage.getItem(`marketplace:c2p-attempt:${id}`) === "1"; } catch { return false; } }
+function errorCode(error: unknown) { return error instanceof MarketplaceServiceError ? String(get(error.body, "diagnostic").code ?? get(error.body, "code") ?? "") : ""; }
+function formatError(error: unknown) { if (error instanceof MarketplaceServiceError) { const code = errorCode(error); if (code === "C2P_RECHAZADO") return "El banco rechazó el cobro C2P. No se realizó el pago; revisa los datos o solicita un nuevo OTP."; if (code === "C2P_OTP_FALLIDO") return "El banco no pudo generar el OTP. Puedes volver a solicitarlo."; if (code === "COMPRA_ABIERTA") return "Ya tienes una compra abierta. Estamos recuperando su estado."; if (code === "MONTO_NO_CUADRA") return "El monto del plan cambió. Actualiza el plan antes de continuar."; if (code === "FUERA_DE_HORARIO") return "El pago inicial solo se puede reportar dentro del horario de atención."; if (code === "COMPRA_VENCIDA") return "Esta compra venció. Actualiza su estado para ver las opciones disponibles."; if (code === "REFERENCIA_USADA") return "Esta referencia ya fue reportada. Verifica el estado de la compra antes de volver a intentar."; if (code === "CUPO_NO_DISPONIBLE" || code === "CUPO_INSUFICIENTE") return "El cupo cambió y ya no permite continuar con esta compra."; if (error.status === 403) return "Esta operación no está habilitada en este momento."; if (error.status === 409) return "La operación no puede continuar con el estado actual."; } return "No pudimos completar la operación. Revisa tu conexión e inténtalo nuevamente."; }
+function setAttemptedC2p(id: string, attempted: boolean) { try { const key = `marketplace:c2p-attempt:${id}`; if (attempted) localStorage.setItem(key, "1"); else localStorage.removeItem(key); } catch { /* El estado del servidor sigue siendo la fuente de verdad. */ } }
+function hasAttemptedC2p(id: string) { try { return localStorage.getItem(`marketplace:c2p-attempt:${id}`) === "1"; } catch { return false; } }
+
+function InitialPaymentInstructions({ destination, amountBs, method }: Readonly<{ destination: NonNullable<ReturnType<typeof parsePurchaseDestination>>; amountBs: string; method: "mobile" | "transfer" }>) {
+  const [copied, setCopied] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState(false);
+  const rows = createInstructionRows(destination, amountBs, method).filter((row) => row.displayValue.trim() !== "");
+  const copy = async (key: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyError(false);
+      setCopied(key);
+      window.setTimeout(() => setCopied((current) => current === key ? null : current), 1600);
+    } catch { setCopied(null); setCopyError(true); }
+  };
+  return <Box sx={{ p: 1.5, borderRadius: "16px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
+    <Typography sx={{ mb: 1, fontWeight: 800 }}>{method === "mobile" ? "Datos para Pago Móvil" : "Datos para transferencia"}</Typography>
+    <Typography sx={{ mb: 1, color: "text.secondary", fontSize: "0.86rem", lineHeight: 1.4 }}>Realiza el pago desde tu banco con estos datos. Al terminar, vuelve aquí para reportarlo.</Typography>
+    <Stack divider={<Box sx={{ borderBottom: "1px solid #E1E1E8" }} />} sx={{ border: "1px solid #D9D9E1", borderRadius: "14px", overflow: "hidden", bgcolor: surface }}>
+      {rows.map((row) => <Stack key={row.key} direction="row" sx={{ minHeight: 58, alignItems: "center", justifyContent: "space-between", gap: 1.5, px: 1.5, py: 0.9 }}>
+        <Box sx={{ minWidth: 0 }}><Typography sx={{ color: "text.secondary", fontSize: "0.78rem", lineHeight: 1.2 }}>{row.label}</Typography><Typography sx={{ overflowWrap: "anywhere", fontWeight: row.key === "amount" ? 800 : 500 }}>{row.displayValue}</Typography></Box>
+        <IconButton aria-label={`Copiar ${row.label}`} onClick={() => void copy(row.key, row.copyValue)} size="small" sx={{ color: blue, flexShrink: 0 }}>{copied === row.key ? <CheckRounded fontSize="small" /> : <ContentCopyRounded fontSize="small" />}</IconButton>
+      </Stack>)}
+    </Stack>
+    {copyError && <Typography role="status" sx={{ mt: 0.8, color: "error.main", fontSize: "0.82rem" }}>No se pudieron copiar los datos. Puedes seleccionarlos y copiarlos manualmente.</Typography>}
+    <Button fullWidth startIcon={copied === "all" ? <CheckRounded /> : <ContentCopyRounded />} onClick={() => void copy("all", createCopyAllText(rows))} sx={{ mt: 1, minHeight: 46, borderRadius: "12px", bgcolor: "#F8F8FA", color: blue, fontWeight: 700, textTransform: "none" }}>{copied === "all" ? "Datos copiados" : "Copiar todos los datos"}</Button>
+  </Box>;
+}
 
 function FlowHeader({ title, onClose }: { title: string; onClose: () => void }) { return <Stack direction="row" sx={{ minHeight: 48, alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}><IconButton aria-label="Cerrar" onClick={onClose} sx={{ width: 42, height: 42, border: "1.5px solid #171717" }}><CloseRounded /></IconButton><Typography id="purchase-flow-title" component="h2" sx={{ fontWeight: 700 }}>{title}</Typography><Box sx={{ width: 42 }} /></Stack>; }
 function Primary({ children, onClick, disabled = false }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) { return <Button fullWidth variant="contained" onClick={onClick} disabled={disabled} sx={{ minHeight: 56, flexShrink: 0, borderRadius: "14px", bgcolor: blue, fontSize: "1rem", fontWeight: 800, "&:hover": { bgcolor: blue } }}>{children}</Button>; }
@@ -74,33 +114,57 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
   const [stage, setStage] = useState<Stage>("plan");
   const [plan, setPlan] = useState<AnyRecord | null>(null);
   const [purchase, setPurchase] = useState<AnyRecord | null>(null);
-  const [method, setMethod] = useState("PAGO_MOVIL");
+  const [blockingPurchase, setBlockingPurchase] = useState<AnyRecord | null>(null);
+  const [purchaseListChecked, setPurchaseListChecked] = useState(false);
+  const [purchaseListUnavailable, setPurchaseListUnavailable] = useState(false);
+  const [method, setMethod] = useState<MarketplacePaymentMethod>("mobile");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hours, setHours] = useState<AnyRecord | null>(null);
-  const [bank, setBank] = useState(""); const [phone, setPhone] = useState(""); const [documentId, setDocumentId] = useState(""); const [reference, setReference] = useState(""); const [date, setDate] = useState(venezuelaDate); const [otp, setOtp] = useState(""); const [otpSent, setOtpSent] = useState(false); const [c2pAttempted, setC2pAttempted] = useState(false);
+  const [sourceBanks, setSourceBanks] = useState<readonly SourceBank[]>([]);
+  const [bankListUnavailable, setBankListUnavailable] = useState(false);
+  const [bank, setBank] = useState(""); const [phone, setPhone] = useState(""); const [documentId, setDocumentId] = useState(""); const [reference, setReference] = useState(""); const [date, setDate] = useState(venezuelaDate); const [reportedAmountBs, setReportedAmountBs] = useState(""); const [otp, setOtp] = useState(""); const [otpSent, setOtpSent] = useState(false); const [c2pAttempted, setC2pAttempted] = useState(false);
+  const operationLock = useRef(false);
 
   useEffect(() => { if (!open) return; const c = new AbortController();
-    void Promise.allSettled([getProductPlan(productId, c.signal), getMarketplaceHours(c.signal), getPurchases(c.signal)]).then(async ([p, h, all]) => {
+    void Promise.allSettled([getProductPlan(productId, c.signal), getMarketplaceHours(c.signal), getPurchases(c.signal), getSourceBanks(c.signal)]).then(async ([p, h, all, banks]) => {
       if (c.signal.aborted) return;
       if (p.status === "rejected") { setError(formatError(p.reason)); return; }
       setPlan(p.value.data);
       if (h.status === "fulfilled") setHours(h.value.data);
-      if (all.status === "rejected") return;
-      const list = Array.isArray(all.value.data) ? all.value.data : Array.isArray(get(all.value.data, "items")) ? get(all.value.data, "items") : [];
-      const opened = list.find((item: AnyRecord) => item?.producto?.id === productId && !["PAGAR_CUOTAS", "CANCELADA", "VENCIDA"].includes(item?.etapa));
+      if (banks.status === "fulfilled") { setSourceBanks(banks.value); setBankListUnavailable(false); }
+      else { setSourceBanks([]); setBankListUnavailable(true); }
+      if (all.status === "rejected") { setPurchaseListUnavailable(true); setPurchaseListChecked(true); return; }
+      const list = purchaseItems(all.value.data);
+      const openedPurchases = list.filter(isActiveMarketplacePurchase);
+      const opened = openedPurchases.find((item: AnyRecord) => marketplacePurchaseProductId(item) === productId);
+      const competing = openedPurchases.find((item: AnyRecord) => marketplacePurchaseProductId(item) !== productId);
+      setBlockingPurchase(opened ? null : competing ?? null);
+      setPurchaseListChecked(true);
       if (opened?.id) { const current = await getPurchase(opened.id, c.signal); if (!c.signal.aborted) { setPurchase(current.data); setC2pAttempted(hasAttemptedC2p(String(opened.id))); } }
       else setPurchase(null);
     }).catch((e: unknown) => { if (!c.signal.aborted) setError(formatError(e)); }).finally(() => { if (!c.signal.aborted) setBusy(false); });
     return () => c.abort();
   }, [open, productId]);
 
-  const close = () => { setOpen(false); setStage("plan"); setPurchase(null); setPlan(null); setError(null); };
+  const close = () => { setOpen(false); setStage("plan"); setPurchase(null); setBlockingPurchase(null); setPurchaseListChecked(false); setPurchaseListUnavailable(false); setPlan(null); setError(null); };
   const resumePurchase = () => {
     if (!purchase) return;
     setStage(purchase.etapa === "PAGAR_INICIAL" ? "payment" : "status");
   };
-  const withBusy = async (fn: () => Promise<void>) => { setBusy(true); setError(null); try { await fn(); } catch (e) { setError(c2pAttempted ? "No podemos confirmar el resultado del cobro. No lo reintentes; actualiza el estado de compra." : formatError(e)); } finally { setBusy(false); } };
+  const withBusy = async (fn: () => Promise<void>) => {
+    if (operationLock.current) return;
+    operationLock.current = true; setBusy(true); setError(null);
+    try { await fn(); }
+    catch (e) {
+      if (errorCode(e) === "C2P_RECHAZADO" && purchase?.id) {
+        setAttemptedC2p(String(purchase.id), false); setC2pAttempted(false); setOtpSent(false); setOtp(""); setError(formatError(e));
+      } else {
+        setError(c2pAttempted || (purchase?.id && hasAttemptedC2p(String(purchase.id))) ? "No podemos confirmar el resultado del cobro. No lo reintentes; actualiza el estado de compra." : formatError(e));
+      }
+    }
+    finally { operationLock.current = false; setBusy(false); }
+  };
   const create = () => withBusy(async () => {
     const p = get(plan, "plan");
     const initial = get(p, "pagoInicial");
@@ -110,8 +174,7 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
       const result = await createPurchase(productId, amount);
       let id = result.data.id ?? result.data.compraId;
       if (!id) {
-        const listed = await getPurchases(); const raw = Array.isArray(listed.data) ? listed.data : get(listed.data, "items");
-        const items = Array.isArray(raw) ? raw : [];
+        const listed = await getPurchases(); const items = purchaseItems(listed.data);
         id = items.find((item: AnyRecord) => item?.producto?.id === productId && item?.etapa === "PAGAR_INICIAL")?.id;
       }
       if (!id) throw new Error("purchase_created_without_id");
@@ -120,9 +183,12 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
     catch (e) {
       const info = e instanceof MarketplaceServiceError ? get(e.body, "diagnostic") : {};
       if (info.code !== "COMPRA_ABIERTA") throw e;
-      const listed = await getPurchases(); const raw = Array.isArray(listed.data) ? listed.data : get(listed.data, "items"); const items = Array.isArray(raw) ? raw : [];
-      const existing = items.find((item: AnyRecord) => item?.producto?.id === productId && item?.id);
+      const listed = await getPurchases(); const items = purchaseItems(listed.data);
+      const existing = items.find((item: AnyRecord) => isActiveMarketplacePurchase(item) && item?.id);
       if (!existing) throw e;
+      if (marketplacePurchaseProductId(existing) !== productId) {
+        setBlockingPurchase(existing); setPurchase(null); setPurchaseListChecked(true); setStage("plan"); return;
+      }
       const current = await getPurchase(existing.id); setPurchase(current.data); setC2pAttempted(hasAttemptedC2p(String(existing.id)));
     }
   });
@@ -139,23 +205,37 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
     link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
   const submitReport = () => withBusy(async () => {
-    if (!purchase?.id) throw new Error("purchase_missing");
-    const initial = get(purchase, "pagoInicial");
-    const amount = Number(initial.bs);
-    await reportInitialPayment(purchase.id, { metodo: method, bancoOrigen: bank, telefonoOrigen: phone.replaceAll("-", ""), ...(documentId ? { documentoPagador: documentId } : {}), referencia: reference, fechaPago: date, montoBs: amount });
+    if (!purchase?.id) return;
+    const amountBs = reportedAmountBs;
+    const destination = parsePurchaseDestination(purchase.pagarA);
+    if (!isValidInitialPayment({ method: activeMethod, bank, phone, documentId, reference, date, amountBs, destination, sourceBanks, paymentEnabled })) throw new Error("initial_payment_invalid");
+    await reportInitialPayment(purchase.id, { metodo: activeMethod === "mobile" ? "PAGO_MOVIL" : "TRANSFERENCIA", bancoOrigen: bank, telefonoOrigen: phone.replace(/\D/g, ""), ...(documentId.trim() ? { documentoPagador: documentId.trim() } : {}), referencia: reference.trim(), fechaPago: date, montoBs: Number(reportedAmountBs) });
     await refreshPurchase();
   });
-  const sendOtp = () => withBusy(async () => { if (!purchase?.id) throw new Error("purchase_missing"); await requestC2pOtp(purchase.id, { bancoOrigen: bank, telefonoOrigen: phone.replaceAll("-", ""), ...(documentId ? { documentoPagador: documentId } : {}) }); setOtpSent(true); });
-  const charge = () => withBusy(async () => { if (!purchase?.id || c2pAttempted) throw new Error("c2p_result_must_be_checked"); setC2pAttempted(true); setAttemptedC2p(purchase.id, true); await payC2p(purchase.id, { bancoOrigen: bank, telefonoOrigen: phone.replaceAll("-", ""), ...(documentId ? { documentoPagador: documentId } : {}), otp }); await refreshPurchase(); });
+  const sendOtp = () => withBusy(async () => {
+    if (!purchase?.id) throw new Error("purchase_missing");
+    const response = await requestC2pOtp(purchase.id, { bancoOrigen: bank, telefonoOrigen: phone.replace(/\D/g, ""), ...(documentId.trim() ? { documentoPagador: documentId.trim() } : {}) });
+    if (typeof response.data.otp === "string" && response.data.otp) setOtp(response.data.otp);
+    setOtpSent(true);
+  });
+  const charge = () => withBusy(async () => {
+    if (!purchase?.id || c2pAttempted || !isValidC2pOtp(otp)) throw new Error("c2p_result_must_be_checked");
+    setC2pAttempted(true); setAttemptedC2p(purchase.id, true);
+    await payC2p(purchase.id, { bancoOrigen: bank, telefonoOrigen: phone.replace(/\D/g, ""), ...(documentId.trim() ? { documentoPagador: documentId.trim() } : {}), otp });
+    await refreshPurchase();
+  });
 
   const p = get(plan, "plan"); const initial = get(p, "pagoInicial"); const initialBs = get(purchase, "pagoInicial").bs ?? initial.bs;
   const horarioOpen = hours?.abierto ?? hours?.estaAbierto;
   const paymentEnabled = horarioOpen === true;
-  const phoneValid = /^04(12|14|16|22|24|26)\d{7}$/.test(phone.replaceAll("-", ""));
+  const phoneValid = /^04(12|14|16|22|24|26)\d{7}$/.test(phone.replace(/\D/g, ""));
   const documentValid = !documentId || /^[VEPJGCvepjgc]-?[0-9]{1,9}$/.test(documentId);
-  const bankValid = /^\d{1,4}$/.test(bank);
+  const bankValid = sourceBanks.some((sourceBank) => sourceBank.code === bank);
+  const purchaseDestination = purchase ? parsePurchaseDestination(purchase.pagarA) : null;
+  const availableMethods = getMarketplacePaymentMethods();
+  const activeMethod = availableMethods.includes(method) ? method : availableMethods[0];
   return <>
-    <Button fullWidth variant="contained" onClick={() => { setBusy(true); setError(null); setPurchase(null); setPlan(null); setStage("plan"); setOpen(true); }} sx={{ position: "fixed", zIndex: (theme) => theme.zIndex.appBar, left: "50%", bottom: "calc(14px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", width: "min(calc(100% - 48px), 440px)", minHeight: 58, borderRadius: "14px", bgcolor: blue, fontWeight: 800, "&:hover": { bgcolor: blue } }}>Ir a plan de compra</Button>
+    <Button fullWidth variant="contained" onClick={() => { setBusy(true); setError(null); setPurchase(null); setBlockingPurchase(null); setPurchaseListChecked(false); setPurchaseListUnavailable(false); setPlan(null); setStage("plan"); setOpen(true); }} sx={{ position: "fixed", zIndex: (theme) => theme.zIndex.appBar, left: "50%", bottom: "calc(14px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", width: "min(calc(100% - 48px), 440px)", minHeight: 58, borderRadius: "14px", bgcolor: blue, fontWeight: 800, "&:hover": { bgcolor: blue } }}>Ir a plan de compra</Button>
     <Dialog open={open} onClose={close} aria-labelledby="purchase-flow-title" fullWidth maxWidth="sm" scroll="paper" slots={{ transition: SlideUp }} slotProps={{ backdrop: { sx: { bgcolor: "rgba(0,0,0,.76)" } }, container: { sx: { alignItems: "flex-end", pb: "max(8px, env(safe-area-inset-bottom))" } } }} sx={{ "& .MuiDialog-paper": { width: "calc(100% - 24px)", maxWidth: 548, height: "min(95dvh, 850px)", maxHeight: "calc(100dvh - 28px - env(safe-area-inset-top))", m: 0, overflow: "hidden", borderRadius: "24px", bgcolor: surface, color: "#171717" } }}>
       <Stack sx={{ height: "100%", minHeight: 0, overflowY: "auto", px: { xs: 2, sm: 3 }, pt: 2.5, pb: 2.5, gap: 1.4 }}>
         <FlowHeader title={stage === "plan" ? "Plan de compra" : stage === "payment" || stage === "report" || stage === "c2p" ? "Realizar pago" : "Estado de compra"} onClose={close} />
@@ -198,32 +278,63 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
             {plan.alcanzaCupo === false || p.alcanzaCupo === false || plan.cupoUsable === false ? <Alert severity="warning">El cupo disponible no alcanza o no está habilitado para este plan.</Alert> : null}
             {horarioOpen === false && <OffHoursNotice isOpen={false} nextOpening={hours?.proximaApertura} />}
           </>}
-          {purchase ? <Box sx={{ p: 1.5, border: "1px solid #C7D3FF", borderRadius: "16px", bgcolor: "#F7F8FF" }}>
+          {purchaseListUnavailable && <Alert severity="warning">No pudimos consultar tus compras activas. Cierra este plan y vuelve a abrirlo para intentarlo nuevamente.</Alert>}
+          {blockingPurchase ? <Box sx={{ p: 1.5, border: "1px solid #C7D3FF", borderRadius: "16px", bgcolor: "#F7F8FF" }}>
+            <Typography sx={{ fontWeight: 800 }}>Ya tienes una compra activa</Typography>
+            <Typography sx={{ mt: 0.35, mb: 1.2, color: "text.secondary", fontSize: "0.9rem" }}>Completa o consulta {get(blockingPurchase, "producto").nombre ? `“${get(blockingPurchase, "producto").nombre}”` : "tu compra actual"} antes de iniciar otra.</Typography>
+            {marketplacePurchaseProductId(blockingPurchase) && <Button component={Link} href={`/marketplace/${encodeURIComponent(marketplacePurchaseProductId(blockingPurchase)!)}`} fullWidth variant="outlined" sx={{ minHeight: 48, borderRadius: "13px", fontWeight: 800 }}>Ir a la compra activa</Button>}
+          </Box> : purchase ? <Box sx={{ p: 1.5, border: "1px solid #C7D3FF", borderRadius: "16px", bgcolor: "#F7F8FF" }}>
             <Typography sx={{ fontWeight: 800 }}>Tienes una compra pendiente</Typography>
             <Typography sx={{ mt: 0.35, mb: 1.2, color: "text.secondary", fontSize: "0.9rem" }}>Revisa este plan y elige cuándo quieres retomar tu compra.</Typography>
             <Button fullWidth variant="contained" disabled={busy} onClick={resumePurchase} sx={{ minHeight: 50, borderRadius: "13px", bgcolor: blue, fontWeight: 800, "&:hover": { bgcolor: blue } }}>Continuar compra</Button>
-          </Box> : p && <Primary disabled={busy || plan.alcanzaCupo === false || p.alcanzaCupo === false || plan.cupoUsable === false} onClick={() => void create()}>Iniciar compra</Primary>}
+          </Box> : p && <Primary disabled={busy || !purchaseListChecked || purchaseListUnavailable || plan.alcanzaCupo === false || p.alcanzaCupo === false || plan.cupoUsable === false} onClick={() => void create()}>Iniciar compra</Primary>}
         </>}
-        {stage === "payment" && purchase && <>
+        {(stage === "payment" || stage === "report") && purchase && <>
           <Typography component="h3" sx={{ fontWeight: 800, fontSize: "1.25rem" }}>Pagar inicial</Typography>
+          {purchase.motivoRechazo && <Alert severity="error">Pago rechazado: {purchase.motivoRechazo}. Revisa los datos antes de volver a reportarlo.</Alert>}
           <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: blue, color: "white" }}><Typography>Monto congelado</Typography><Typography sx={{ fontSize: "1.5rem", fontWeight: 700 }}>{fmt(initialBs, "Bs.")}</Typography></Box>
-          {purchase.pagarA && <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: "white" }}><Typography sx={{ fontWeight: 800 }}>Datos de pago móvil</Typography><Typography>{purchase.pagarA.nombre}</Typography><Typography>{purchase.pagarA.documento}</Typography><Typography>{purchase.pagarA.telefono}</Typography><Typography>{purchase.pagarA.banco}</Typography></Box>}
-          <Select value={method} onChange={(e) => setMethod(e.target.value)}><MenuItem value="PAGO_MOVIL">Pago móvil</MenuItem><MenuItem value="TRANSFERENCIA">Transferencia</MenuItem><MenuItem value="C2P">C2P</MenuItem></Select>
+          {stage === "payment" && <>
+          <ToggleButtonGroup aria-label="Método de pago" exclusive fullWidth value={activeMethod} onChange={(_, value: MarketplacePaymentMethod | null) => value && setMethod(value)} sx={{ p: 0.5, borderRadius: 99, bgcolor: "#F0EFFF", "& .MuiToggleButtonGroup-grouped": { minHeight: 44, border: 0, borderRadius: "99px !important", color: "#171717", fontWeight: 700, textTransform: "none" }, "& .Mui-selected": { bgcolor: `${blue} !important`, color: "#fff !important" } }}>
+            <ToggleButton value="mobile">Pago móvil</ToggleButton><ToggleButton value="transfer">Transferencia</ToggleButton><ToggleButton value="c2p">C2P</ToggleButton>
+          </ToggleButtonGroup>
           {!paymentEnabled && <OffHoursNotice isOpen={horarioOpen} nextOpening={hours?.proximaApertura} />}
-          {method === "C2P" ? <><TextField label="Código del banco" value={bank} onChange={(e) => setBank(e.target.value)} error={Boolean(bank) && !bankValid} helperText={Boolean(bank) && !bankValid ? "Ingresa el código bancario de hasta 4 dígitos." : ""} /><TextField label="Teléfono del pagador" value={phone} onChange={(e) => setPhone(e.target.value)} error={Boolean(phone) && !phoneValid} helperText={Boolean(phone) && !phoneValid ? "Usa un móvil venezolano válido, por ejemplo 04141122556." : ""} />{!otpSent ? <Primary disabled={busy || !bankValid || !phoneValid || !paymentEnabled} onClick={() => void sendOtp()}>Solicitar OTP</Primary> : <><TextField label="Código OTP" value={otp} onChange={(e) => setOtp(e.target.value)} /><Alert severity="warning">Al confirmar se intentará cobrar el pago inicial. Si el resultado es incierto, no vuelvas a enviar el cobro; actualiza el estado de compra.</Alert>{c2pAttempted && <><Alert severity="info">Este intento no se repetirá desde la pantalla. Actualiza el estado para comprobar el resultado.</Alert><Button disabled={busy} onClick={() => void withBusy(refreshPurchase)}>Actualizar estado de compra</Button></>}<Primary disabled={busy || !otp || c2pAttempted || !paymentEnabled} onClick={() => void charge()}>Confirmar cobro</Primary></>}</> : <>
+          {activeMethod !== "c2p" && purchaseDestination && <InitialPaymentInstructions destination={purchaseDestination} amountBs={String(initialBs ?? "0")} method={activeMethod} />}
+          {activeMethod !== "c2p" && !purchaseDestination && <Alert severity="warning">No recibimos los datos de destino para este método. Actualiza la compra o inténtalo más tarde.</Alert>}
+          {activeMethod !== "c2p" && <Primary disabled={busy || !paymentEnabled || !purchaseDestination} onClick={() => { setReportedAmountBs(String(initialBs ?? "")); setStage("report"); }}>Listo - Ya pagué</Primary>}
+          {bankListUnavailable && activeMethod === "c2p" && <Alert severity="warning">No se pudo cargar el directorio de bancos. Cierra y vuelve a abrir este flujo para intentarlo nuevamente.</Alert>}
+          {activeMethod === "c2p" && <>
+            <Alert severity="info">C2P realiza el cobro desde Impúlsate. Solicita el OTP al banco y confirma el pago una sola vez.</Alert>
+            <TextField select label="Banco del pagador" value={bank} onChange={(e) => setBank(e.target.value)} error={!bankValid && Boolean(bank)} helperText={!bankValid && Boolean(bank) ? "Selecciona un banco del directorio." : ""}>
+              <MenuItem value="" disabled>Selecciona tu banco</MenuItem>
+              {sourceBanks.map((sourceBank) => <MenuItem key={sourceBank.code} value={sourceBank.code}>{sourceBank.name}</MenuItem>)}
+            </TextField>
+            <TextField label="Teléfono afiliado a C2P" value={phone} onChange={(e) => setPhone(e.target.value)} error={Boolean(phone) && !phoneValid} helperText={Boolean(phone) && !phoneValid ? "Usa un móvil venezolano válido, por ejemplo 04141122556." : ""} />
+            <TextField label="Documento del pagador (opcional)" value={documentId} onChange={(e) => setDocumentId(e.target.value)} error={!documentValid} helperText={!documentValid ? "Formato esperado: V12345678." : "Si paga el titular de la cuenta, puedes dejarlo vacío."} />
+            {!otpSent ? <Primary disabled={busy || !bankValid || !phoneValid || !documentValid || !paymentEnabled} onClick={() => void sendOtp()}>Solicitar OTP</Primary> : <>
+              <TextField label="Código OTP (4 a 8 dígitos)" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))} error={Boolean(otp) && !isValidC2pOtp(otp)} helperText={Boolean(otp) && !isValidC2pOtp(otp) ? "Ingresa entre 4 y 8 dígitos." : "Ingresa la clave enviada por tu banco o proporcionada por el servicio."} slotProps={{ htmlInput: { inputMode: "numeric", maxLength: 8 } }} />
+              <Alert severity="warning">Al confirmar se intentará cobrar el pago inicial. Si el resultado es incierto, no vuelvas a enviar el cobro; actualiza el estado de compra.</Alert>
+              {c2pAttempted && <><Alert severity="info">Este intento no se repetirá desde la pantalla. Actualiza el estado para comprobar el resultado.</Alert><Button disabled={busy} onClick={() => void withBusy(refreshPurchase)}>Actualizar estado de compra</Button></>}
+              <Primary disabled={busy || !isValidC2pOtp(otp) || c2pAttempted || !paymentEnabled} onClick={() => void charge()}>Confirmar cobro</Primary>
+            </>}
+          </>}
+          </>}
+          {stage === "report" && activeMethod !== "c2p" && <>
+            <Button onClick={() => setStage("payment")} sx={{ alignSelf: "flex-start" }}>Volver a instrucciones</Button>
+            {!paymentEnabled && <OffHoursNotice isOpen={horarioOpen} nextOpening={hours?.proximaApertura} />}
             <Typography sx={{ fontWeight: 700 }}>Reporta el pago realizado</Typography>
-            <TextField label="Código del banco de origen" value={bank} onChange={(e) => setBank(e.target.value)} slotProps={{ htmlInput: { maxLength: 4 } }} error={Boolean(bank) && !bankValid} helperText={Boolean(bank) && !bankValid ? "Ingresa entre 1 y 4 dígitos." : ""} />
+            <TextField label="Monto realmente pagado (Bs.)" type="number" value={reportedAmountBs} onChange={(e) => setReportedAmountBs(e.target.value)} error={Boolean(reportedAmountBs) && (!/^\d+(?:\.\d{1,2})?$/.test(reportedAmountBs) || Number(reportedAmountBs) <= 0)} helperText={activeMethod === "mobile" ? "Si difiere del monto de la inicial, el reporte quedará en revisión." : "La transferencia será revisada por el equipo. Ingresa el monto que enviaste."} slotProps={{ htmlInput: { min: 0.01, step: 0.01, inputMode: "decimal" } }} />
+            <TextField select label="Banco desde el que pagaste" value={bank} onChange={(e) => setBank(e.target.value)} error={Boolean(bank) && !bankValid} helperText={Boolean(bank) && !bankValid ? "Selecciona un banco del directorio." : ""}><MenuItem value="" disabled>Selecciona el banco de origen</MenuItem>{sourceBanks.map((sourceBank) => <MenuItem key={sourceBank.code} value={sourceBank.code}>{sourceBank.name}</MenuItem>)}</TextField>
             <TextField label="Teléfono de origen" placeholder="04141122556" value={phone} onChange={(e) => setPhone(e.target.value)} error={Boolean(phone) && !phoneValid} helperText={Boolean(phone) && !phoneValid ? "Usa un móvil venezolano válido." : ""} />
             <TextField label="Documento del pagador (opcional)" value={documentId} onChange={(e) => setDocumentId(e.target.value)} error={!documentValid} helperText={!documentValid ? "Formato esperado: V12345678." : ""} />
-            <TextField label="Referencia" value={reference} onChange={(e) => setReference(e.target.value)} />
+            <TextField label="Referencia (4 a 20 dígitos)" value={reference} onChange={(e) => setReference(e.target.value.replace(/\D/g, "").slice(0, 20))} error={Boolean(reference) && !/^\d{4,20}$/.test(reference)} helperText={Boolean(reference) && !/^\d{4,20}$/.test(reference) ? "Ingresa de 4 a 20 dígitos." : ""} />
             <TextField label="Fecha de pago" type="date" value={date} onChange={(e) => setDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-            {method === "TRANSFERENCIA" && <Alert severity="warning">El contrato de compra no entrega cuenta destino y no está confirmado que los datos bancarios generales sean válidos para la inicial. Por ahora, el reporte de transferencia queda bloqueado hasta confirmar ese flujo con backend.</Alert>}
             <Alert severity="info">El contrato de pago inicial no recibe comprobante. El envío quedará sujeto al estado que confirme el backend.</Alert>
-            <Primary disabled={busy || !bankValid || !phoneValid || !documentValid || !reference || !date || !paymentEnabled || method === "TRANSFERENCIA"} onClick={() => void submitReport()}>Enviar reporte de inicial</Primary>
+            {bankListUnavailable && <Alert severity="warning">No se pudo cargar el directorio de bancos. Cierra y vuelve a abrir este flujo para intentarlo nuevamente.</Alert>}
+            <Primary disabled={busy || !isValidInitialPayment({ method: activeMethod, bank, phone, documentId, reference, date, amountBs: reportedAmountBs, destination: purchaseDestination, sourceBanks, paymentEnabled })} onClick={() => void submitReport()}>Enviar reporte de inicial</Primary>
           </>}
         </>}
         {stage === "status" && purchase && <>
-          <Box sx={{ p: 2, borderRadius: 2, bgcolor: "white", textAlign: "center" }}><AccountBalanceWalletRounded sx={{ color: blue, fontSize: 42 }} /><Typography component="h3" sx={{ fontSize: "1.25rem", fontWeight: 800 }}>{purchase.etapa === "VALIDANDO_PAGO" ? "Pago en revisión" : purchase.etapa === "PAGAR_CUOTAS" ? "Compra confirmada" : purchase.etapa === "VENCIDA" ? "Compra vencida" : purchase.etapa === "ESPERANDO_FIRMAS" ? "Esperando firmas" : purchase.motivoRechazo ? "Pago rechazado" : purchase.estado ?? "Estado de compra"}</Typography><Typography>{purchase.motivoRechazo ?? `Etapa: ${purchase.etapa ?? "No disponible"}`}</Typography></Box>
+          <Box sx={{ p: 2, borderRadius: 2, bgcolor: "white", textAlign: "center" }}><AccountBalanceWalletRounded sx={{ color: blue, fontSize: 42 }} /><Typography component="h3" sx={{ fontSize: "1.25rem", fontWeight: 800 }}>{purchase.etapa === "VALIDANDO_PAGO" ? String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "TRANSFERENCIA" ? "Pago pendiente de aprobación" : String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "PAGO_MOVIL" ? "Pago móvil en revisión" : String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "C2P" ? "Verificando pago C2P" : "Verificando pago" : purchase.etapa === "PAGAR_CUOTAS" ? "Compra confirmada" : purchase.etapa === "VENCIDA" ? "Compra vencida" : purchase.etapa === "ESPERANDO_FIRMAS" ? "Inicial aprobada" : purchase.motivoRechazo ? "Pago rechazado" : purchase.estado ?? "Estado de compra"}</Typography><Typography>{purchase.motivoRechazo ?? (purchase.etapa === "ESPERANDO_FIRMAS" ? "El pago inicial fue aprobado. El contrato está disponible para revisión." : purchase.etapa === "VALIDANDO_PAGO" && String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "TRANSFERENCIA" ? "La transferencia debe ser revisada y aprobada por la empresa." : purchase.etapa === "VALIDANDO_PAGO" && String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "PAGO_MOVIL" ? "El pago móvil no pudo confirmarse automáticamente y será revisado. Actualiza para consultar el resultado." : purchase.etapa === "VALIDANDO_PAGO" ? "Estamos confirmando el resultado con el banco. Actualiza el estado para consultar el resultado; no repitas un cobro C2P." : `Etapa: ${purchase.etapa ?? "No disponible"}`)}</Typography></Box>
           {purchase.etapa === "ESPERANDO_FIRMAS" && <><Alert severity="info">Descarga y revisa el contrato. La firma electrónica no está definida en esta integración; no enviaremos una confirmación de firma sin el flujo real.</Alert><Button disabled={busy} onClick={() => void downloadContract()}>Descargar contrato</Button></>}
           {purchase.etapa === "PAGAR_CUOTAS" && purchase.consumoId && <Button component="a" href={`/installments/${encodeURIComponent(purchase.consumoId)}`} variant="contained" sx={{ bgcolor: blue }}>Ir a mis cuotas</Button>}
           <Button onClick={() => void withBusy(refreshPurchase)}>Actualizar estado</Button>

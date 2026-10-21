@@ -14,6 +14,7 @@ test("validates the purchase amount and UUID without coercing strings", () => {
 test("validates the initial payment against Core fields", () => {
   const request = { metodo: "PAGO_MOVIL", ...mobile, referencia: "123456", fechaPago: "2026-10-19", montoBs: 17590.76 };
   assert.equal(isInitialPaymentRequest(request), true);
+  assert.equal(isInitialPaymentRequest({ ...request, montoBs: 16000.25 }), true);
   assert.equal(isInitialPaymentRequest({ ...request, telefonoOrigen: "0422" }), false);
   assert.equal(isInitialPaymentRequest({ ...request, metodo: "C2P" }), false);
   assert.equal(isInitialPaymentRequest({ ...request, documentoPagador: "not-an-id" }), false);
