@@ -63,7 +63,8 @@ export function createInstructionRows(
     key: "taxId",
     label: "RIF",
     displayValue: destination.taxId,
-    copyValue: destination.taxId.replace(/[^a-z0-9]/gi, ""),
+    // Solo los dígitos: en el banco la letra se elige aparte y el campo admite 9 dígitos (IMOV-512).
+    copyValue: destination.taxId.replace(/\D/g, ""),
   };
   const amount: InstructionRow = {
     key: "amount",
