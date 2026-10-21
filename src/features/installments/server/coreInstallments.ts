@@ -154,6 +154,14 @@ export async function getPaymentDataFromCore(
   return parsedOrThrow(parseCorePaymentData(dataBody, banks));
 }
 
+export async function getSourceBanksFromCore(
+  accessToken: string,
+  signal: AbortSignal,
+): Promise<readonly import("../types").SourceBank[]> {
+  const response = await requestCore("/api/directorio-bancos", { accessToken, signal });
+  return parsedOrThrow(parseCoreBanks(await readOk(response)));
+}
+
 export async function createInstallmentReportInCore(
   accessToken: string,
   consumptionId: string,
