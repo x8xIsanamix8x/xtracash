@@ -56,7 +56,9 @@ export function createInstructionRows(
   const bank: InstructionRow = {
     key: "bank",
     label: "Banco",
-    displayValue: `${destination.bank} (${destination.bankCode})`,
+    displayValue: destination.bankCode === destination.bank
+      ? destination.bank
+      : `${destination.bank} (${destination.bankCode})`,
     copyValue: destination.bankCode,
   };
   const taxId: InstructionRow = {
