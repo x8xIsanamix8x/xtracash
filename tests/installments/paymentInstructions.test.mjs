@@ -48,14 +48,21 @@ test("pago móvil: banco, RIF, teléfono y monto", () => {
   const rows = createInstructionRows(destination, "34372.09", "mobile");
   assert.deepEqual(rows.map((row) => [row.label, row.displayValue, row.copyValue]), [
     ["Banco", "Banco Activo (0171)", "0171"],
-    ["RIF", "J500887043", "J500887043"],
+    ["RIF", "J500887043", "500887043"],
     ["Teléfono", "0414 264 2085", "04142642085"],
     ["Monto", "Bs. 34.372,09", "34372,09"],
   ]);
   assert.equal(
     createCopyAllText(rows),
-    "Banco: 0171\nRIF: J500887043\nTeléfono: 04142642085\nMonto: 34372,09",
+    "Banco: 0171\nRIF: 500887043\nTeléfono: 04142642085\nMonto: 34372,09",
   );
+});
+
+test("el RIF se copia solo con sus dígitos, para el campo numérico del banco (IMOV-512)", () => {
+  const conGuiones = { ...destination, taxId: "J-50088704-3" };
+  const rif = createInstructionRows(conGuiones, "10.00", "mobile").find((row) => row.key === "taxId");
+  assert.equal(rif.displayValue, "J-50088704-3");
+  assert.equal(rif.copyValue, "500887043");
 });
 
 test("transferencia: titular, cuenta y tipo", () => {
@@ -63,7 +70,7 @@ test("transferencia: titular, cuenta y tipo", () => {
   assert.deepEqual(rows.map((row) => [row.label, row.displayValue, row.copyValue]), [
     ["Banco", "Banco Activo (0171)", "0171"],
     ["Titular", "IMPULSA VENTURE CAPITAL C.A.", "IMPULSA VENTURE CAPITAL C.A."],
-    ["RIF", "J500887043", "J500887043"],
+    ["RIF", "J500887043", "500887043"],
     ["Número de cuenta", "0171 0002 5060 0262 7254", "01710002506002627254"],
     ["Tipo de cuenta", "Corriente", "Corriente"],
     ["Monto", "Bs. 68.744,18", "68744,18"],
