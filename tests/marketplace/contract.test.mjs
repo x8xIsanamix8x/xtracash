@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isC2pChargeRequest, isC2pOtpRequest, isCreatePurchaseRequest, isInitialPaymentRequest } from "../../src/features/marketplace/contractValidation.ts";
+import { isC2pChargeRequest, isC2pOtpRequest, isCreatePurchaseRequest, isInitialPaymentRequest, isSignPurchaseRequest } from "../../src/features/marketplace/contractValidation.ts";
 
 const uuid = "01919b3e-7c2a-7d10-9f3e-2b6c8a4d5e71";
 const mobile = { bancoOrigen: "0171", telefonoOrigen: "04141122556" };
@@ -25,4 +25,11 @@ test("C2P separates OTP request from explicit charge confirmation", () => {
   assert.equal(isC2pChargeRequest({ ...mobile, otp: "605410" }), true);
   assert.equal(isC2pChargeRequest(mobile), false);
   assert.equal(isC2pChargeRequest({ ...mobile, otp: "12" }), false);
+});
+
+test("purchase signature only accepts the explicit signed confirmation", () => {
+  assert.equal(isSignPurchaseRequest({ firmado: true }), true);
+  assert.equal(isSignPurchaseRequest({ firmado: false }), false);
+  assert.equal(isSignPurchaseRequest({}), false);
+  assert.equal(isSignPurchaseRequest({ firmado: true, signature: "name" }), false);
 });

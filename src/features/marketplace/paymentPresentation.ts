@@ -10,19 +10,29 @@ function text(value: unknown): string | null {
 export function parsePurchaseDestination(value: unknown): PaymentDestination | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  const bank = text(raw.banco);
-  const bankCode = text(raw.codigoBanco) ?? text(raw.codigo) ?? bank;
+  // CompraMarketplace documenta `pagarA` en español. Algunas respuestas Core
+  // reutilizan el DTO PaymentDataResponse, cuyos campos equivalentes están en inglés.
+  const bank = text(raw.banco) ?? text(raw.bank);
+  const bankCode = text(raw.codigoBanco) ?? text(raw.codigo) ?? text(raw.bankCode) ?? bank;
   if (!bank || !bankCode) return null;
 
   return {
     bank,
     bankCode,
-    taxId: text(raw.documento) ?? "",
-    phone: text(raw.telefono) ?? "",
-    beneficiaryName: text(raw.nombre),
-    account: text(raw.cuenta),
-    accountType: text(raw.tipoCuenta),
+    taxId: text(raw.documento) ?? text(raw.taxId) ?? "",
+    phone: text(raw.telefono) ?? text(raw.phone) ?? "",
+    beneficiaryName: text(raw.nombre) ?? text(raw.beneficiaryName),
+    account: text(raw.cuenta) ?? text(raw.account),
+    accountType: text(raw.tipoCuenta) ?? text(raw.accountType),
   };
+}
+
+export function hasInitialPaymentDestination(
+  destination: PaymentDestination | null,
+  method: Exclude<MarketplacePaymentMethod, "c2p">,
+): boolean {
+  if (!destination?.bank || !destination.bankCode || !destination.taxId) return false;
+  return method === "mobile" ? Boolean(destination.phone) : Boolean(destination.account);
 }
 
 /** Los tres medios forman parte del flujo; que falten instrucciones no debe ocultar el método. */
@@ -32,6 +42,14 @@ export function getMarketplacePaymentMethods(): readonly MarketplacePaymentMetho
 
 export function isValidC2pOtp(value: string): boolean {
   return /^\d{4,8}$/.test(value);
+}
+
+export function parseC2pOtpResponse(value: unknown): { otp: string } | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  if (raw.solicitada !== true || (raw.otp !== undefined && typeof raw.otp !== "string")) return null;
+  const otp = typeof raw.otp === "string" ? raw.otp : "";
+  return otp === "" || isValidC2pOtp(otp) ? { otp } : null;
 }
 
 export function isValidInitialPayment(value: Readonly<{
