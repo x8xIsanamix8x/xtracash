@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { AccountBalanceWalletRounded, CheckRounded, CloseRounded, ContentCopyRounded, InfoOutlined, LocalAtmRounded, LocalOfferRounded, RequestQuoteRounded, SavingsRounded } from "@mui/icons-material";
-import { Alert, Box, Button, Dialog, IconButton, MenuItem, Slide, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { AccountBalanceWalletRounded, CheckCircleRounded, CheckRounded, CloseRounded, ContentCopyRounded, InfoOutlined, LocalAtmRounded, LocalOfferRounded, RequestQuoteRounded, SavingsRounded } from "@mui/icons-material";
+import { Alert, Box, Button, Checkbox, Dialog, FormControlLabel, IconButton, MenuItem, Slide, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import type { TransitionProps } from "@mui/material/transitions";
 import { forwardRef } from "react";
-import { createPurchase, getMarketplaceHours, getProductPlan, getPurchases, getPurchase, getPurchaseContract, payC2p, reportInitialPayment, requestC2pOtp, MarketplaceServiceError } from "../services/marketplace";
+import { createPurchase, getMarketplaceHours, getMarketplacePaymentData, getProductPlan, getPurchases, getPurchase, getPurchaseContract, payC2p, reportInitialPayment, requestC2pOtp, signPurchase, MarketplaceServiceError } from "../services/marketplace";
 import { createCopyAllText, createInstructionRows } from "../../installments/paymentInstructions";
-import { getMarketplacePaymentMethods, isValidC2pOtp, isValidInitialPayment, parsePurchaseDestination, type MarketplacePaymentMethod } from "../paymentPresentation";
+import { getMarketplacePaymentMethods, hasInitialPaymentDestination, isValidC2pOtp, isValidInitialPayment, parseC2pOtpResponse, parsePurchaseDestination, type MarketplacePaymentMethod } from "../paymentPresentation";
 import { MarketplaceProductImage } from "./MarketplaceProductImage";
 import { getSourceBanks } from "../../installments/services/installments";
 import type { SourceBank } from "../../installments/types";
@@ -20,7 +20,7 @@ const surface = "#F0EFFF";
 // único límite dinámico mientras se valida cada campo usado en la vista.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = Record<string, any>;
-type Stage = "plan" | "payment" | "report" | "c2p" | "status";
+type Stage = "plan" | "payment" | "report" | "c2p" | "status" | "contract" | "signed";
 const SlideUp = forwardRef(function SlideUp(props: TransitionProps & { children: React.ReactElement }, ref: React.Ref<unknown>) { return <Slide direction="up" ref={ref} {...props} />; });
 const get = (value: unknown, key: string): AnyRecord => value && typeof value === "object" ? (value as AnyRecord)[key] ?? {} : {};
 function purchaseItems(data: unknown): AnyRecord[] {
@@ -30,10 +30,34 @@ function purchaseItems(data: unknown): AnyRecord[] {
   const content = get(data, "content");
   return Array.isArray(content) ? content as AnyRecord[] : [];
 }
+async function getPurchaseWithPaymentDestination(id: string, signal?: AbortSignal) {
+  const result = await getPurchase(id, signal);
+  if (result.data.etapa !== "PAGAR_INICIAL") return result;
+  const currentDestination = parsePurchaseDestination(result.data.pagarA);
+  if (hasInitialPaymentDestination(currentDestination, "mobile")
+    && hasInitialPaymentDestination(currentDestination, "transfer")) return result;
+
+  // Prefer the purchase-specific destination. The documented no-consumptionId
+  // endpoint supplements missing fields with the authenticated company's data.
+  try {
+    const paymentData = await getMarketplacePaymentData(signal);
+    if (!parsePurchaseDestination(paymentData.data)) return result;
+    return {
+      ...result,
+      data: {
+        ...result.data,
+        pagarA: { ...paymentData.data, ...get(result.data, "pagarA") },
+      },
+    };
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw error;
+    return result;
+  }
+}
 function fmt(value: unknown, currency = "USDT") { if (value === undefined || value === null || value === "") return "—"; const n = Number(value); return Number.isFinite(n) ? `${currency} ${new Intl.NumberFormat("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}` : `${currency} ${String(value)}`; }
 function venezuelaDate() { const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date()); const value = (type: string) => parts.find((part) => part.type === type)?.value ?? ""; return `${value("year")}-${value("month")}-${value("day")}`; }
 function errorCode(error: unknown) { return error instanceof MarketplaceServiceError ? String(get(error.body, "diagnostic").code ?? get(error.body, "code") ?? "") : ""; }
-function formatError(error: unknown) { if (error instanceof MarketplaceServiceError) { const code = errorCode(error); if (code === "C2P_RECHAZADO") return "El banco rechazó el cobro C2P. No se realizó el pago; revisa los datos o solicita un nuevo OTP."; if (code === "C2P_OTP_FALLIDO") return "El banco no pudo generar el OTP. Puedes volver a solicitarlo."; if (code === "COMPRA_ABIERTA") return "Ya tienes una compra abierta. Estamos recuperando su estado."; if (code === "MONTO_NO_CUADRA") return "El monto del plan cambió. Actualiza el plan antes de continuar."; if (code === "FUERA_DE_HORARIO") return "El pago inicial solo se puede reportar dentro del horario de atención."; if (code === "COMPRA_VENCIDA") return "Esta compra venció. Actualiza su estado para ver las opciones disponibles."; if (code === "REFERENCIA_USADA") return "Esta referencia ya fue reportada. Verifica el estado de la compra antes de volver a intentar."; if (code === "CUPO_NO_DISPONIBLE" || code === "CUPO_INSUFICIENTE") return "El cupo cambió y ya no permite continuar con esta compra."; if (error.status === 403) return "Esta operación no está habilitada en este momento."; if (error.status === 409) return "La operación no puede continuar con el estado actual."; } return "No pudimos completar la operación. Revisa tu conexión e inténtalo nuevamente."; }
+function formatError(error: unknown) { if (error instanceof Error && error.message === "c2p_otp_not_requested") return "El banco no confirmó la solicitud de OTP. Verifica los datos e inténtalo nuevamente."; if (error instanceof MarketplaceServiceError) { const code = errorCode(error); if (code === "C2P_RECHAZADO") return "El banco rechazó el cobro C2P. No se realizó el pago; revisa los datos o solicita un nuevo OTP."; if (code === "C2P_OTP_FALLIDO") return "El banco no pudo generar el OTP. Puedes volver a solicitarlo."; if (code === "COMPRA_ABIERTA") return "Ya tienes una compra abierta. Estamos recuperando su estado."; if (code === "MONTO_NO_CUADRA") return "El monto del plan cambió. Actualiza el plan antes de continuar."; if (code === "FUERA_DE_HORARIO") return "El pago inicial solo se puede reportar dentro del horario de atención."; if (code === "COMPRA_VENCIDA") return "Esta compra venció. Actualiza su estado para ver las opciones disponibles."; if (code === "REFERENCIA_USADA") return "Esta referencia ya fue reportada. Verifica el estado de la compra antes de volver a intentar."; if (code === "CUPO_NO_DISPONIBLE" || code === "CUPO_INSUFICIENTE") return "El cupo cambió y ya no permite continuar con esta compra."; if (error.status === 403) return "Esta operación no está habilitada en este momento."; if (error.status === 409) return "La operación no puede continuar con el estado actual."; } return "No pudimos completar la operación. Revisa tu conexión e inténtalo nuevamente."; }
 function setAttemptedC2p(id: string, attempted: boolean) { try { const key = `marketplace:c2p-attempt:${id}`; if (attempted) localStorage.setItem(key, "1"); else localStorage.removeItem(key); } catch { /* El estado del servidor sigue siendo la fuente de verdad. */ } }
 function hasAttemptedC2p(id: string) { try { return localStorage.getItem(`marketplace:c2p-attempt:${id}`) === "1"; } catch { return false; } }
 
@@ -65,6 +89,55 @@ function InitialPaymentInstructions({ destination, amountBs, method }: Readonly<
 
 function FlowHeader({ title, onClose }: { title: string; onClose: () => void }) { return <Stack direction="row" sx={{ minHeight: 48, alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}><IconButton aria-label="Cerrar" onClick={onClose} sx={{ width: 42, height: 42, border: "1.5px solid #171717" }}><CloseRounded /></IconButton><Typography id="purchase-flow-title" component="h2" sx={{ fontWeight: 700 }}>{title}</Typography><Box sx={{ width: 42 }} /></Stack>; }
 function Primary({ children, onClick, disabled = false }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) { return <Button fullWidth variant="contained" onClick={onClick} disabled={disabled} sx={{ minHeight: 56, flexShrink: 0, borderRadius: "14px", bgcolor: blue, fontSize: "1rem", fontWeight: 800, "&:hover": { bgcolor: blue } }}>{children}</Button>; }
+
+function SignatureCaptureDialog({ open, onClose, onSave }: Readonly<{ open: boolean; onClose: () => void; onSave: (signature: string) => void }>) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawing = useRef(false);
+  const [hasInk, setHasInk] = useState(false);
+  useEffect(() => {
+    if (!open || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const bounds = canvas.getBoundingClientRect();
+    const scale = window.devicePixelRatio || 1;
+    canvas.width = Math.round(bounds.width * scale);
+    canvas.height = Math.round(bounds.height * scale);
+    const context = canvas.getContext("2d");
+    if (context) { context.scale(scale, scale); context.lineWidth = 3; context.lineCap = "round"; context.lineJoin = "round"; context.strokeStyle = blue; }
+    setHasInk(false);
+  }, [open]);
+  const point = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+  };
+  const start = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); drawing.current = true;
+    const context = event.currentTarget.getContext("2d"); const p = point(event);
+    context?.beginPath(); context?.moveTo(p.x, p.y); setHasInk(true);
+  };
+  const move = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawing.current) return;
+    event.preventDefault(); const p = point(event); const context = event.currentTarget.getContext("2d");
+    context?.lineTo(p.x, p.y); context?.stroke();
+  };
+  const stop = () => { drawing.current = false; };
+  const clear = () => {
+    const canvas = canvasRef.current; const context = canvas?.getContext("2d");
+    if (canvas && context) { const scale = window.devicePixelRatio || 1; context.clearRect(0, 0, canvas.width / scale, canvas.height / scale); }
+    setHasInk(false);
+  };
+  const save = () => { if (canvasRef.current && hasInk) onSave(canvasRef.current.toDataURL("image/png")); };
+  return <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" aria-labelledby="signature-capture-title" slotProps={{ paper: { sx: { m: 2, p: 2.5, borderRadius: "22px" } } }}>
+    <Typography id="signature-capture-title" component="h2" sx={{ fontSize: "1.2rem", fontWeight: 800 }}>Firma con tu dedo o mouse</Typography>
+    <Typography sx={{ mt: 0.6, color: "text.secondary", fontSize: "0.9rem" }}>Dibuja tu firma en el recuadro. Si no queda como esperas, puedes borrarla y repetir.</Typography>
+    <Box component="canvas" ref={canvasRef} aria-label="Área para dibujar la firma" onPointerDown={start} onPointerMove={move} onPointerUp={stop} onPointerCancel={stop} onPointerLeave={stop} sx={{ display: "block", mt: 2, width: "100%", height: 210, border: "1px solid #D9D9E1", borderRadius: "16px", bgcolor: "#F4F3FB", touchAction: "none", cursor: "crosshair" }} />
+    <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+      <Button onClick={clear} disabled={!hasInk}>Borrar</Button>
+      <Box sx={{ flex: 1 }} />
+      <Button onClick={onClose}>Cancelar</Button>
+      <Button variant="contained" onClick={save} disabled={!hasInk} sx={{ bgcolor: blue, fontWeight: 700 }}>Usar firma</Button>
+    </Stack>
+  </Dialog>;
+}
 
 function OffHoursNotice({ isOpen, nextOpening }: Readonly<{ isOpen: boolean | undefined; nextOpening?: unknown }>) {
   const openingDate = typeof nextOpening === "string" ? new Date(nextOpening) : null;
@@ -123,6 +196,10 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
   const [hours, setHours] = useState<AnyRecord | null>(null);
   const [sourceBanks, setSourceBanks] = useState<readonly SourceBank[]>([]);
   const [bankListUnavailable, setBankListUnavailable] = useState(false);
+  const [acceptContract, setAcceptContract] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [signatureDataUrl, setSignatureDataUrl] = useState("");
+  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
   const [bank, setBank] = useState(""); const [phone, setPhone] = useState(""); const [documentId, setDocumentId] = useState(""); const [reference, setReference] = useState(""); const [date, setDate] = useState(venezuelaDate); const [reportedAmountBs, setReportedAmountBs] = useState(""); const [otp, setOtp] = useState(""); const [otpSent, setOtpSent] = useState(false); const [c2pAttempted, setC2pAttempted] = useState(false);
   const operationLock = useRef(false);
 
@@ -141,7 +218,7 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
       const competing = openedPurchases.find((item: AnyRecord) => marketplacePurchaseProductId(item) !== productId);
       setBlockingPurchase(opened ? null : competing ?? null);
       setPurchaseListChecked(true);
-      if (opened?.id) { const current = await getPurchase(opened.id, c.signal); if (!c.signal.aborted) { setPurchase(current.data); setC2pAttempted(hasAttemptedC2p(String(opened.id))); } }
+      if (opened?.id) { const current = await getPurchaseWithPaymentDestination(opened.id, c.signal); if (!c.signal.aborted) { setPurchase(current.data); setC2pAttempted(hasAttemptedC2p(String(opened.id))); } }
       else setPurchase(null);
     }).catch((e: unknown) => { if (!c.signal.aborted) setError(formatError(e)); }).finally(() => { if (!c.signal.aborted) setBusy(false); });
     return () => c.abort();
@@ -178,7 +255,7 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
         id = items.find((item: AnyRecord) => item?.producto?.id === productId && item?.etapa === "PAGAR_INICIAL")?.id;
       }
       if (!id) throw new Error("purchase_created_without_id");
-      const current = await getPurchase(String(id)); setPurchase(current.data); setStage(current.data.etapa === "PAGAR_INICIAL" ? "payment" : "status");
+      const current = await getPurchaseWithPaymentDestination(String(id)); setPurchase(current.data); setStage(current.data.etapa === "PAGAR_INICIAL" ? "payment" : "status");
     }
     catch (e) {
       const info = e instanceof MarketplaceServiceError ? get(e.body, "diagnostic") : {};
@@ -189,10 +266,10 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
       if (marketplacePurchaseProductId(existing) !== productId) {
         setBlockingPurchase(existing); setPurchase(null); setPurchaseListChecked(true); setStage("plan"); return;
       }
-      const current = await getPurchase(existing.id); setPurchase(current.data); setC2pAttempted(hasAttemptedC2p(String(existing.id)));
+      const current = await getPurchaseWithPaymentDestination(existing.id); setPurchase(current.data); setC2pAttempted(hasAttemptedC2p(String(existing.id)));
     }
   });
-  const refreshPurchase = async () => { if (purchase?.id) { const updated = await getPurchase(purchase.id); setPurchase(updated.data); setStage(updated.data.etapa === "PAGAR_INICIAL" ? "payment" : "status"); if (updated.data.etapa !== "PAGAR_INICIAL") { setAttemptedC2p(purchase.id, false); setC2pAttempted(false); } else if (hasAttemptedC2p(purchase.id)) setC2pAttempted(true); } };
+  const refreshPurchase = async () => { if (purchase?.id) { const updated = await getPurchaseWithPaymentDestination(purchase.id); setPurchase(updated.data); setStage(updated.data.etapa === "PAGAR_INICIAL" ? "payment" : "status"); if (updated.data.etapa !== "PAGAR_INICIAL") { setAttemptedC2p(purchase.id, false); setC2pAttempted(false); } else if (hasAttemptedC2p(purchase.id)) setC2pAttempted(true); } };
   const downloadContract = () => withBusy(async () => {
     if (!purchase?.id) throw new Error("purchase_missing");
     const { data } = await getPurchaseContract(purchase.id);
@@ -215,14 +292,28 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
   const sendOtp = () => withBusy(async () => {
     if (!purchase?.id) throw new Error("purchase_missing");
     const response = await requestC2pOtp(purchase.id, { bancoOrigen: bank, telefonoOrigen: phone.replace(/\D/g, ""), ...(documentId.trim() ? { documentoPagador: documentId.trim() } : {}) });
-    if (typeof response.data.otp === "string" && response.data.otp) setOtp(response.data.otp);
+    const result = parseC2pOtpResponse(response.data);
+    if (!result) throw new Error("c2p_otp_not_requested");
+    setOtp(result.otp);
     setOtpSent(true);
   });
   const charge = () => withBusy(async () => {
     if (!purchase?.id || c2pAttempted || !isValidC2pOtp(otp)) throw new Error("c2p_result_must_be_checked");
     setC2pAttempted(true); setAttemptedC2p(purchase.id, true);
     await payC2p(purchase.id, { bancoOrigen: bank, telefonoOrigen: phone.replace(/\D/g, ""), ...(documentId.trim() ? { documentoPagador: documentId.trim() } : {}), otp });
+    // /c2p returns a purchase (approved or under review), never an OTP result.
+    // Re-read the canonical state because 202 can mean the bank result is uncertain.
     await refreshPurchase();
+  });
+  const confirmSignature = () => withBusy(async () => {
+    if (!purchase?.id || !acceptContract || !acceptTerms || !signatureDataUrl) throw new Error("signature_incomplete");
+    // The contract only accepts firmado:true. The typed name and acknowledgements
+    // are interaction/UI evidence; Core does not persist them as a signature artifact.
+    await signPurchase(purchase.id);
+    const updated = await getPurchase(purchase.id);
+    setPurchase(updated.data);
+    if (updated.data.etapa === "PAGAR_CUOTAS") setStage("signed");
+    else setStage("status");
   });
 
   const p = get(plan, "plan"); const initial = get(p, "pagoInicial"); const initialBs = get(purchase, "pagoInicial").bs ?? initial.bs;
@@ -238,7 +329,7 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
     <Button fullWidth variant="contained" onClick={() => { setBusy(true); setError(null); setPurchase(null); setBlockingPurchase(null); setPurchaseListChecked(false); setPurchaseListUnavailable(false); setPlan(null); setStage("plan"); setOpen(true); }} sx={{ position: "fixed", zIndex: (theme) => theme.zIndex.appBar, left: "50%", bottom: "calc(14px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", width: "min(calc(100% - 48px), 440px)", minHeight: 58, borderRadius: "14px", bgcolor: blue, fontWeight: 800, "&:hover": { bgcolor: blue } }}>Ir a plan de compra</Button>
     <Dialog open={open} onClose={close} aria-labelledby="purchase-flow-title" fullWidth maxWidth="sm" scroll="paper" slots={{ transition: SlideUp }} slotProps={{ backdrop: { sx: { bgcolor: "rgba(0,0,0,.76)" } }, container: { sx: { alignItems: "flex-end", pb: "max(8px, env(safe-area-inset-bottom))" } } }} sx={{ "& .MuiDialog-paper": { width: "calc(100% - 24px)", maxWidth: 548, height: "min(95dvh, 850px)", maxHeight: "calc(100dvh - 28px - env(safe-area-inset-top))", m: 0, overflow: "hidden", borderRadius: "24px", bgcolor: surface, color: "#171717" } }}>
       <Stack sx={{ height: "100%", minHeight: 0, overflowY: "auto", px: { xs: 2, sm: 3 }, pt: 2.5, pb: 2.5, gap: 1.4 }}>
-        <FlowHeader title={stage === "plan" ? "Plan de compra" : stage === "payment" || stage === "report" || stage === "c2p" ? "Realizar pago" : "Estado de compra"} onClose={close} />
+        <FlowHeader title={stage === "plan" ? "Plan de compra" : stage === "payment" || stage === "report" || stage === "c2p" ? "Realizar pago" : stage === "contract" ? "Firma digital" : stage === "signed" ? "Compra confirmada" : "Estado de compra"} onClose={close} />
         {error && <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => void withBusy(refreshPurchase)}>Actualizar</Button>}>{error}</Alert>}
         {busy && <Typography role="status">Consultando información…</Typography>}
         {stage === "plan" && plan && <>
@@ -280,8 +371,8 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
           </>}
           {purchaseListUnavailable && <Alert severity="warning">No pudimos consultar tus compras activas. Cierra este plan y vuelve a abrirlo para intentarlo nuevamente.</Alert>}
           {blockingPurchase ? <Box sx={{ p: 1.5, border: "1px solid #C7D3FF", borderRadius: "16px", bgcolor: "#F7F8FF" }}>
-            <Typography sx={{ fontWeight: 800 }}>Ya tienes una compra activa</Typography>
-            <Typography sx={{ mt: 0.35, mb: 1.2, color: "text.secondary", fontSize: "0.9rem" }}>Completa o consulta {get(blockingPurchase, "producto").nombre ? `“${get(blockingPurchase, "producto").nombre}”` : "tu compra actual"} antes de iniciar otra.</Typography>
+            <Typography sx={{ fontWeight: 800 }}>Tienes una compra en curso</Typography>
+            <Typography sx={{ mt: 0.35, mb: 1.2, color: "text.secondary", fontSize: "0.9rem" }}>Completa {get(blockingPurchase, "producto").nombre ? `“${get(blockingPurchase, "producto").nombre}”` : "tu compra actual"} primero. Después podrás iniciar otra compra —de un producto a la vez— si tu cupo disponible alcanza.</Typography>
             {marketplacePurchaseProductId(blockingPurchase) && <Button component={Link} href={`/marketplace/${encodeURIComponent(marketplacePurchaseProductId(blockingPurchase)!)}`} fullWidth variant="outlined" sx={{ minHeight: 48, borderRadius: "13px", fontWeight: 800 }}>Ir a la compra activa</Button>}
           </Box> : purchase ? <Box sx={{ p: 1.5, border: "1px solid #C7D3FF", borderRadius: "16px", bgcolor: "#F7F8FF" }}>
             <Typography sx={{ fontWeight: 800 }}>Tienes una compra pendiente</Typography>
@@ -298,9 +389,9 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
             <ToggleButton value="mobile">Pago móvil</ToggleButton><ToggleButton value="transfer">Transferencia</ToggleButton><ToggleButton value="c2p">C2P</ToggleButton>
           </ToggleButtonGroup>
           {!paymentEnabled && <OffHoursNotice isOpen={horarioOpen} nextOpening={hours?.proximaApertura} />}
-          {activeMethod !== "c2p" && purchaseDestination && <InitialPaymentInstructions destination={purchaseDestination} amountBs={String(initialBs ?? "0")} method={activeMethod} />}
-          {activeMethod !== "c2p" && !purchaseDestination && <Alert severity="warning">No recibimos los datos de destino para este método. Actualiza la compra o inténtalo más tarde.</Alert>}
-          {activeMethod !== "c2p" && <Primary disabled={busy || !paymentEnabled || !purchaseDestination} onClick={() => { setReportedAmountBs(String(initialBs ?? "")); setStage("report"); }}>Listo - Ya pagué</Primary>}
+          {activeMethod !== "c2p" && hasInitialPaymentDestination(purchaseDestination, activeMethod) && <InitialPaymentInstructions destination={purchaseDestination!} amountBs={String(initialBs ?? "0")} method={activeMethod} />}
+          {activeMethod !== "c2p" && !hasInitialPaymentDestination(purchaseDestination, activeMethod) && <Alert severity="warning">No recibimos todos los datos de destino para este método. Verifica la configuración bancaria de la empresa o inténtalo más tarde.</Alert>}
+          {activeMethod !== "c2p" && <Primary disabled={busy || !paymentEnabled || !hasInitialPaymentDestination(purchaseDestination, activeMethod)} onClick={() => { setReportedAmountBs(String(initialBs ?? "")); setStage("report"); }}>Listo - Ya pagué</Primary>}
           {bankListUnavailable && activeMethod === "c2p" && <Alert severity="warning">No se pudo cargar el directorio de bancos. Cierra y vuelve a abrir este flujo para intentarlo nuevamente.</Alert>}
           {activeMethod === "c2p" && <>
             <Alert severity="info">C2P realiza el cobro desde Impúlsate. Solicita el OTP al banco y confirma el pago una sola vez.</Alert>
@@ -334,12 +425,59 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
           </>}
         </>}
         {stage === "status" && purchase && <>
-          <Box sx={{ p: 2, borderRadius: 2, bgcolor: "white", textAlign: "center" }}><AccountBalanceWalletRounded sx={{ color: blue, fontSize: 42 }} /><Typography component="h3" sx={{ fontSize: "1.25rem", fontWeight: 800 }}>{purchase.etapa === "VALIDANDO_PAGO" ? String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "TRANSFERENCIA" ? "Pago pendiente de aprobación" : String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "PAGO_MOVIL" ? "Pago móvil en revisión" : String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "C2P" ? "Verificando pago C2P" : "Verificando pago" : purchase.etapa === "PAGAR_CUOTAS" ? "Compra confirmada" : purchase.etapa === "VENCIDA" ? "Compra vencida" : purchase.etapa === "ESPERANDO_FIRMAS" ? "Inicial aprobada" : purchase.motivoRechazo ? "Pago rechazado" : purchase.estado ?? "Estado de compra"}</Typography><Typography>{purchase.motivoRechazo ?? (purchase.etapa === "ESPERANDO_FIRMAS" ? "El pago inicial fue aprobado. El contrato está disponible para revisión." : purchase.etapa === "VALIDANDO_PAGO" && String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "TRANSFERENCIA" ? "La transferencia debe ser revisada y aprobada por la empresa." : purchase.etapa === "VALIDANDO_PAGO" && String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "PAGO_MOVIL" ? "El pago móvil no pudo confirmarse automáticamente y será revisado. Actualiza para consultar el resultado." : purchase.etapa === "VALIDANDO_PAGO" ? "Estamos confirmando el resultado con el banco. Actualiza el estado para consultar el resultado; no repitas un cobro C2P." : `Etapa: ${purchase.etapa ?? "No disponible"}`)}</Typography></Box>
-          {purchase.etapa === "ESPERANDO_FIRMAS" && <><Alert severity="info">Descarga y revisa el contrato. La firma electrónica no está definida en esta integración; no enviaremos una confirmación de firma sin el flujo real.</Alert><Button disabled={busy} onClick={() => void downloadContract()}>Descargar contrato</Button></>}
+          <Box sx={{ p: 2.5, borderRadius: "20px", bgcolor: "white", textAlign: "center", border: "1px solid #D9D9E1" }}>
+            {purchase.etapa === "ESPERANDO_FIRMAS" ? <CheckCircleRounded sx={{ color: "#06D986", fontSize: 62 }} /> : <AccountBalanceWalletRounded sx={{ color: blue, fontSize: 42 }} />}
+            <Typography component="h3" sx={{ mt: 0.5, fontSize: "1.25rem", fontWeight: 800 }}>{purchase.etapa === "VALIDANDO_PAGO" ? String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "TRANSFERENCIA" ? "Pago pendiente de aprobación" : String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "PAGO_MOVIL" ? "Pago móvil en revisión" : String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "C2P" ? "Verificando pago C2P" : "Verificando pago" : purchase.etapa === "PAGAR_CUOTAS" ? "Compra confirmada" : purchase.etapa === "VENCIDA" ? "Compra vencida" : purchase.etapa === "ESPERANDO_FIRMAS" ? "¡Pago inicial aprobado!" : purchase.motivoRechazo ? "Pago rechazado" : purchase.estado ?? "Estado de compra"}</Typography>
+            <Typography sx={{ mt: 0.5 }}>{purchase.motivoRechazo ?? (purchase.etapa === "ESPERANDO_FIRMAS" ? "Tu pago fue validado correctamente. Revisa y firma el contrato para activar el financiamiento." : purchase.etapa === "VALIDANDO_PAGO" && String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "TRANSFERENCIA" ? "La transferencia debe ser revisada y aprobada por la empresa." : purchase.etapa === "VALIDANDO_PAGO" && String(get(get(purchase, "pago"), "metodo")).toUpperCase() === "PAGO_MOVIL" ? "El pago móvil no pudo confirmarse automáticamente y será revisado. Actualiza para consultar el resultado." : purchase.etapa === "VALIDANDO_PAGO" ? "Estamos confirmando el resultado con el banco. Actualiza el estado para consultar el resultado; no repitas un cobro C2P." : `Etapa: ${purchase.etapa ?? "No disponible"}`)}</Typography>
+          </Box>
+          {purchase.etapa === "ESPERANDO_FIRMAS" && <>
+            <Box sx={{ p: 1.6, borderRadius: "16px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
+              <Typography sx={{ fontWeight: 800 }}>{get(purchase, "producto").nombre ?? productName}</Typography>
+              <Stack divider={<Box sx={{ borderBottom: "1px solid #E2E2E8" }} />} sx={{ mt: 1 }}>
+                {[["Precio", get(purchase, "precio")], ["Pago inicial", get(purchase, "pagoInicial").usdt], ["Monto financiado", get(purchase, "aFinanciar")], ["Cuotas", purchase.cuotas]].filter(([, value]) => value !== undefined && value !== null && value !== "").map(([label, value]) => <Stack key={String(label)} direction="row" sx={{ justifyContent: "space-between", gap: 1, py: 0.9 }}><Typography color="text.secondary">{label}</Typography><Typography sx={{ fontWeight: 700 }}>{label === "Cuotas" ? value : fmt(value)}</Typography></Stack>)}
+              </Stack>
+            </Box>
+            <Primary disabled={busy} onClick={() => { setAcceptContract(false); setAcceptTerms(false); setSignatureDataUrl(""); setStage("contract"); }}>Revisar y firmar contrato</Primary>
+            <Button disabled={busy} onClick={() => void downloadContract()}>Descargar contrato</Button>
+          </>}
           {purchase.etapa === "PAGAR_CUOTAS" && purchase.consumoId && <Button component="a" href={`/installments/${encodeURIComponent(purchase.consumoId)}`} variant="contained" sx={{ bgcolor: blue }}>Ir a mis cuotas</Button>}
           <Button onClick={() => void withBusy(refreshPurchase)}>Actualizar estado</Button>
         </>}
+        {stage === "contract" && purchase && <>
+          <Typography component="h3" sx={{ fontSize: "1.2rem", fontWeight: 800 }}>Revisa y firma tu contrato</Typography>
+          <Alert severity="info">Al confirmar la firma se activa el financiamiento y comienza el calendario de cuotas. Puedes descargar el contrato para revisarlo antes de continuar.</Alert>
+          <Box sx={{ p: 1.6, borderRadius: "18px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
+            <Typography sx={{ mb: 1, fontWeight: 800 }}>Condiciones de compra</Typography>
+            <Stack divider={<Box sx={{ borderBottom: "1px solid #E2E2E8" }} />}>
+              {[["Producto", get(purchase, "producto").nombre ?? productName], ["Precio", purchase.precio], ["Pago inicial", get(purchase, "pagoInicial").usdt], ["Monto financiado", purchase.aFinanciar], ["Número de cuotas", purchase.cuotas], ["Servicio legal", purchase.servicioLegal], ["Servicio administrativo", purchase.servicioAdministrativo]].filter(([, value]) => value !== undefined && value !== null && value !== "").map(([label, value]) => <Stack key={String(label)} direction="row" sx={{ justifyContent: "space-between", gap: 1, py: 0.85 }}><Typography color="text.secondary">{label}</Typography><Typography sx={{ fontWeight: 700, textAlign: "right" }}>{label === "Número de cuotas" ? value : label === "Producto" ? value : fmt(value)}</Typography></Stack>)}
+            </Stack>
+            <Button fullWidth disabled={busy} onClick={() => void downloadContract()} sx={{ mt: 1 }}>Descargar contrato para revisar</Button>
+          </Box>
+          <Box sx={{ p: 1.2, borderRadius: "16px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
+            <FormControlLabel control={<Checkbox checked={acceptContract} onChange={(event) => setAcceptContract(event.target.checked)} sx={{ color: blue, "&.Mui-checked": { color: blue } }} />} label="Confirmo que revisé y acepto las condiciones del contrato." />
+            <FormControlLabel control={<Checkbox checked={acceptTerms} onChange={(event) => setAcceptTerms(event.target.checked)} sx={{ color: blue, "&.Mui-checked": { color: blue } }} />} label="Acepto los términos y condiciones de esta compra." />
+          </Box>
+          <Box sx={{ p: 1.4, borderRadius: "16px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
+            <Typography sx={{ fontWeight: 700 }}>Firma del cliente</Typography>
+            {signatureDataUrl ? <Box component="img" src={signatureDataUrl} alt="Vista previa de la firma dibujada" sx={{ display: "block", width: "100%", height: 110, objectFit: "contain", my: 0.5 }} /> : <Typography sx={{ py: 2, color: "text.secondary", fontSize: "0.9rem" }}>Dibuja tu firma usando el dedo en pantalla táctil o el mouse.</Typography>}
+            <Button fullWidth variant="outlined" onClick={() => setSignatureDialogOpen(true)} sx={{ minHeight: 46, borderRadius: "12px", borderColor: blue, color: blue }}>{signatureDataUrl ? "Volver a dibujar" : "Dibujar firma"}</Button>
+            <Typography sx={{ mt: 0.75, color: "text.secondary", fontSize: "0.78rem" }}>La firma dibujada se conserva solo en esta pantalla. Core registra la confirmación, pero no almacena el trazo como artefacto de firma.</Typography>
+          </Box>
+          <Primary disabled={busy || !acceptContract || !acceptTerms || !signatureDataUrl} onClick={() => void confirmSignature()}>Firmar contrato y confirmar</Primary>
+          <Button disabled={busy} onClick={() => setStage("status")}>Volver</Button>
+        </>}
+        {stage === "signed" && purchase && <>
+          <Box sx={{ p: 2.5, borderRadius: "20px", bgcolor: "white", textAlign: "center", border: "1px solid #D9D9E1" }}>
+            <CheckCircleRounded sx={{ color: "#06D986", fontSize: 72 }} />
+            <Typography component="h3" sx={{ fontSize: "1.35rem", fontWeight: 800 }}>¡Firma registrada!</Typography>
+            <Typography sx={{ mt: 0.8 }}>La compra quedó confirmada. La otra parte completará la firma y se emitirá el contrato firmado por ambas partes.</Typography>
+          </Box>
+          <Alert severity="info">Core confirmó la compra y la etapa de cuotas. El estado de la firma de la otra parte y la emisión del documento bilateral no están disponibles en esta integración.</Alert>
+          {purchase.consumoId && <Button component="a" href={`/installments/${encodeURIComponent(purchase.consumoId)}`} variant="contained" sx={{ minHeight: 54, bgcolor: blue, fontWeight: 800 }}>Ir a mis cuotas</Button>}
+          <Button disabled={busy} onClick={() => void downloadContract()}>Descargar contrato</Button>
+        </>}
       </Stack>
     </Dialog>
+    <SignatureCaptureDialog open={signatureDialogOpen} onClose={() => setSignatureDialogOpen(false)} onSave={(signature) => { setSignatureDataUrl(signature); setSignatureDialogOpen(false); }} />
   </>;
 }
