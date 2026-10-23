@@ -26,3 +26,4 @@ function validC2pFields(value: Record<string, unknown>) {
 
 export function isC2pOtpRequest(value: unknown): boolean { return record(value) && validC2pFields(value); }
 export function isC2pChargeRequest(value: unknown): boolean { return record(value) && validC2pFields(value) && typeof value.otp === "string" && /^\d{4,8}$/.test(value.otp); }
+export function isSignPurchaseRequest(value: unknown): boolean { return record(value) && value.firmado === true && Object.keys(value).length === 1; }

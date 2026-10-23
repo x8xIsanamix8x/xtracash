@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { isActiveMarketplacePurchase, marketplacePurchaseProductId } from "../../src/features/marketplace/purchaseAvailability.ts";
 
-test("only unresolved purchase stages block starting another purchase", () => {
+test("one unresolved purchase blocks a second; confirmed and expired purchases do not", () => {
   assert.equal(isActiveMarketplacePurchase({ etapa: "PAGAR_INICIAL" }), true);
   assert.equal(isActiveMarketplacePurchase({ etapa: "VALIDANDO_PAGO" }), true);
   assert.equal(isActiveMarketplacePurchase({ etapa: "ESPERANDO_FIRMAS" }), true);
