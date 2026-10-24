@@ -15,6 +15,7 @@ import {
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { getUnreadCount, NotificationsServiceError } from "@/features/notifications/services/notifications";
 import { syncPushSubscription } from "@/features/notifications/push/pushNotifications";
+import { getProfilePersonalInfo, ProfileServiceError } from "@/features/profile/services/profile";
 import { PushNotificationsGuide } from "@/features/notifications/push/PushNotificationsGuide";
 import { PwaInstallGuide } from "@/features/pwa/PwaInstallGuide";
 
@@ -25,6 +26,7 @@ import { createNewBusinessHomeViewModel } from "./newBusinessViewModel";
 import type { HomeDashboardViewModel } from "./newBusinessTypes";
 import { getNewBusinessHomeData } from "./services/newBusinessHome";
 import { getTimeGreeting } from "./timeGreeting";
+import { canAccessMarketplace } from "./marketplaceAccess";
 import {
   AccountSummaryServiceError,
   getAccountSummary,
@@ -34,6 +36,7 @@ import type { OnboardingMasterProgress } from "./types";
 export function HomeView() {
   const router = useRouter();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [showMarketplacePromo, setShowMarketplacePromo] = useState(false);
   const [homeViewModel, setHomeViewModel] = useState<HomeDashboardViewModel | null>(null);
   const [greeting, setGreeting] = useState("Buenos días");
   const [isSummaryLoaded, setIsSummaryLoaded] = useState(false);
@@ -110,6 +113,26 @@ export function HomeView() {
 
   useEffect(() => {
     const controller = new AbortController();
+
+    void getProfilePersonalInfo(controller.signal)
+      .then(({ email }) => {
+        if (!controller.signal.aborted) setShowMarketplacePromo(canAccessMarketplace(email));
+      })
+      .catch((error: unknown) => {
+        if (
+          !controller.signal.aborted
+          && error instanceof ProfileServiceError
+          && error.type === "unauthenticated"
+        ) {
+          router.replace(sessionExpiredUrl);
+        }
+      });
+
+    return () => controller.abort();
+  }, [router]);
+
+  useEffect(() => {
+    const controller = new AbortController();
     const scenario = new URLSearchParams(window.location.search).get("scenario");
     const mockScenario = scenario && scenario in newBusinessHomeMocks
       ? scenario as keyof typeof newBusinessHomeMocks
@@ -162,6 +185,7 @@ export function HomeView() {
             greeting={greeting}
             onNotifications={() => router.push("/notifications")}
             unreadNotifications={unreadNotifications}
+            showMarketplacePromo={showMarketplacePromo}
             viewModel={homeViewModel}
           />
         )}

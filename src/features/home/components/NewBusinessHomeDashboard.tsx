@@ -25,12 +25,14 @@ import emptyConsumptionsImage from "../../../../public/home/empty-consumptions.p
 import type { HomeDashboardViewModel } from "../newBusinessTypes";
 import { homeVisualTokens } from "../homeVisualTokens";
 import { ConsumptionCard } from "./ConsumptionCard";
+import { MarketplacePromo } from "./MarketplacePromo";
 
 type NewBusinessHomeDashboardProps = Readonly<{
   greeting: string;
   viewModel: HomeDashboardViewModel;
   onNotifications: () => void;
   unreadNotifications: number;
+  showMarketplacePromo: boolean;
 }>;
 
 function HomeHeader({
@@ -427,6 +429,7 @@ export function NewBusinessHomeDashboard({
   viewModel,
   onNotifications,
   unreadNotifications,
+  showMarketplacePromo,
 }: NewBusinessHomeDashboardProps) {
   return (
     <Stack spacing={2.5}>
@@ -437,6 +440,7 @@ export function NewBusinessHomeDashboard({
         unreadNotifications={unreadNotifications}
       />
       <BalanceCard balance={viewModel.balance} />
+      {showMarketplacePromo && <MarketplacePromo />}
       {viewModel.notice && (
         <AttentionNotice
           message={viewModel.notice.message}
