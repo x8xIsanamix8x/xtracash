@@ -11,6 +11,7 @@
     "test:auth": "node --no-warnings --experimental-strip-types --test tests/auth/*.test.mjs",
     "test:home": "node --no-warnings --experimental-strip-types --test tests/home/*.test.mjs",
     "test:installments": "node --no-warnings --experimental-strip-types --test tests/installments/*.test.mjs",
+    "test:marketplace": "node --no-warnings --experimental-strip-types --test tests/marketplace/*.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report",
     "test:profile": "node --no-warnings --experimental-strip-types --test tests/profile/*.test.mjs",

@@ -4,6 +4,7 @@ import {
   parseInstallmentsBffError,
   parseInstallmentsOverview,
   parsePaymentData,
+  parseSourceBank,
 } from "../contractValidation";
 import type {
   ConsumptionDetail,
@@ -11,6 +12,7 @@ import type {
   InstallmentReportResult,
   InstallmentsOverview,
   PaymentData,
+  SourceBank,
 } from "../types";
 
 export type InstallmentsServiceErrorType =
@@ -108,6 +110,14 @@ export async function getInstallments(signal: AbortSignal): Promise<Installments
   return parsedOrThrow(parseInstallmentsOverview(
     await request("/api/installments", {}, signal),
   ));
+}
+
+export async function getSourceBanks(signal: AbortSignal): Promise<readonly SourceBank[]> {
+  const body = await request("/api/installments/banks", {}, signal);
+  if (!Array.isArray(body) || body.length === 0) throw new InstallmentsServiceError("invalid");
+  const banks = body.map(parseSourceBank);
+  if (banks.some((bank) => bank === null)) throw new InstallmentsServiceError("invalid");
+  return banks as SourceBank[];
 }
 
 export async function getConsumptionDetail(

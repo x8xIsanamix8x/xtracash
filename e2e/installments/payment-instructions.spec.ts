@@ -83,11 +83,16 @@ test.describe("SPEC-05 · Instrucciones de pago", () => {
     await expect(page.getByRole("status").filter({ hasText: "Teléfono copiado" })).toBeVisible();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("04142642085");
 
+    // El banco pide la letra aparte y el número en un campo de 9 dígitos (IMOV-512).
+    await details(page).getByRole("button", { name: "Copiar rif" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "RIF copiado" })).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("500887043");
+
     await details(page).getByRole("button", { name: "Copiar todos los datos" }).click();
     // Windows devuelve los saltos de línea del portapapeles como \r\n.
     const copiedAll = await page.evaluate(() => navigator.clipboard.readText());
     expect(copiedAll.replace(/\r\n/g, "\n")).toBe(
-      "Banco: 0171\nRIF: J500887043\nTeléfono: 04142642085\nMonto: 34372,09",
+      "Banco: 0171\nRIF: 500887043\nTeléfono: 04142642085\nMonto: 34372,09",
     );
   });
 
