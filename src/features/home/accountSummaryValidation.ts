@@ -259,7 +259,7 @@ export function parseHomeAccountSummary(value: unknown): HomeAccountSummary | nu
   if (!isRecord(value)) return null;
   const newBusiness = parseNewBusinessHomeData(value);
   if (newBusiness) {
-    const delinquencyStage = newBusiness.balance.status === "SUSPENDED"
+    const delinquencyStage = newBusiness.balance.status === "SUSPENDED" || newBusiness.balance.status === "BLOCKED"
       ? "BLOQUEADA"
       : newBusiness.balance.status === "PAYMENT_DUE"
         ? "CON_MORA"
@@ -272,14 +272,15 @@ export function parseHomeAccountSummary(value: unknown): HomeAccountSummary | nu
         availableBs: newBusiness.balance.available.bs,
       },
       payments: {
-        hasPendingPayment: newBusiness.balance.status !== "ACTIVE",
+        hasPendingPayment: newBusiness.balance.status !== "ACTIVE"
+          || newBusiness.consumptions.some((item) => item.status === "PAYMENT_DUE" || item.status === "OVERDUE"),
         nextCutoffDate: null,
         currentDebtBs: newBusiness.debt.total.bs,
         minimumPaymentBs: null,
         delinquencyStage,
       },
       movements: [],
-      onboardingMaster: null,
+      onboardingMaster: newBusiness.onboardingMaster,
     };
   }
   if (typeof value.name !== "string" || !value.name.trim()) return null;
