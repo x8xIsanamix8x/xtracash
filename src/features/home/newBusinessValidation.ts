@@ -19,10 +19,10 @@ function isCalendarDate(value: unknown): value is string {
 }
 
 function normalizeBalanceStatus(value: unknown): NewBusinessHomeData["balance"]["status"] | null {
-  if (value === "AL_DIA" || value === "ACTIVE") return "ACTIVE";
+  if (value === "AL_DIA" || value === "ABIERTA" || value === "ACTIVE") return "ACTIVE";
   if (value === "RETRASO" || value === "PAYMENT_DUE") return "PAYMENT_DUE";
-  if (value === "BLOQUEADO" || value === "BLOCKED" || value === "MORA" || value === "CON_MORA") return "BLOCKED";
-  if (value === "SUSPENDIDO" || value === "SUSPENDED") return "SUSPENDED";
+  if (value === "BLOQUEADO" || value === "BLOQUEADA" || value === "BLOCKED" || value === "MORA" || value === "CON_MORA") return "BLOCKED";
+  if (value === "SUSPENDIDO" || value === "SUSPENDIDA" || value === "SUSPENDED") return "SUSPENDED";
   return null;
 }
 
