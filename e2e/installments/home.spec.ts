@@ -57,6 +57,18 @@ test.describe("SPEC-08 · Integración con el Home", () => {
     await expect(page.getByRole("link", { name: "Pagar cuotas" })).toBeVisible();
   });
 
+  test("muestra la única cuota vencida cuando Core responde BLOQUEADA", async ({ page, bff }) => {
+    const summary = coreFixture<{ balance: { status: string }; consumptions: { status: string; label: string }[] }>("resumen");
+    summary.balance.status = "BLOQUEADA";
+    summary.consumptions = [{ ...summary.consumptions[0], status: "VENCIDO_SIN_MORA" }];
+    await bff.respond("**/api/home/summary", { body: summary });
+    await page.goto("/home");
+
+    await expect(page.getByText("Tienes cuotas vencidas y tu disponible está bloqueado.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Clínica.*Cuota vencida/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Pagar cuotas" })).toBeVisible();
+  });
+
   test("una suspensión de empresa mantiene separado el aviso de bloqueo por deuda", async ({ page, bff }) => {
     const summary = coreFixture<{ balance: { status: string } }>("resumen");
     summary.balance.status = "SUSPENDIDO";
