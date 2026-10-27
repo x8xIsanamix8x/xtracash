@@ -5,12 +5,13 @@ export type HomeMoney = Readonly<{
   usd: string;
 }>;
 
-export type HomeBalanceStatus = "ACTIVE" | "PAYMENT_DUE" | "SUSPENDED";
+export type HomeBalanceStatus = "ACTIVE" | "PAYMENT_DUE" | "BLOCKED" | "SUSPENDED";
 
 export type HomeConsumptionStatus =
   | "UP_TO_DATE"
   | "PAYMENT_DUE"
-  | "OVERDUE";
+  | "OVERDUE"
+  | "PAID";
 
 export type HomeConsumptionIconName = PaymentIconId;
 
@@ -25,6 +26,8 @@ export type NewBusinessHomeData = Readonly<{
     totalCredit: HomeMoney;
     status: HomeBalanceStatus;
   }>;
+  onboardingMaster: Readonly<{ completedPhases: 0 | 1 | 2 | 3 }> | null;
+  showMarket: boolean | null;
   consumptions: readonly Readonly<{
     consumptionId: string;
     icon: HomeConsumptionIconName;
@@ -47,7 +50,7 @@ export type HomeMockScenario =
   | "paymentDue"
   | "delinquent";
 
-export type HomeStatusTone = "positive" | "attention";
+export type HomeStatusTone = "positive" | "attention" | "danger";
 
 export type HomeDashboardViewModel = Readonly<{
   firstName: string;
@@ -59,11 +62,13 @@ export type HomeDashboardViewModel = Readonly<{
     available: string;
     totalCredit: string;
     primaryAction: "useAvailable" | "reportInstallment";
-    primaryActionLabel: "Usar mi disponible" | "Reportar cuota" | "Reactivar";
+    primaryActionLabel: "Usar mi disponible" | "Pagar cuotas" | "Ver mis cuotas";
+    isRestricted: boolean;
   }>;
   notice: Readonly<{
     message: string;
-    tone: "attention";
+    tone: "attention" | "danger";
+    suspended: boolean;
   }> | null;
   consumptions: readonly Readonly<{
     id: string;
