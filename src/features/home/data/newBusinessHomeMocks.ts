@@ -48,6 +48,8 @@ const activeBase: NewBusinessHomeData = {
   },
   consumptions: activeConsumptions,
   debt: { total: { bs: "153000.00", usd: "0.00" } },
+  onboardingMaster: null,
+  showMarket: null,
 };
 
 export const newBusinessHomeMocks: Readonly<
@@ -62,6 +64,8 @@ export const newBusinessHomeMocks: Readonly<
     },
     consumptions: [],
     debt: { total: { bs: "0.00", usd: "0.00" } },
+    onboardingMaster: null,
+    showMarket: null,
   },
   active: activeBase,
   paymentDue: {
