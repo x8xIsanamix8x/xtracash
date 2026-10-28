@@ -27,7 +27,6 @@ export type NewBusinessHomeData = Readonly<{
     status: HomeBalanceStatus;
   }>;
   onboardingMaster: Readonly<{ completedPhases: 0 | 1 | 2 | 3 }> | null;
-  showMarket: boolean | null;
   consumptions: readonly Readonly<{
     consumptionId: string;
     icon: HomeConsumptionIconName;

@@ -123,6 +123,7 @@ test("distingue instalación programática, instrucciones iOS y standalone", () 
 
 test("el Service Worker excluye APIs, mutaciones y datos privados del caché", async () => {
   const source = await readFile(new URL("public/sw.js", projectUrl), "utf8");
+  assert.match(source, /const CACHE_VERSION = "v3"/);
   const precache = source.slice(
     source.indexOf("const PRECACHE_URLS"),
     source.indexOf("function canStore"),
