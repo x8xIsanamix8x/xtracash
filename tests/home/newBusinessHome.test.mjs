@@ -91,6 +91,27 @@ test("mapea los estados vigentes de Core y no confunde vencimiento con suspensi�
   assert.equal(createNewBusinessHomeViewModel(suspended).status.label, "Línea suspendida");
 });
 
+test("muestra un único consumo vencido con los estados de balance descritos por Core", () => {
+  const source = structuredClone(newBusinessHomeMocks.active);
+  source.balance.status = "BLOQUEADA";
+  source.consumptions = [{ ...source.consumptions[0], status: "VENCIDO_SIN_MORA" }];
+
+  const parsed = parseNewBusinessHomeData(source);
+  assert.ok(parsed, "BLOQUEADA aparece como alias en la descripción del resumen de Core");
+  const viewModel = createNewBusinessHomeViewModel(parsed);
+
+  assert.equal(viewModel.consumptions.length, 1);
+  assert.equal(viewModel.consumptions[0].statusLabel, "Cuota vencida");
+  assert.equal(viewModel.status.label, "Disponible bloqueado");
+  assert.match(viewModel.notice?.message, /cuotas vencidas/);
+  assert.equal(viewModel.balance.primaryActionLabel, "Pagar cuotas");
+
+  source.balance.status = "ABIERTA";
+  assert.equal(parseNewBusinessHomeData(source)?.balance.status, "ACTIVE");
+  source.balance.status = "SUSPENDIDA";
+  assert.equal(parseNewBusinessHomeData(source)?.balance.status, "SUSPENDED");
+});
+
 test("centraliza exactamente la paleta aprobada para el Home", () => {
   assert.deepEqual(Object.values(homeVisualTokens.color), [
     "#00004B",

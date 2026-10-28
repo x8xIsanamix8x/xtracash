@@ -19,10 +19,10 @@ function isCalendarDate(value: unknown): value is string {
 }
 
 function normalizeBalanceStatus(value: unknown): NewBusinessHomeData["balance"]["status"] | null {
-  if (value === "AL_DIA" || value === "ACTIVE") return "ACTIVE";
+  if (value === "AL_DIA" || value === "ABIERTA" || value === "ACTIVE") return "ACTIVE";
   if (value === "RETRASO" || value === "PAYMENT_DUE") return "PAYMENT_DUE";
-  if (value === "BLOQUEADO" || value === "BLOCKED" || value === "MORA" || value === "CON_MORA") return "BLOCKED";
-  if (value === "SUSPENDIDO" || value === "SUSPENDED") return "SUSPENDED";
+  if (value === "BLOQUEADO" || value === "BLOQUEADA" || value === "BLOCKED" || value === "MORA" || value === "CON_MORA") return "BLOCKED";
+  if (value === "SUSPENDIDO" || value === "SUSPENDIDA" || value === "SUSPENDED") return "SUSPENDED";
   return null;
 }
 
@@ -50,7 +50,6 @@ export function parseNewBusinessHomeData(value: unknown): NewBusinessHomeData | 
   if (!totalDebt) return null;
   const onboardingMaster = parseOnboardingMaster(value.OnboardingMaster);
   if (value.OnboardingMaster !== undefined && value.OnboardingMaster !== null && onboardingMaster === null) return null;
-  if (value.showMarket != null && typeof value.showMarket !== "boolean") return null;
   const consumptions = value.consumptions.map((item) => {
     if (!isRecord(item) || typeof item.consumptionId !== "string" || typeof item.label !== "string") return null;
     const amount = readMoney(item.amount);
@@ -64,5 +63,5 @@ export function parseNewBusinessHomeData(value: unknown): NewBusinessHomeData | 
     return { consumptionId: item.consumptionId, icon, label: item.label.trim(), amount, installments, paidInstallments, nextPaymentDate, nextPaymentAmount: nextAmount, status };
   });
   if (consumptions.some((item) => item === null)) return null;
-  return { fullName: value.fullName.trim(), balance: { available, totalCredit, status: balanceStatus }, consumptions: consumptions as NonNullable<typeof consumptions[number]>[], debt: { total: totalDebt }, onboardingMaster, showMarket: typeof value.showMarket === "boolean" ? value.showMarket : null };
+  return { fullName: value.fullName.trim(), balance: { available, totalCredit, status: balanceStatus }, consumptions: consumptions as NonNullable<typeof consumptions[number]>[], debt: { total: totalDebt }, onboardingMaster };
 }
