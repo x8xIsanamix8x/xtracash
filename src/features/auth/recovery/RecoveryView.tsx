@@ -1,0 +1,326 @@
+"use client";
+
+import { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowBackRounded, LockOpenRounded, LockResetRounded } from "@mui/icons-material";
+import {
+  Alert,
+  Box,
+  Button,
+  IconButton,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { alpha, darken } from "@mui/material/styles";
+
+import { ViewportCanvasBackground } from "@/components/ViewportCanvasBackground";
+import { recoveryRequestedUrl } from "@/lib/accessNotificationNavigation";
+import { themeTokens } from "@/theme/tokens";
+
+import { PreLoginIconBadge } from "../shared/components/PreLoginIconBadge";
+import { RecoveryRequestStep } from "./components/RecoveryRequestStep";
+import {
+  clearRecoveryCooldown,
+  formatRecoveryCooldownTime,
+  getRecoveryCooldownRemainingSeconds,
+  getRecoveryCooldownUntil,
+  startRecoveryCooldown,
+} from "./lib/recoveryCooldown";
+import {
+  createRecoveryRequest,
+  requestPasswordRecovery,
+  RecoveryServiceError,
+} from "./services/recovery";
+import type { RecoveryData } from "./types";
+import { validateRecoveryIdentifier } from "./validation";
+
+const initialData: RecoveryData = {
+  identifier: "",
+};
+
+function getRecoveryErrorMessage(error: unknown, isActivation: boolean): string {
+  if (!(error instanceof RecoveryServiceError)) {
+    return "No pudimos procesar la solicitud. Inténtalo nuevamente.";
+  }
+
+  if (error.type === "network") {
+    return "No pudimos conectarnos. Revisa tu conexión e inténtalo nuevamente.";
+  }
+
+  if (error.type === "http") {
+    return "No pudimos procesar la solicitud. Inténtalo nuevamente más tarde.";
+  }
+
+  return isActivation
+    ? "La activación no está disponible en este momento. Inténtalo nuevamente más tarde."
+    : "La recuperación no está disponible en este momento. Inténtalo nuevamente más tarde.";
+}
+
+export function RecoveryView({ mode = "recovery" }: Readonly<{ mode?: "recovery" | "activation" }>) {
+  const isActivation = mode === "activation";
+  const router = useRouter();
+  const [data, setData] = useState<RecoveryData>(initialData);
+  const [fieldError, setFieldError] = useState("");
+  const [requestError, setRequestError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cooldownSecondsRemaining, setCooldownSecondsRemaining] = useState<number | null>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const identifierRef = useRef<HTMLInputElement>(null);
+  const submissionRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const cooldownUntilRef = useRef<number | null>(null);
+  const cooldownIntervalRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    titleRef.current?.focus({ preventScroll: true });
+
+    const stopCooldownTicker = () => {
+      if (cooldownIntervalRef.current === null) return;
+
+      window.clearInterval(cooldownIntervalRef.current);
+      cooldownIntervalRef.current = null;
+    };
+
+    const updateCooldown = () => {
+      const cooldownUntil = cooldownUntilRef.current;
+      if (cooldownUntil === null) {
+        setCooldownSecondsRemaining(0);
+        return;
+      }
+
+      const remainingSeconds = getRecoveryCooldownRemainingSeconds(cooldownUntil);
+      setCooldownSecondsRemaining(remainingSeconds);
+
+      if (remainingSeconds === 0) {
+        cooldownUntilRef.current = null;
+        clearRecoveryCooldown();
+        stopCooldownTicker();
+      }
+    };
+
+    const initializationTimeout = window.setTimeout(() => {
+      cooldownUntilRef.current = getRecoveryCooldownUntil();
+      updateCooldown();
+
+      if (cooldownUntilRef.current !== null) {
+        cooldownIntervalRef.current = window.setInterval(updateCooldown, 1000);
+      }
+    }, 0);
+
+    return () => {
+      isMountedRef.current = false;
+      abortControllerRef.current?.abort();
+      window.clearTimeout(initializationTimeout);
+      stopCooldownTicker();
+    };
+  }, []);
+
+  const isCooldownChecking = cooldownSecondsRemaining === null;
+  const isCooldownActive = (cooldownSecondsRemaining ?? 0) > 0;
+
+  const updateIdentifier = (value: string) => {
+    if (isSubmitting) return;
+
+    setData({ identifier: value });
+    setFieldError("");
+    setRequestError("");
+  };
+
+  const submitRequest = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (submissionRef.current || isCooldownChecking || isCooldownActive) return;
+
+    const nextFieldError = validateRecoveryIdentifier(data.identifier);
+    setFieldError(nextFieldError);
+    setRequestError("");
+
+    if (nextFieldError) {
+      identifierRef.current?.focus();
+      return;
+    }
+
+    const request = createRecoveryRequest(data.identifier);
+    const controller = new AbortController();
+    submissionRef.current = true;
+    abortControllerRef.current = controller;
+    setIsSubmitting(true);
+
+    try {
+      await requestPasswordRecovery(request, controller.signal);
+
+      startRecoveryCooldown();
+
+      if (!isMountedRef.current) return;
+
+      setData(initialData);
+      setFieldError("");
+      setRequestError("");
+      router.replace(recoveryRequestedUrl);
+    } catch (error) {
+      if (!isMountedRef.current) return;
+
+      if (error instanceof RecoveryServiceError && error.type === "aborted") {
+        return;
+      }
+
+      setRequestError(getRecoveryErrorMessage(error, isActivation));
+    } finally {
+      submissionRef.current = false;
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
+      if (isMountedRef.current) setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Box
+      component="main"
+      sx={{
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        bgcolor: themeTokens.color.preLoginBackground,
+        overflowX: "hidden",
+      }}
+    >
+      <ViewportCanvasBackground color={themeTokens.color.preLoginBackground} />
+      <Stack
+        component="header"
+        direction="row"
+        sx={{
+          width: "100%",
+          maxWidth: 520,
+          minHeight: 48,
+          mx: "auto",
+          alignItems: "center",
+          justifyContent: "space-between",
+          pt: "calc(12px + env(safe-area-inset-top))",
+          pr: "calc(16px + env(safe-area-inset-right))",
+          pl: "calc(16px + env(safe-area-inset-left))",
+        }}
+      >
+        <IconButton
+          aria-label="Volver a la pantalla de acceso"
+          component={Link}
+          href="/"
+          sx={{ color: themeTokens.color.preLoginNavy }}
+        >
+          <ArrowBackRounded />
+        </IconButton>
+        <Typography sx={{ color: themeTokens.color.brandLogo, fontWeight: 800 }}>
+          Impúlsate Móvil
+        </Typography>
+      </Stack>
+
+      <Box
+        sx={{
+          width: "100%",
+          maxWidth: 520,
+          mx: "auto",
+          pt: "clamp(8px, 4dvh, 44px)",
+          pr: "calc(19px + env(safe-area-inset-right))",
+          pb: "calc(24px + env(safe-area-inset-bottom))",
+          pl: "calc(19px + env(safe-area-inset-left))",
+        }}
+      >
+        <Stack sx={{ alignItems: "center", textAlign: "center" }}>
+          <Box sx={{ "@media (max-height: 700px)": { transform: "scale(0.73)" } }}>
+            <PreLoginIconBadge icon={isActivation ? LockOpenRounded : LockResetRounded} />
+          </Box>
+          <Typography
+            component="h1"
+            ref={titleRef}
+            tabIndex={-1}
+            sx={{
+              mt: "33px",
+              color: themeTokens.color.preLoginNavy,
+              fontSize: "clamp(1.75rem, 8vw, 2rem)",
+              fontWeight: 600,
+              lineHeight: 1.2,
+            }}
+          >
+            {isActivation ? "Activa tu cuenta" : "Recupera tu acceso"}
+          </Typography>
+          <Typography
+            sx={{
+              mt: 2,
+              maxWidth: 360,
+              color: themeTokens.color.preLoginNavy,
+              fontSize: "1rem",
+              fontWeight: 500,
+              lineHeight: 1.4,
+            }}
+          >
+            {isActivation
+              ? "Ingresa el correo electrónico con el que recibiste tu invitación para crear tu contraseña y activar tu cuenta."
+              : "Ingresa el correo electrónico asociado a tu cuenta para recibir las instrucciones de recuperación."}
+          </Typography>
+        </Stack>
+
+        <Box
+          aria-busy={isSubmitting || isCooldownChecking}
+          component="form"
+          noValidate
+          onSubmit={submitRequest}
+          sx={{ display: "flex", flexDirection: "column", pt: "31px" }}
+        >
+          <RecoveryRequestStep
+            disabled={isSubmitting}
+            error={fieldError}
+            identifier={data.identifier}
+            inputRef={identifierRef}
+            onChange={updateIdentifier}
+          />
+
+          {requestError && (
+            <Alert role="alert" severity="error" sx={{ mt: 2 }}>
+              {requestError}
+            </Alert>
+          )}
+
+          {cooldownSecondsRemaining !== null && cooldownSecondsRemaining > 0 && (
+            <Typography
+              aria-live="polite"
+              role="status"
+              sx={{ mt: 2, color: themeTokens.color.preLoginMuted, fontSize: "0.875rem", textAlign: "center" }}
+            >
+              Podrás solicitar otro enlace en {formatRecoveryCooldownTime(cooldownSecondsRemaining)}
+            </Typography>
+          )}
+
+          <Button
+            disabled={isSubmitting || isCooldownChecking || isCooldownActive}
+            fullWidth
+            loading={isSubmitting}
+            sx={{
+              mt: "29px",
+              minHeight: 50,
+              borderRadius: "999px",
+              fontWeight: 400,
+              bgcolor: themeTokens.color.preLoginPrimary,
+              "&:hover": { bgcolor: darken(themeTokens.color.preLoginPrimary, 0.12) },
+              "&:active": { bgcolor: darken(themeTokens.color.preLoginPrimary, 0.2) },
+              "&:focus-visible": {
+                outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
+                outlineOffset: 2,
+              },
+              "&.Mui-disabled": {
+                bgcolor: alpha(themeTokens.color.preLoginNavy, 0.12),
+                color: alpha(themeTokens.color.preLoginNavy, 0.38),
+              },
+            }}
+            type="submit"
+            variant="contained"
+          >
+            {isActivation ? "Enviar enlace de activación" : "Enviar enlace"}
+          </Button>
+        </Box>
+      </Box>
+    </Box>
+  );
+}

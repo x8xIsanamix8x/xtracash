@@ -1,0 +1,175 @@
+{
+  "bank": "Banco Activo",
+  "bankCode": "0171",
+  "taxId": "J500887043",
+  "beneficiaryName": "IMPULSA VENTURE CAPITAL C.A.",
+  "phone": "584142642085",
+  "account": "01710002506002627254",
+  "accountType": "CTE",
+  "phoneAreaCode": "09",
+  "consumption": {
+    "consumptionId": "01a0cb0e-8dcf-70d3-a1cf-bd74d4efaeb3",
+    "paymentDate": "2026-09-24",
+    "rate": {
+      "bolivaresPerUsd": "854.46370000",
+      "effectiveDate": "2026-09-23"
+    },
+    "nextInstallment": {
+      "installmentCount": 1,
+      "installments": [
+        1
+      ],
+      "lastDueDate": "2026-10-07",
+      "breakdown": {
+        "capital": {
+          "bs": "34372.09",
+          "usd": "40.23"
+        },
+        "interest": {
+          "bs": "0.00",
+          "usd": "0.00"
+        },
+        "lateFee": {
+          "bs": "0.00",
+          "usd": "0.00"
+        },
+        "reconnection": {
+          "bs": "0.00",
+          "usd": "0.00"
+        }
+      },
+      "total": {
+        "bs": "34372.09",
+        "usd": "40.23"
+      },
+      "interestFree": true
+    },
+    "allPending": {
+      "installmentCount": 3,
+      "installments": [
+        1,
+        2,
+        3
+      ],
+      "lastDueDate": "2026-11-06",
+      "breakdown": {
+        "capital": {
+          "bs": "103116.44",
+          "usd": "120.68"
+        },
+        "interest": {
+          "bs": "0.00",
+          "usd": "0.00"
+        },
+        "lateFee": {
+          "bs": "0.00",
+          "usd": "0.00"
+        },
+        "reconnection": {
+          "bs": "0.00",
+          "usd": "0.00"
+        }
+      },
+      "total": {
+        "bs": "103116.44",
+        "usd": "120.68"
+      },
+      "interestFree": true
+    },
+    "options": [
+      {
+        "installmentCount": 1,
+        "installments": [
+          1
+        ],
+        "lastDueDate": "2026-10-07",
+        "breakdown": {
+          "capital": {
+            "bs": "34372.09",
+            "usd": "40.23"
+          },
+          "interest": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "lateFee": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "reconnection": {
+            "bs": "0.00",
+            "usd": "0.00"
+          }
+        },
+        "total": {
+          "bs": "34372.09",
+          "usd": "40.23"
+        },
+        "interestFree": true
+      },
+      {
+        "installmentCount": 2,
+        "installments": [
+          1,
+          2
+        ],
+        "lastDueDate": "2026-10-22",
+        "breakdown": {
+          "capital": {
+            "bs": "68744.18",
+            "usd": "80.45"
+          },
+          "interest": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "lateFee": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "reconnection": {
+            "bs": "0.00",
+            "usd": "0.00"
+          }
+        },
+        "total": {
+          "bs": "68744.18",
+          "usd": "80.45"
+        },
+        "interestFree": true
+      },
+      {
+        "installmentCount": 3,
+        "installments": [
+          1,
+          2,
+          3
+        ],
+        "lastDueDate": "2026-11-06",
+        "breakdown": {
+          "capital": {
+            "bs": "103116.44",
+            "usd": "120.68"
+          },
+          "interest": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "lateFee": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "reconnection": {
+            "bs": "0.00",
+            "usd": "0.00"
+          }
+        },
+        "total": {
+          "bs": "103116.44",
+          "usd": "120.68"
+        },
+        "interestFree": true
+      }
+    ]
+  }
+}

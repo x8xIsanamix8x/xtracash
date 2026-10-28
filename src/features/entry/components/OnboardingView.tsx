@@ -1,0 +1,200 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { ArrowBackRounded } from "@mui/icons-material";
+import { Box, Button, IconButton, Stack, Typography } from "@mui/material";
+
+import type { OnboardingStep } from "../data/onboardingSteps";
+import { BubbleField } from "./BubbleField";
+import { OnboardingVisual } from "./OnboardingVisual";
+
+type OnboardingViewProps = Readonly<{
+  step: OnboardingStep;
+  stepIndex: number;
+  totalSteps: number;
+  onBack: () => void;
+  onNext: () => void;
+  onSkip: () => void;
+}>;
+
+export function OnboardingView({
+  step,
+  stepIndex,
+  totalSteps,
+  onBack,
+  onNext,
+  onSkip,
+}: OnboardingViewProps) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const previousStepIndexRef = useRef(stepIndex);
+  const swipeStartRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const isLastStep = stepIndex === totalSteps - 1;
+
+  useEffect(() => {
+    if (previousStepIndexRef.current !== stepIndex) {
+      swipeStartRef.current = null;
+      titleRef.current?.focus();
+      previousStepIndexRef.current = stepIndex;
+    }
+  }, [stepIndex]);
+
+  return (
+    <Box
+      component="main"
+      sx={{
+        // El alto dinÃ¡mico sigue el viewport visible de la PWA.
+        position: "fixed",
+        top: 0,
+        right: 0,
+        left: 0,
+        width: "100%",
+        height: "100dvh",
+        minHeight: "100dvh",
+        isolation: "isolate",
+        display: "grid",
+        gridTemplateRows: "48px minmax(0, 1fr) auto",
+        overflow: "hidden",
+        pt: "calc(16px + env(safe-area-inset-top))",
+        pr: "calc(24px + env(safe-area-inset-right))",
+        pb: "max(8px, env(safe-area-inset-bottom))",
+        pl: "calc(24px + env(safe-area-inset-left))",
+      }}
+    >
+      <BubbleField />
+
+      <Box sx={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 720, mx: "auto" }}>
+        {stepIndex > 0 && (
+          <IconButton aria-label="Volver al paso anterior" color="secondary" onClick={onBack}>
+            <ArrowBackRounded />
+          </IconButton>
+        )}
+      </Box>
+
+      <Box
+        onPointerDown={(event) => {
+          if (event.pointerType !== "touch") return;
+          swipeStartRef.current = event.isPrimary
+            ? { pointerId: event.pointerId, x: event.clientX, y: event.clientY }
+            : null;
+        }}
+        onPointerCancel={() => { swipeStartRef.current = null; }}
+        onPointerUp={(event) => {
+          const start = swipeStartRef.current;
+          swipeStartRef.current = null;
+          if (!start || event.pointerId !== start.pointerId) return;
+
+          const dx = event.clientX - start.x;
+          const dy = event.clientY - start.y;
+          if (Math.abs(dx) <= 48 || Math.abs(dx) <= Math.abs(dy) * 1.3) return;
+
+          if (dx < 0 && !isLastStep) onNext();
+          if (dx > 0 && stepIndex > 0) onBack();
+        }}
+        sx={{
+          position: "relative",
+          zIndex: 1,
+          minHeight: 0,
+          display: "grid",
+          gridTemplateRows: "minmax(96px, 1fr) auto",
+          overflowY: "auto",
+          overflowX: "hidden",
+          touchAction: "pan-y pinch-zoom",
+          py: 1,
+        }}
+      >
+        <Box
+          sx={{
+            minHeight: 0,
+            display: "grid",
+            placeItems: "center",
+            overflow: "hidden",
+          }}
+        >
+          <OnboardingVisual imageAlt={step.imageAlt} imageSrc={step.imageSrc} />
+        </Box>
+
+        <Stack spacing={{ xs: 2.25, sm: 1.5 }} sx={{ width: "100%", maxWidth: 560, mx: "auto", textAlign: "center" }}>
+          <Typography
+            component="h1"
+            ref={titleRef}
+            tabIndex={-1}
+            variant="h3"
+            sx={{
+              fontSize: { xs: "clamp(1.625rem, 7vw, 2rem)", sm: "2rem" },
+              lineHeight: { xs: 1.14, sm: 1.2 },
+              "&:focus-visible": {
+                outline: "3px solid",
+                outlineColor: "primary.main",
+                outlineOffset: 6,
+              },
+            }}
+          >
+            {step.title}
+          </Typography>
+          <Typography color="text.secondary" sx={{ fontSize: { xs: "1rem", sm: "1.125rem" }, lineHeight: 1.45 }}>
+            {step.description}
+          </Typography>
+        </Stack>
+      </Box>
+
+      <Stack
+        spacing={1}
+        sx={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 520, mx: "auto", pt: 2 }}
+      >
+        <Typography
+          color="text.secondary"
+          variant="caption"
+          sx={{
+            display: "none",
+            textAlign: "center",
+            "@media (any-pointer: coarse)": { display: "block" },
+          }}
+        >
+          Desliza para cambiar de paso
+        </Typography>
+        <Box
+          aria-label={`Paso ${stepIndex + 1} de ${totalSteps}`}
+          role="img"
+          sx={{ display: "flex", minHeight: 20, alignItems: "center", justifyContent: "center", gap: 1 }}
+        >
+          {Array.from({ length: totalSteps }, (_, index) => {
+            const isActive = index === stepIndex;
+
+            return (
+              <Box
+                aria-hidden="true"
+                key={index}
+                sx={{
+                  width: isActive ? 12 : 8,
+                  height: isActive ? 12 : 8,
+                  borderRadius: "50%",
+                  bgcolor: isActive ? "primary.main" : "text.secondary",
+                  opacity: isActive ? 1 : 0.8,
+                  transition: "width 180ms ease, height 180ms ease, background-color 180ms ease",
+                  "@media (prefers-reduced-motion: reduce)": {
+                    transition: "none",
+                  },
+                }}
+              />
+            );
+          })}
+        </Box>
+
+        <Button fullWidth onClick={onNext} variant="contained">
+          {isLastStep ? "Finalizar" : "Siguiente"}
+        </Button>
+        <Button
+          fullWidth
+          aria-hidden={isLastStep}
+          color="secondary"
+          onClick={onSkip}
+          tabIndex={isLastStep ? -1 : 0}
+          variant="text"
+          sx={{ visibility: isLastStep ? "hidden" : "visible" }}
+        >
+          Omitir
+        </Button>
+      </Stack>
+    </Box>
+  );
+}

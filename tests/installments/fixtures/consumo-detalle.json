@@ -1,0 +1,124 @@
+{
+  "consumption": {
+    "consumptionId": "01a0cb0e-8dcf-70d3-a1cf-bd74d4efaeb3",
+    "icon": "stethoscope-ico",
+    "label": "Clínica",
+    "status": "AL_DIA",
+    "consumedOn": "2026-09-22",
+    "amount": {
+      "bs": "100000.00",
+      "usd": "117.16"
+    },
+    "installments": 3,
+    "everyDays": 15,
+    "interestFreeDays": 15,
+    "interestMonthly": "1.00",
+    "lateFeeMonthly": "3.00",
+    "reconnectionFee": {
+      "bs": "4272.32",
+      "usd": "5.00"
+    }
+  },
+  "installments": [
+    {
+      "installmentId": "01a0cb0f-7b41-7d8d-9ef7-d30e8ad88f04",
+      "number": 1,
+      "dueDate": "2026-10-07",
+      "amount": {
+        "bs": "34372.09",
+        "usd": "40.23"
+      },
+      "status": "PENDIENTE",
+      "isNext": true,
+      "paidOn": null
+    },
+    {
+      "installmentId": "01a0cb0f-7b41-7f6d-848a-c79157531cc2",
+      "number": 2,
+      "dueDate": "2026-10-22",
+      "amount": {
+        "bs": "34372.09",
+        "usd": "40.23"
+      },
+      "status": "PENDIENTE",
+      "isNext": false,
+      "paidOn": null
+    },
+    {
+      "installmentId": "01a0cb0f-7b41-7f1e-8ba2-8857f1ea18f8",
+      "number": 3,
+      "dueDate": "2026-11-06",
+      "amount": {
+        "bs": "34372.26",
+        "usd": "40.23"
+      },
+      "status": "PENDIENTE",
+      "isNext": false,
+      "paidOn": null
+    }
+  ],
+  "debt": {
+    "nextInstallment": {
+      "installmentCount": 1,
+      "installments": [
+        1
+      ],
+      "lastDueDate": "2026-10-07",
+      "breakdown": {
+        "capital": {
+          "bs": "34372.09",
+          "usd": "40.23"
+        },
+        "interest": {
+          "bs": "0.00",
+          "usd": "0.00"
+        },
+        "lateFee": {
+          "bs": "0.00",
+          "usd": "0.00"
+        },
+        "reconnection": {
+          "bs": "0.00",
+          "usd": "0.00"
+        }
+      },
+      "total": {
+        "bs": "34372.09",
+        "usd": "40.23"
+      },
+      "interestFree": true
+    },
+    "allPending": {
+      "installmentCount": 3,
+      "installments": [
+        1,
+        2,
+        3
+      ],
+      "lastDueDate": "2026-11-06",
+      "breakdown": {
+        "capital": {
+          "bs": "103116.44",
+          "usd": "120.68"
+        },
+        "interest": {
+          "bs": "0.00",
+          "usd": "0.00"
+        },
+        "lateFee": {
+          "bs": "0.00",
+          "usd": "0.00"
+        },
+        "reconnection": {
+          "bs": "0.00",
+          "usd": "0.00"
+        }
+      },
+      "total": {
+        "bs": "103116.44",
+        "usd": "120.68"
+      },
+      "interestFree": true
+    }
+  }
+}

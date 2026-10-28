@@ -1,0 +1,12 @@
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g clip-path="url(#profile-clip)">
+    <mask id="profile-mask" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="28" height="28">
+      <path d="M28 0H0V28H28V0Z" fill="white"/>
+    </mask>
+    <g mask="url(#profile-mask)">
+      <path d="M13.9993 13.9997C17.221 13.9997 19.8327 11.388 19.8327 8.16634C19.8327 4.94468 17.221 2.33301 13.9993 2.33301C10.7777 2.33301 8.16602 4.94468 8.16602 8.16634C8.16602 11.388 10.7777 13.9997 13.9993 13.9997Z" fill="white"/>
+      <path d="M13.9995 16.916C8.15453 16.916 3.39453 20.836 3.39453 25.666C3.39453 25.9927 3.6512 26.2493 3.97786 26.2493H24.0212C24.3479 26.2493 24.6045 25.9927 24.6045 25.666C24.6045 20.836 19.8445 16.916 13.9995 16.916Z" fill="white"/>
+    </g>
+  </g>
+  <defs><clipPath id="profile-clip"><rect width="28" height="28" fill="white"/></clipPath></defs>
+</svg>

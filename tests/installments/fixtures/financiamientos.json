@@ -1,0 +1,231 @@
+{
+  "resumen": {
+    "capital": {
+      "bs": "128380.03",
+      "usd": "150.25"
+    },
+    "interes": {
+      "bs": "0.00",
+      "usd": "0.00"
+    },
+    "mora": {
+      "bs": "0.00",
+      "usd": "0.00"
+    },
+    "comisionReconexion": {
+      "bs": "0.00",
+      "usd": "0.00"
+    },
+    "cuotasVencidas": 0,
+    "vencido": {
+      "bs": "0.00",
+      "usd": "0.00"
+    },
+    "vencidoConMora": false,
+    "deudaTotal": {
+      "bs": "128380.03",
+      "usd": "150.25"
+    },
+    "proximoVencimiento": "2026-10-07",
+    "proximaCuota": {
+      "bs": "59635.68",
+      "usd": "69.79"
+    },
+    "cuotasProximoVencimiento": 2,
+    "estado": "AL_DIA"
+  },
+  "financiamientos": [
+    {
+      "consumoId": "01a0cb0e-8dcf-70d3-a1cf-bd74d4efaeb3",
+      "etiqueta": "Clínica",
+      "estado": "AL_DIA",
+      "fecha": "2026-09-22",
+      "nivel": 2,
+      "numeroCuotas": 3,
+      "cuotaActual": 1,
+      "cuotasPendientes": 2,
+      "proximoPago": {
+        "fecha": "2026-10-07",
+        "monto": {
+          "bs": "34372.09",
+          "usd": "40.23"
+        }
+      },
+      "vencido": {
+        "bs": "0.00",
+        "usd": "0.00"
+      },
+      "cuotasVencidas": 0,
+      "montoSolicitado": {
+        "bs": "100000.00",
+        "usd": "117.16"
+      },
+      "plazoTotalDias": 45,
+      "interesMensual": "1.00",
+      "interesDiario": "0.0333",
+      "interesAnual": "12.00",
+      "moraMensual": "3.00",
+      "moraDiaria": "0.1000",
+      "comisionReconexion": {
+        "bs": "4272.32",
+        "usd": "5.00"
+      },
+      "comisionFlat": {
+        "bs": "3000.00",
+        "usd": "3.51"
+      },
+      "cuotas": [
+        {
+          "cuotaId": "01a0cb0f-7b41-7d8d-9ef7-d30e8ad88f04",
+          "numero": 1,
+          "vencimiento": "2026-10-07",
+          "capital": {
+            "bs": "34372.09",
+            "usd": "40.23"
+          },
+          "comisionReconexion": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "interes": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "mora": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "total": {
+            "bs": "34372.09",
+            "usd": "40.23"
+          },
+          "estado": "PENDIENTE",
+          "pagadaEl": null
+        },
+        {
+          "cuotaId": "01a0cb0f-7b41-7f6d-848a-c79157531cc2",
+          "numero": 2,
+          "vencimiento": "2026-10-22",
+          "capital": {
+            "bs": "34372.09",
+            "usd": "40.23"
+          },
+          "comisionReconexion": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "interes": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "mora": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "total": {
+            "bs": "34372.09",
+            "usd": "40.23"
+          },
+          "estado": "PENDIENTE",
+          "pagadaEl": null
+        },
+        {
+          "cuotaId": "01a0cb0f-7b41-7f1e-8ba2-8857f1ea18f8",
+          "numero": 3,
+          "vencimiento": "2026-11-06",
+          "capital": {
+            "bs": "34372.26",
+            "usd": "40.23"
+          },
+          "comisionReconexion": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "interes": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "mora": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "total": {
+            "bs": "34372.26",
+            "usd": "40.23"
+          },
+          "estado": "PENDIENTE",
+          "pagadaEl": null
+        }
+      ]
+    },
+    {
+      "consumoId": "01a0cb15-9730-7ab0-beef-046eda7fdd7d",
+      "etiqueta": "Mercado",
+      "estado": "AL_DIA",
+      "fecha": "2026-09-22",
+      "nivel": 1,
+      "numeroCuotas": 1,
+      "cuotaActual": 1,
+      "cuotasPendientes": 0,
+      "proximoPago": {
+        "fecha": "2026-10-07",
+        "monto": {
+          "bs": "25263.59",
+          "usd": "29.57"
+        }
+      },
+      "vencido": {
+        "bs": "0.00",
+        "usd": "0.00"
+      },
+      "cuotasVencidas": 0,
+      "montoSolicitado": {
+        "bs": "24500.00",
+        "usd": "28.71"
+      },
+      "plazoTotalDias": 15,
+      "interesMensual": "1.00",
+      "interesDiario": "0.0333",
+      "interesAnual": "12.00",
+      "moraMensual": "3.00",
+      "moraDiaria": "0.1000",
+      "comisionReconexion": {
+        "bs": "2563.40",
+        "usd": "3.00"
+      },
+      "comisionFlat": {
+        "bs": "735.00",
+        "usd": "0.86"
+      },
+      "cuotas": [
+        {
+          "cuotaId": "01a0cb15-cc58-7bf8-aa31-8699eccb00ee",
+          "numero": 1,
+          "vencimiento": "2026-10-07",
+          "capital": {
+            "bs": "25263.59",
+            "usd": "29.57"
+          },
+          "comisionReconexion": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "interes": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "mora": {
+            "bs": "0.00",
+            "usd": "0.00"
+          },
+          "total": {
+            "bs": "25263.59",
+            "usd": "29.57"
+          },
+          "estado": "PENDIENTE",
+          "pagadaEl": null
+        }
+      ]
+    }
+  ]
+}

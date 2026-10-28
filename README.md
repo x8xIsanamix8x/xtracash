@@ -16,6 +16,52 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Environment configuration
+
+Copy `.env.example` to `.env.local` and configure the public Core API URL used by registration and recovery, the server-only URL used by the BFF, and a random session secret of at least 32 characters:
+
+```bash
+NEXT_PUBLIC_CORE_API_URL=https://core-api.sandbox.impulsa.vc
+CORE_API_URL=https://core-api.sandbox.impulsa.vc
+AUTH_SESSION_SECRET=
+BIOMETRIC_ACCESS_ENABLED=false
+PAYMENT_DESTINATION_BANK_NAME=
+PAYMENT_DESTINATION_BANK_CODE=
+PAYMENT_DESTINATION_TAX_ID=
+PAYMENT_DESTINATION_PHONE=
+PAYMENT_DESTINATION_BENEFICIARY_NAME=
+PAYMENT_DESTINATION_BANK_ACCOUNT=
+PAYMENT_DESTINATION_BANK_ACCOUNT_TYPE=
+```
+
+Generate `AUTH_SESSION_SECRET` securely for each environment and do not commit its value. Public Next.js environment variables are embedded during `next build`; `CORE_API_URL` and `AUTH_SESSION_SECRET` remain server-only and must be available to the Next.js runtime.
+
+`BIOMETRIC_ACCESS_ENABLED` is `false` by default, which hides biometric access from Login and Profile. The existing prototype can only be shown by explicitly setting it to `true`; its sandbox host and Core restrictions still apply.
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `PAYMENT_DESTINATION_BANK_NAME` | No | Legacy reference for the commercial bank name. |
+| `PAYMENT_DESTINATION_BANK_CODE` | No | Legacy reference for the four-digit Venezuelan bank code. |
+| `PAYMENT_DESTINATION_TAX_ID` | No | Legacy reference for the beneficiary RIF. |
+| `PAYMENT_DESTINATION_PHONE` | No | Legacy reference for the mobile-payment recipient. |
+| `PAYMENT_DESTINATION_BENEFICIARY_NAME` | No | Legacy reference for the bank-account holder. |
+| `PAYMENT_DESTINATION_BANK_ACCOUNT` | No | Legacy reference for the bank-account number. |
+| `PAYMENT_DESTINATION_BANK_ACCOUNT_TYPE` | No | Legacy reference for the account type. |
+
+The variables remain in `.env.example` for deployment compatibility, but the installment payment screen gets the current beneficiary data from Core's authenticated `GET /api/impulsate-movil/datos-pago` response. Core also decides whether mobile payment and bank transfer are available.
+
+## Registration behavior
+
+After the Core API accepts registration with any HTTP `2xx` response, the PWA returns to the access route, opens login, and shows a one-time notice asking the user to review their inbox or spam folder. Account activation remains the responsibility of Keycloak; the PWA does not verify activation.
+
+A real browser test continues to depend on the Core API allowing CORS for the PWA origin.
+
+## Authentication behavior
+
+Login, refresh, session checks, and logout use same-origin Route Handlers. Access and refresh tokens are stored in separate HttpOnly cookies and are never returned in JSON or exposed to client components. The protected application routes require a valid signed session marker, and access renewal occurs through the BFF before expiration.
+
+This authentication architecture requires a Next.js server runtime. A static-only export cannot provide Route Handlers, HttpOnly cookie management, refresh, logout, or server-side route protection.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

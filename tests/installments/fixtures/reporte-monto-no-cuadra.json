@@ -1,0 +1,9 @@
+{
+  "detail": "El monto reportado (2.00 Bs) no cuadra con la deuda de ese pago (34089.72 Bs).",
+  "instance": "/api/impulsate-movil/reportes-pago",
+  "status": 400,
+  "title": "Bad Request",
+  "code": "MONTO_NO_CUADRA",
+  "reportedAmount": "2.00",
+  "expectedAmount": { "usd": "40.23", "bs": "34089.72" }
+}
