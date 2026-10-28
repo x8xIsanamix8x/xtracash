@@ -25,14 +25,12 @@ import emptyConsumptionsImage from "../../../../public/home/empty-consumptions.p
 import type { HomeDashboardViewModel } from "../newBusinessTypes";
 import { homeVisualTokens } from "../homeVisualTokens";
 import { ConsumptionCard } from "./ConsumptionCard";
-import { MarketplacePromo } from "./MarketplacePromo";
 
 type NewBusinessHomeDashboardProps = Readonly<{
   greeting: string;
   viewModel: HomeDashboardViewModel;
   onNotifications: () => void;
   unreadNotifications: number;
-  showMarketplacePromo: boolean;
 }>;
 
 function HomeHeader({
@@ -144,7 +142,7 @@ function BalanceCard({
               sx={{ color: homeVisualTokens.color.white, fontWeight: 700 }}
             >
               <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
-                {isReportAction && <LockRounded aria-hidden="true" sx={{ fontSize: 20 }} />}
+                {balance.isRestricted && <LockRounded aria-hidden="true" sx={{ fontSize: 20 }} />}
                 <span>Disponible</span>
               </Stack>
             </Typography>
@@ -196,7 +194,7 @@ function BalanceCard({
             Línea total: {isAvailableVisible ? balance.totalCredit : "Bs. ••••••"}
           </Typography>
         </Stack>
-        {/* "Reactivar" lleva a Cuotas: ahí se paga el total pendiente. */}
+        {/* Las acciones de regularización y consulta llevan al detalle real de cuotas. */}
         <Button
           component={Link}
           fullWidth
@@ -211,7 +209,7 @@ function BalanceCard({
   );
 }
 
-function AttentionNotice({ message, suspended }: Readonly<{ message: string; suspended: boolean }>) {
+function AttentionNotice({ message, tone, suspended }: Readonly<{ message: string; tone: "attention" | "danger"; suspended: boolean }>) {
   return (
     <Card
       component="section"
@@ -219,7 +217,7 @@ function AttentionNotice({ message, suspended }: Readonly<{ message: string; sus
       variant="outlined"
       sx={{
         borderWidth: 2,
-        borderColor: suspended ? homeVisualTokens.color.danger : homeVisualTokens.color.orange,
+        borderColor: tone === "danger" ? homeVisualTokens.color.danger : homeVisualTokens.color.orange,
         borderRadius: `${homeVisualTokens.radius.inset}px`,
         bgcolor: homeVisualTokens.color.white,
         boxShadow: "none",
@@ -325,12 +323,8 @@ function ConsumptionsSection({
 
 function DebtOverview({
   debt,
-  isDebtFree,
 }: Readonly<{
   debt: NonNullable<HomeDashboardViewModel["debt"]>;
-  /** Sin uso mientras el botón "Detalles de cuota" está comentado (ver abajo). */
-  showReportAction: boolean;
-  isDebtFree: boolean;
 }>) {
   return (
     <Card
@@ -360,13 +354,8 @@ function DebtOverview({
                 overflowWrap: "anywhere",
               }}
             >
-              {isDebtFree ? "Estás al día" : debt.total}
+              {debt.total}
             </Typography>
-            {isDebtFree && (
-              <Typography sx={{ color: homeVisualTokens.color.neutral }}>
-                Continúas al día con tus cuotas y pagos.
-              </Typography>
-            )}
           </Stack>
           {/*
             Oculto (25/09, Gabriel) para evitar scroll en el Home: la card solo muestra la deuda
@@ -429,7 +418,6 @@ export function NewBusinessHomeDashboard({
   viewModel,
   onNotifications,
   unreadNotifications,
-  showMarketplacePromo,
 }: NewBusinessHomeDashboardProps) {
   return (
     <Stack spacing={2.5}>
@@ -440,19 +428,17 @@ export function NewBusinessHomeDashboard({
         unreadNotifications={unreadNotifications}
       />
       <BalanceCard balance={viewModel.balance} />
-      {showMarketplacePromo && <MarketplacePromo />}
       {viewModel.notice && (
         <AttentionNotice
           message={viewModel.notice.message}
-          suspended={viewModel.balance.primaryActionLabel === "Reactivar"}
+          suspended={viewModel.notice.suspended}
+          tone={viewModel.notice.tone}
         />
       )}
       <ConsumptionsSection items={viewModel.consumptions} />
       {viewModel.debt && (
         <DebtOverview
           debt={viewModel.debt}
-          showReportAction={viewModel.showReportInstallmentAction}
-          isDebtFree={viewModel.consumptions.length === 0}
         />
       )}
     </Stack>

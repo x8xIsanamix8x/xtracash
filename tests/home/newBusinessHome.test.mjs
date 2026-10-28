@@ -46,7 +46,7 @@ test("el recién llegado no muestra deuda ni próxima cuota inexistente", () => 
   assert.equal(viewModel.showReportInstallmentAction, false);
 });
 
-test("distingue retraso y mora con mensajes textuales de atención", () => {
+test("distingue cuotas pendientes, vencidas, bloqueo por deuda y suspensión administrativa", () => {
   const paymentDue = createNewBusinessHomeViewModel(
     newBusinessHomeMocks.paymentDue,
   );
@@ -55,26 +55,71 @@ test("distingue retraso y mora con mensajes textuales de atención", () => {
   );
 
   assert.equal(paymentDue.status.tone, "attention");
-  assert.equal(
-    paymentDue.notice?.message,
-    "Tienes una cuota pendiente. Repórtala para mantener tu crédito al día.",
-  );
-  assert.equal(delinquent.status.tone, "attention");
-  assert.equal(
-    delinquent.notice?.message,
-    "Tu disponible está suspendido. Regulariza tus cuotas pendientes para recuperarlo.",
-  );
+  assert.equal(paymentDue.notice?.message, "Tienes una cuota vencida. Revisa Mis cuotas para consultar el monto actualizado y las opciones de pago.");
+  assert.equal(paymentDue.balance.primaryActionLabel, "Pagar cuotas");
+  assert.equal(delinquent.status.label, "Línea suspendida");
+  assert.equal(delinquent.status.tone, "danger");
+  assert.match(delinquent.notice?.message, /suspendida por la empresa/);
   assert.equal(delinquent.balance.primaryAction, "reportInstallment");
-  assert.equal(delinquent.balance.primaryActionLabel, "Reportar cuota");
+  assert.equal(delinquent.balance.primaryActionLabel, "Ver mis cuotas");
+  assert.equal(delinquent.balance.isRestricted, true);
+});
+
+test("mapea los estados vigentes de Core y no confunde vencimiento con suspensión", () => {
+  const source = structuredClone(newBusinessHomeMocks.active);
+  source.balance.status = "BLOQUEADO";
+  source.consumptions[0].status = "VENCIDO_SIN_MORA";
+  source.consumptions[1].status = "VENCIDO_CON_MORA";
+  const parsed = parseNewBusinessHomeData(source);
+  assert.ok(parsed);
+  assert.equal(parsed.balance.status, "BLOCKED");
+  assert.equal(parsed.consumptions[0].status, "PAYMENT_DUE");
+  assert.equal(parsed.consumptions[1].status, "OVERDUE");
+
+  const viewModel = createNewBusinessHomeViewModel(parsed);
+  assert.equal(viewModel.status.label, "Disponible bloqueado");
+  assert.equal(viewModel.notice?.suspended, false);
+  assert.equal(viewModel.balance.primaryActionLabel, "Pagar cuotas");
+  assert.equal(viewModel.consumptions[0].statusLabel, "Cuota vencida");
+  assert.equal(viewModel.consumptions[1].statusLabel, "En mora");
+  assert.equal(viewModel.consumptions[1].tone, "danger");
+
+  source.balance.status = "SUSPENDIDO";
+  source.consumptions = [];
+  const suspended = parseNewBusinessHomeData(source);
+  assert.equal(suspended?.balance.status, "SUSPENDED");
+  assert.equal(createNewBusinessHomeViewModel(suspended).status.label, "Línea suspendida");
+});
+
+test("muestra un único consumo vencido con los estados de balance descritos por Core", () => {
+  const source = structuredClone(newBusinessHomeMocks.active);
+  source.balance.status = "BLOQUEADA";
+  source.consumptions = [{ ...source.consumptions[0], status: "VENCIDO_SIN_MORA" }];
+
+  const parsed = parseNewBusinessHomeData(source);
+  assert.ok(parsed, "BLOQUEADA aparece como alias en la descripción del resumen de Core");
+  const viewModel = createNewBusinessHomeViewModel(parsed);
+
+  assert.equal(viewModel.consumptions.length, 1);
+  assert.equal(viewModel.consumptions[0].statusLabel, "Cuota vencida");
+  assert.equal(viewModel.status.label, "Disponible bloqueado");
+  assert.match(viewModel.notice?.message, /cuotas vencidas/);
+  assert.equal(viewModel.balance.primaryActionLabel, "Pagar cuotas");
+
+  source.balance.status = "ABIERTA";
+  assert.equal(parseNewBusinessHomeData(source)?.balance.status, "ACTIVE");
+  source.balance.status = "SUSPENDIDA";
+  assert.equal(parseNewBusinessHomeData(source)?.balance.status, "SUSPENDED");
 });
 
 test("centraliza exactamente la paleta aprobada para el Home", () => {
   assert.deepEqual(Object.values(homeVisualTokens.color), [
     "#00004B",
     "#4637F5",
-    "#747474",
-    "#4637F5",
+    "#ffffff",
+    "#25259A",
     "#FF7800",
+    "#D32F2F",
     "#0AED81",
     "#61FF17",
     "#BEB8FF",
@@ -197,7 +242,7 @@ test("mantiene iconos seguros, rutas existentes y lleva el pago de cuotas a Cuot
   assert.match(navigation, /bottom: 0/);
 });
 
-test("el monto próximo suma todas las cuotas que vencen el día más cercano", async () => {
+test("el resumen parcial de consumos no se presenta como calendario global de cuotas", async () => {
   const summary = JSON.parse(await readFile(
     new URL("tests/installments/fixtures/resumen.json", projectUrl),
     "utf8",
@@ -206,9 +251,9 @@ test("el monto próximo suma todas las cuotas que vencen el día más cercano", 
   assert.ok(data);
 
   const viewModel = createNewBusinessHomeViewModel(data);
-  assert.match(viewModel.debt.nextPaymentDate, /^7 oct/);
-  // Clínica (34.372,09) + Mercado (25.263,59), ambas vencen el 07/10.
-  assert.equal(viewModel.debt.nextPaymentAmount, "Bs. 59.635,68");
+  assert.equal(viewModel.debt.total, "Bs. 128.380,03");
+  assert.equal(viewModel.debt.nextPaymentDate, null);
+  assert.equal(viewModel.debt.nextPaymentAmount, null);
 
   const laterMercado = createNewBusinessHomeViewModel({
     ...data,
@@ -216,5 +261,6 @@ test("el monto próximo suma todas las cuotas que vencen el día más cercano", 
       item.label === "Mercado" ? { ...item, nextPaymentDate: "2026-10-22" } : item
     )),
   });
-  assert.equal(laterMercado.debt.nextPaymentAmount, "Bs. 34.372,09");
+  assert.equal(laterMercado.debt.nextPaymentDate, null);
+  assert.equal(laterMercado.debt.nextPaymentAmount, null);
 });

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Container } from "@mui/material";
+import { Alert, Box, Button, Container, Skeleton, Stack, Typography } from "@mui/material";
 
 import {
   APP_BOTTOM_NAVIGATION_HEIGHT,
@@ -15,7 +15,6 @@ import {
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { getUnreadCount, NotificationsServiceError } from "@/features/notifications/services/notifications";
 import { syncPushSubscription } from "@/features/notifications/push/pushNotifications";
-import { getProfilePersonalInfo, ProfileServiceError } from "@/features/profile/services/profile";
 import { PushNotificationsGuide } from "@/features/notifications/push/PushNotificationsGuide";
 import { PwaInstallGuide } from "@/features/pwa/PwaInstallGuide";
 
@@ -24,20 +23,16 @@ import { newBusinessHomeMocks } from "./data/newBusinessHomeMocks";
 import { homeVisualTokens } from "./homeVisualTokens";
 import { createNewBusinessHomeViewModel } from "./newBusinessViewModel";
 import type { HomeDashboardViewModel } from "./newBusinessTypes";
-import { getNewBusinessHomeData } from "./services/newBusinessHome";
+import { getNewBusinessHomeData, NewBusinessHomeError } from "./services/newBusinessHome";
 import { getTimeGreeting } from "./timeGreeting";
-import { canAccessMarketplace } from "./marketplaceAccess";
-import {
-  AccountSummaryServiceError,
-  getAccountSummary,
-} from "./services/accountSummary";
 import type { OnboardingMasterProgress } from "./types";
 
 export function HomeView() {
   const router = useRouter();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [showMarketplacePromo, setShowMarketplacePromo] = useState(false);
   const [homeViewModel, setHomeViewModel] = useState<HomeDashboardViewModel | null>(null);
+  const [summaryState, setSummaryState] = useState<"loading" | "ready" | "error">("loading");
+  const [summaryRetry, setSummaryRetry] = useState(0);
   const [greeting, setGreeting] = useState("Buenos días");
   const [isSummaryLoaded, setIsSummaryLoaded] = useState(false);
   const [isPushGuideFinished, setIsPushGuideFinished] = useState(false);
@@ -45,36 +40,6 @@ export function HomeView() {
   const [masterOnboardingProgress, setMasterOnboardingProgress] = useState<
     OnboardingMasterProgress | null
   >(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    void getAccountSummary(controller.signal)
-      .then((summary) => {
-        if (controller.signal.aborted) return;
-        if (
-          summary.onboardingMaster
-          && summary.onboardingMaster.completedPhases <= 2
-          && consumeMasterOnboardingPrompt()
-        ) {
-          setMasterOnboardingProgress(summary.onboardingMaster);
-        }
-        setIsSummaryLoaded(true);
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        if (
-          error instanceof AccountSummaryServiceError
-          && error.type === "unauthenticated"
-        ) {
-          router.replace(sessionExpiredUrl);
-        }
-      });
-
-    return () => {
-      controller.abort();
-    };
-  }, [router]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -113,26 +78,6 @@ export function HomeView() {
 
   useEffect(() => {
     const controller = new AbortController();
-
-    void getProfilePersonalInfo(controller.signal)
-      .then(({ email }) => {
-        if (!controller.signal.aborted) setShowMarketplacePromo(canAccessMarketplace(email));
-      })
-      .catch((error: unknown) => {
-        if (
-          !controller.signal.aborted
-          && error instanceof ProfileServiceError
-          && error.type === "unauthenticated"
-        ) {
-          router.replace(sessionExpiredUrl);
-        }
-      });
-
-    return () => controller.abort();
-  }, [router]);
-
-  useEffect(() => {
-    const controller = new AbortController();
     const scenario = new URLSearchParams(window.location.search).get("scenario");
     const mockScenario = scenario && scenario in newBusinessHomeMocks
       ? scenario as keyof typeof newBusinessHomeMocks
@@ -144,6 +89,8 @@ export function HomeView() {
           setHomeViewModel(
             createNewBusinessHomeViewModel(newBusinessHomeMocks[mockScenario]),
           );
+          setSummaryState("ready");
+          setIsSummaryLoaded(true);
         }
       });
       return () => controller.abort();
@@ -151,13 +98,28 @@ export function HomeView() {
 
     void getNewBusinessHomeData(controller.signal)
       .then((data) => {
-        if (!controller.signal.aborted) setHomeViewModel(createNewBusinessHomeViewModel(data));
+        if (controller.signal.aborted) return;
+        setHomeViewModel(createNewBusinessHomeViewModel(data));
+        setSummaryState("ready");
+        setIsSummaryLoaded(true);
+        if (
+          data.onboardingMaster
+          && data.onboardingMaster.completedPhases <= 2
+          && consumeMasterOnboardingPrompt()
+        ) {
+          setMasterOnboardingProgress(data.onboardingMaster);
+        }
       })
-      .catch(() => {
-        // Keep the static state available while the session/backend is unavailable.
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (error instanceof NewBusinessHomeError && error.type === "unauthenticated") {
+          router.replace(sessionExpiredUrl);
+          return;
+        }
+        setSummaryState("error");
       });
     return () => controller.abort();
-  }, []);
+  }, [summaryRetry, router]);
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => {
@@ -180,12 +142,40 @@ export function HomeView() {
       }}
     >
       <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 } }}>
+        {!homeViewModel && summaryState === "loading" && (
+          <Stack spacing={2} role="status" aria-label="Cargando tu información">
+            <Skeleton variant="rounded" height={48} />
+            <Skeleton variant="rounded" height={218} />
+            <Skeleton variant="rounded" height={120} />
+          </Stack>
+        )}
+        {!homeViewModel && summaryState === "error" && (
+          <Alert
+            severity="error"
+            action={<Button color="inherit" onClick={() => setSummaryRetry((value) => value + 1)}>Reintentar</Button>}
+          >
+            No pudimos cargar tu disponible y tus cuotas. Inténtalo de nuevo.
+          </Alert>
+        )}
+        {homeViewModel && summaryState === "loading" && (
+          <Typography role="status" sx={{ mb: 1, color: "text.secondary", fontSize: "0.85rem" }}>
+            Actualizando tu información…
+          </Typography>
+        )}
+        {homeViewModel && summaryState === "error" && (
+          <Alert
+            severity="warning"
+            sx={{ mb: 2 }}
+            action={<Button color="inherit" onClick={() => setSummaryRetry((value) => value + 1)}>Reintentar</Button>}
+          >
+            No se pudo actualizar tu información. Mostramos los últimos datos cargados.
+          </Alert>
+        )}
         {homeViewModel && (
           <NewBusinessHomeDashboard
             greeting={greeting}
             onNotifications={() => router.push("/notifications")}
             unreadNotifications={unreadNotifications}
-            showMarketplacePromo={showMarketplacePromo}
             viewModel={homeViewModel}
           />
         )}
