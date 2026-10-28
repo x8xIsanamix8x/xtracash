@@ -50,7 +50,6 @@ export function parseNewBusinessHomeData(value: unknown): NewBusinessHomeData | 
   if (!totalDebt) return null;
   const onboardingMaster = parseOnboardingMaster(value.OnboardingMaster);
   if (value.OnboardingMaster !== undefined && value.OnboardingMaster !== null && onboardingMaster === null) return null;
-  if (value.showMarket != null && typeof value.showMarket !== "boolean") return null;
   const consumptions = value.consumptions.map((item) => {
     if (!isRecord(item) || typeof item.consumptionId !== "string" || typeof item.label !== "string") return null;
     const amount = readMoney(item.amount);
@@ -64,5 +63,5 @@ export function parseNewBusinessHomeData(value: unknown): NewBusinessHomeData | 
     return { consumptionId: item.consumptionId, icon, label: item.label.trim(), amount, installments, paidInstallments, nextPaymentDate, nextPaymentAmount: nextAmount, status };
   });
   if (consumptions.some((item) => item === null)) return null;
-  return { fullName: value.fullName.trim(), balance: { available, totalCredit, status: balanceStatus }, consumptions: consumptions as NonNullable<typeof consumptions[number]>[], debt: { total: totalDebt }, onboardingMaster, showMarket: typeof value.showMarket === "boolean" ? value.showMarket : null };
+  return { fullName: value.fullName.trim(), balance: { available, totalCredit, status: balanceStatus }, consumptions: consumptions as NonNullable<typeof consumptions[number]>[], debt: { total: totalDebt }, onboardingMaster };
 }

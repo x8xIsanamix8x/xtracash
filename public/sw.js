@@ -1,5 +1,6 @@
 const CACHE_PREFIX = "impulsate-pwa";
-const CACHE_VERSION = "v2";
+// Bump releases to evict cached chunks from the previous app version.
+const CACHE_VERSION = "v3";
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime-${CACHE_VERSION}`;
 const MAX_RUNTIME_ENTRIES = 60;
