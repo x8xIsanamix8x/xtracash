@@ -122,7 +122,7 @@ export function ActivationWelcomeGuide({ autoOpen }: Readonly<{ autoOpen: boolea
           component={Link}
           endIcon={<ArrowForwardRounded />}
           fullWidth
-          href="/recover-password?mode=activation"
+          href="/activate"
           onClick={closeGuide}
           variant="contained"
           sx={{ minHeight: 48, borderRadius: 99, bgcolor: themeTokens.color.accent, color: "secondary.main", fontWeight: 800, "&:hover": { bgcolor: "#FF922E" } }}
