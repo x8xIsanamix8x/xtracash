@@ -19,23 +19,17 @@ test("muestra la bienvenida después del onboarding y conserva la primera aparic
   await expect(welcome).not.toBeVisible();
 });
 
-test("la invitación abre activación, valida el correo y usa el servicio de contraseña existente", async ({ page }) => {
+test("la invitación abre el nuevo proceso de activación de cliente precargado", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("xtracash:onboarding-completed", "true"));
-  await page.route("**/api/auth/recovery", (route) => route.fulfill({ json: {} }));
   await page.goto("/");
   await page.getByRole("dialog", { name: welcomeName }).getByRole("link", { name: "Activa tu cuenta" }).click();
-  await expect(page).toHaveURL(/\/recover-password\?mode=activation$/);
+  await expect(page).toHaveURL(/\/activate$/);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Activa tu cuenta", exact: true })).toBeVisible();
-  await expect(page.getByText(/correo electrónico con el que recibiste tu invitación/)).toBeVisible();
-  const submit = page.getByRole("button", { name: "Enviar enlace de activación", exact: true });
-  await submit.click();
-  await expect(page.getByText("Ingresa tu correo electrónico.", { exact: true })).toBeVisible();
-  await page.getByRole("textbox", { name: "Correo electrónico" }).fill("invitado@example.test");
-  const request = page.waitForRequest((request) => request.url().endsWith("/api/auth/recovery") && request.method() === "POST");
-  await submit.click();
-  expect((await request).postDataJSON()).toEqual({ identifier: "invitado@example.test" });
-  await expect(page.getByText("Revisa tu correo", { exact: true })).toBeVisible();
+  await expect(page.getByText(/correo electrónico donde recibiste la invitación/)).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Cédula de identidad" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Correo de la invitación" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Validar invitación" })).toBeDisabled();
   await expect(page.getByRole("dialog", { name: welcomeName })).not.toBeVisible();
 });
 
@@ -74,14 +68,11 @@ test("la mascota y los controles caben en móvil pequeño y escritorio; Escape c
   for (const viewport of [{ width: 320, height: 568 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport);
     const bounds = await welcome.boundingBox();
-    const descriptionBounds = await welcome.locator("#activation-welcome-description").boundingBox();
-    const actionBounds = await welcome.getByRole("link", { name: "Activa tu cuenta" }).boundingBox();
     const dismissBounds = await welcome.getByRole("button", { name: "Ya tengo una cuenta" }).boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width);
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height);
     expect(dismissBounds!.y + dismissBounds!.height).toBeLessThanOrEqual(viewport.height);
-    expect(descriptionBounds!.y + descriptionBounds!.height).toBeLessThanOrEqual(actionBounds!.y);
     await page.screenshot({ path: testInfo.outputPath(`bienvenida-${viewport.width}.png`) });
   }
   await page.keyboard.press("Escape");
