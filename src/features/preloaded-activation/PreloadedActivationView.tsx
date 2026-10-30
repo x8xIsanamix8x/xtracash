@@ -20,8 +20,10 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  InputAdornment,
   LinearProgress,
   MenuItem,
+  Select,
   Stack,
   TextField,
   Typography,
@@ -471,42 +473,47 @@ export function PreloadedActivationView() {
 
             <Box component="form" noValidate onSubmit={validateIdentity}>
               <Stack spacing={2}>
-                <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
-                  <TextField
-                    hiddenLabel
-                    name="nacionalidad"
-                    onChange={(event) => {
-                      if (isActivationNationality(event.target.value)) {
-                        const nacionalidad = event.target.value;
-                        setIdentity((current) => ({ ...current, nacionalidad }));
-                      }
-                    }}
-                    required
-                    select
-                    slotProps={{ htmlInput: { "aria-label": "Tipo de cédula" } }}
-                    value={identity.nacionalidad}
-                    variant="filled"
-                    sx={{ ...activationFieldSx, flex: "0 0 84px" }}
-                  >
-                    <MenuItem value="V">V</MenuItem>
-                    <MenuItem value="E">E</MenuItem>
-                  </TextField>
-                  <TextField
-                    autoComplete="off"
-                    error={Boolean(errors.cedula)}
-                    fullWidth
-                    helperText={errors.cedula ?? "Solo números, sin puntos ni letras."}
-                    inputRef={cedulaRef}
-                    label="Cédula de identidad"
-                    name="cedula"
-                    onChange={(event) => setIdentity((current) => ({ ...current, cedula: keepActivationDigits(event.target.value) }))}
-                    required
-                    slotProps={{ htmlInput: { inputMode: "numeric", maxLength: 9 } }}
-                    value={identity.cedula}
-                    variant="filled"
-                    sx={activationFieldSx}
-                  />
-                </Stack>
+                <TextField
+                  autoComplete="off"
+                  error={Boolean(errors.cedula)}
+                  fullWidth
+                  helperText={errors.cedula ?? "Solo números, sin puntos ni letras."}
+                  hiddenLabel
+                  inputRef={cedulaRef}
+                  name="cedula"
+                  onChange={(event) => setIdentity((current) => ({ ...current, cedula: keepActivationDigits(event.target.value) }))}
+                  placeholder="Cédula de identidad"
+                  required
+                  slotProps={{
+                    htmlInput: { "aria-label": "Cédula de identidad", inputMode: "numeric", maxLength: 9 },
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start" sx={activationDocumentTypeAdornmentSx}>
+                          <Select
+                            disableUnderline
+                            inputProps={{ "aria-label": "Tipo de cédula" }}
+                            name="nacionalidad"
+                            onChange={(event) => {
+                              if (isActivationNationality(event.target.value)) {
+                                const nacionalidad = event.target.value;
+                                setIdentity((current) => ({ ...current, nacionalidad }));
+                              }
+                            }}
+                            value={identity.nacionalidad}
+                            variant="standard"
+                            sx={activationDocumentTypeSx}
+                          >
+                            <MenuItem value="V">V</MenuItem>
+                            <MenuItem value="E">E</MenuItem>
+                          </Select>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                  value={identity.cedula}
+                  variant="filled"
+                  sx={activationFieldSx}
+                />
                 <TextField
                   autoComplete="email"
                   error={Boolean(errors.correo)}
@@ -756,6 +763,19 @@ const activationFieldSx = {
   },
   "& .MuiInputLabel-root": { color: themeTokens.color.preLoginMuted },
   "& .MuiInputBase-input.Mui-disabled": { WebkitTextFillColor: themeTokens.color.preLoginNavy, opacity: 0.8 },
+} as const;
+
+const activationDocumentTypeAdornmentSx = {
+  mt: "0 !important",
+  mr: 1.5,
+  pr: 0.5,
+  height: 28,
+  borderRight: `1px solid ${alpha(themeTokens.color.preLoginMuted, 0.3)}`,
+} as const;
+
+const activationDocumentTypeSx = {
+  fontWeight: 700,
+  "& .MuiSelect-select": { py: 0, pl: 0.5, "&:focus": { bgcolor: "transparent" } },
 } as const;
 
 const activationPrimaryButtonSx = {
