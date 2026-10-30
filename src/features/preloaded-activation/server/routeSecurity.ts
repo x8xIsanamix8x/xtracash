@@ -2,10 +2,14 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 
+import { matchesPublicHost } from "./activationOrigin";
+
 export function isSameOrigin(request: NextRequest): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try { return new URL(origin).origin === new URL(request.url).origin; } catch { return false; }
+  return matchesPublicHost(
+    request.headers.get("origin"),
+    request.headers.get("x-forwarded-host"),
+    request.headers.get("host"),
+  );
 }
 
 export function isValidIdentity(value: unknown): value is { cedula: string; correo: string } {

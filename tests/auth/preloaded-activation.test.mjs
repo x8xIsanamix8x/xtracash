@@ -10,11 +10,23 @@ import {
   validateActivationIdentity,
 } from "../../src/features/preloaded-activation/validation.ts";
 import { getActivationHeaders } from "../../src/features/preloaded-activation/server/activationHeaders.ts";
+import { matchesPublicHost } from "../../src/features/preloaded-activation/server/activationOrigin.ts";
 
 test("el header de activación se omite si Core acepta el valor por defecto y solo se añade con secreto configurado", () => {
   assert.deepEqual(getActivationHeaders(undefined), {});
   assert.deepEqual(getActivationHeaders("   "), {});
   assert.deepEqual(getActivationHeaders(" sandbox-secret "), { "X-Activation-Key": "sandbox-secret" });
+});
+
+test("el origen se compara con el host público, no con la dirección interna del servidor", () => {
+  const sitio = "https://impulsate-app.sandbox.impulsa.vc";
+  assert.equal(matchesPublicHost(sitio, "impulsate-app.sandbox.impulsa.vc", "10.0.1.5:3000"), true);
+  assert.equal(matchesPublicHost(sitio, null, "impulsate-app.sandbox.impulsa.vc"), true);
+  assert.equal(matchesPublicHost(sitio, "impulsate-app.sandbox.impulsa.vc, interno", "x"), true);
+  assert.equal(matchesPublicHost(null, null, null), true);
+  assert.equal(matchesPublicHost("https://otro-sitio.example", "impulsate-app.sandbox.impulsa.vc", "x"), false);
+  assert.equal(matchesPublicHost(sitio, null, null), false);
+  assert.equal(matchesPublicHost("no-es-una-url", "impulsate-app.sandbox.impulsa.vc", null), false);
 });
 
 test("la identidad acepta únicamente 5–9 dígitos y un correo con formato válido", () => {
