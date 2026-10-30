@@ -21,6 +21,7 @@ import {
   DialogTitle,
   IconButton,
   LinearProgress,
+  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -39,6 +40,8 @@ import {
   validateActivationDocument,
   validateActivationIdentity,
   type ActivationFormErrors,
+  isActivationNationality,
+  type ActivationNationality,
 } from "./validation";
 import {
   PreloadedActivationError,
@@ -99,7 +102,7 @@ function acceptedFileSize(size: number): string {
 export function PreloadedActivationView() {
   const [step, setStep] = useState<PreloadedActivationStep>("identity");
   const [profile, setProfile] = useState<PreloadedActivationProfile | null>(null);
-  const [identity, setIdentity] = useState({ cedula: "", correo: "" });
+  const [identity, setIdentity] = useState<{ nacionalidad: ActivationNationality; cedula: string; correo: string }>({ nacionalidad: "V", cedula: "", correo: "" });
   const [details, setDetails] = useState({ nombre: "", apellido: "", telefono: "" });
   const [documents, setDocuments] = useState<ActivationDocuments>(emptyDocuments);
   const [confirmedDetails, setConfirmedDetails] = useState(false);
@@ -161,6 +164,7 @@ export function PreloadedActivationView() {
     const controller = createRequest();
     try {
       const result = await validateInvitation({
+        nacionalidad: identity.nacionalidad,
         cedula: identity.cedula.trim(),
         correo: identity.correo.trim(),
       }, controller.signal);
@@ -293,7 +297,7 @@ export function PreloadedActivationView() {
     requestRef.current?.abort();
     setStep("identity");
     setProfile(null);
-    setIdentity({ cedula: "", correo: "" });
+    setIdentity({ nacionalidad: "V", cedula: "", correo: "" });
     setDetails({ nombre: "", apellido: "", telefono: "" });
     setDocuments(emptyDocuments);
     setDocumentErrors({});
@@ -467,6 +471,25 @@ export function PreloadedActivationView() {
 
             <Box component="form" noValidate onSubmit={validateIdentity}>
               <Stack spacing={2}>
+                <TextField
+                  fullWidth
+                  label="Nacionalidad"
+                  name="nacionalidad"
+                  onChange={(event) => {
+                    if (isActivationNationality(event.target.value)) {
+                      const nacionalidad = event.target.value;
+                      setIdentity((current) => ({ ...current, nacionalidad }));
+                    }
+                  }}
+                  required
+                  select
+                  value={identity.nacionalidad}
+                  variant="filled"
+                  sx={activationFieldSx}
+                >
+                  <MenuItem value="V">Venezolano (V)</MenuItem>
+                  <MenuItem value="E">Extranjero (E)</MenuItem>
+                </TextField>
                 <TextField
                   autoComplete="off"
                   error={Boolean(errors.cedula)}

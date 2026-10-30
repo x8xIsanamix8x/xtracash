@@ -8,6 +8,7 @@ import {
   validateActivationDetails,
   validateActivationDocument,
   validateActivationIdentity,
+  isActivationNationality,
 } from "../../src/features/preloaded-activation/validation.ts";
 import { getActivationHeaders } from "../../src/features/preloaded-activation/server/activationHeaders.ts";
 import { matchesPublicHost } from "../../src/features/preloaded-activation/server/activationOrigin.ts";
@@ -28,6 +29,13 @@ test("el origen se compara con el host público, no con la dirección interna de
   assert.equal(matchesPublicHost("https://otro-sitio.example", "impulsate-app.sandbox.impulsa.vc", "x"), false);
   assert.equal(matchesPublicHost(sitio, null, null), false);
   assert.equal(matchesPublicHost("no-es-una-url", "impulsate-app.sandbox.impulsa.vc", null), false);
+});
+
+test("la activación admite cédulas V y E", () => {
+  assert.equal(isActivationNationality("V"), true);
+  assert.equal(isActivationNationality("E"), true);
+  assert.equal(isActivationNationality("J"), false);
+  assert.equal(isActivationNationality(undefined), false);
 });
 
 test("la identidad acepta únicamente 5–9 dígitos y un correo con formato válido", () => {

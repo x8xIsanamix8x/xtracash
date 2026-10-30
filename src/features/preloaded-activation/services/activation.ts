@@ -1,3 +1,4 @@
+import type { ActivationNationality } from "../validation";
 import type {
   PreloadedActivationProfile,
   PreloadedActivationSubmission,
@@ -105,7 +106,7 @@ function parseSubmission(value: unknown): PreloadedActivationSubmission {
 }
 
 export async function validateInvitation(
-  request: Readonly<{ cedula: string; correo: string }>,
+  request: Readonly<{ nacionalidad: ActivationNationality; cedula: string; correo: string }>,
   signal: AbortSignal,
 ): Promise<PreloadedActivationProfile> {
   let response: Response;
@@ -146,7 +147,7 @@ export async function submitPreloadedActivation(
 }
 
 export async function resendActivationEmail(
-  request: Readonly<{ cedula: string; correo: string }>,
+  request: Readonly<{ nacionalidad: ActivationNationality; cedula: string; correo: string }>,
   signal: AbortSignal,
 ): Promise<void> {
   let response: Response;
