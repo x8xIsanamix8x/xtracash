@@ -4,6 +4,7 @@ import { authJson, noStoreHeaders } from "@/features/auth/session/server/routeRe
 import {
   ACTIVATION_DOCUMENT_MAX_BYTES,
   ACTIVATION_DOCUMENT_TYPES,
+  isActivationPhone,
   normalizeActivationName,
 } from "@/features/preloaded-activation/validation";
 import { CoreActivationError, submitPreloadedActivation } from "@/features/preloaded-activation/server/coreActivation";
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     form.set(key, normalized);
   }
   const phone = form.get("telefono");
-  if (typeof phone !== "string" || !/^[+0-9() -]{7,20}$/.test(phone.trim())) return authJson({ error: "invalid_request" }, 400);
+  if (typeof phone !== "string" || !isActivationPhone(phone)) return authJson({ error: "DATOS_INVALIDOS" }, 400);
   if (form.get("datosConfirmados") !== "true" || form.get("terminosAceptados") !== "true") {
     return authJson({ error: "invalid_request" }, 400);
   }

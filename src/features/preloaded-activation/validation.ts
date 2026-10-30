@@ -20,6 +20,11 @@ export function isActivationNationality(value: unknown): value is ActivationNati
   return value === "V" || value === "E";
 }
 
+/** El mismo formato que exige Core al enviar la activación. */
+export function isActivationPhone(value: string): boolean {
+  return /^04(12|14|16|22|24|26)\d{7}$/.test(value.trim());
+}
+
 export function keepActivationDigits(value: string): string {
   return value.replace(/[^0-9]/g, "").slice(0, 9);
 }
@@ -73,8 +78,8 @@ export function validateActivationDetails(
   }
 
   if (!values.telefono.trim()) errors.telefono = "Ingresa tu número de teléfono.";
-  else if (!/^[+0-9() -]{7,20}$/.test(values.telefono.trim())) {
-    errors.telefono = "Revisa el formato del teléfono.";
+  else if (!isActivationPhone(values.telefono)) {
+    errors.telefono = "Escribe tu teléfono completo, por ejemplo 04121234567.";
   }
 
   return errors;

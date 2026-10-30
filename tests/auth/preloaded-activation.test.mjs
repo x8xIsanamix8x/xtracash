@@ -46,12 +46,15 @@ test("la identidad acepta únicamente 5–9 dígitos y un correo con formato vá
 });
 
 test("los datos editables requieren nombre, apellido y teléfono válidos", () => {
-  assert.deepEqual(validateActivationDetails({ nombre: "Ana María", apellido: "Pérez-Gómez", telefono: "+58 414-1234567" }), {});
+  assert.deepEqual(validateActivationDetails({ nombre: "Ana María", apellido: "Pérez-Gómez", telefono: "04141234567" }), {});
   assert.deepEqual(validateActivationDetails({ nombre: "Daysbel Katerine", apellido: "Alfonzo Rojas", telefono: "04125823664" }), {});
   assert.deepEqual(validateActivationDetails({ nombre: "\u200cDaysbel Katerine", apellido: "Alfonzo Rojas", telefono: "04125823664" }), {});
   assert.equal(normalizeActivationName("\u200cDaysbel Katerine\u200c"), "Daysbel Katerine");
   assert.ok(validateActivationDetails({ nombre: "", apellido: "Pérez", telefono: "04141234567" }).nombre);
   assert.ok(validateActivationDetails({ nombre: "Ana", apellido: "Pérez", telefono: "abc" }).telefono);
+  assert.match(validateActivationDetails({ nombre: "Ana", apellido: "Pérez", telefono: "4142388898" }).telefono, /04121234567/);
+  assert.ok(validateActivationDetails({ nombre: "Ana", apellido: "Pérez", telefono: "+58 414-1234567" }).telefono);
+  assert.ok(validateActivationDetails({ nombre: "Ana", apellido: "Pérez", telefono: "04131234567" }).telefono);
 });
 
 test("los documentos admiten JPEG, PNG o WEBP no vacíos de hasta 5 MB", () => {

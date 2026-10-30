@@ -31,7 +31,7 @@ export function activationErrorResponse(error: unknown) {
   if (code === "DOCUMENTO_RECHAZADO") {
     return authJson({ error: code, ...(error.field ? { campo: error.field } : {}), ...(error.reason ? { motivo: error.reason } : {}) }, 422);
   }
-  if (code === "CAMPO_NO_EDITABLE") return authJson({ error: code }, 400);
+  if (code === "CAMPO_NO_EDITABLE" || code === "DATOS_INVALIDOS") return authJson({ error: code }, 400);
 
   return authJson({
     error: "UNAVAILABLE",
