@@ -13,6 +13,13 @@ export type ActivationFormValues = Readonly<{
 
 export type ActivationFormErrors = Partial<Record<keyof ActivationFormValues, string>>;
 
+export const ACTIVATION_NATIONALITIES = ["V", "E"] as const;
+export type ActivationNationality = (typeof ACTIVATION_NATIONALITIES)[number];
+
+export function isActivationNationality(value: unknown): value is ActivationNationality {
+  return value === "V" || value === "E";
+}
+
 export function keepActivationDigits(value: string): string {
   return value.replace(/[^0-9]/g, "").slice(0, 9);
 }
