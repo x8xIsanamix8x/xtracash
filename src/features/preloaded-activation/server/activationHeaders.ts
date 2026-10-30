@@ -1,5 +1,6 @@
-/** Devuelve el header privado solo si el despliegue configuró una clave explícita. */
+const DEFAULT_ACTIVATION_KEY = "impulsa-activacion-precargado";
+
+/** Core siempre exige la clave: sin una configurada se envía la misma que Core usa por defecto. */
 export function getActivationHeaders(configuredKey: string | undefined): Readonly<Record<string, string>> {
-  const key = configuredKey?.trim();
-  return key ? { "X-Activation-Key": key } : {};
+  return { "X-Activation-Key": configuredKey?.trim() || DEFAULT_ACTIVATION_KEY };
 }
