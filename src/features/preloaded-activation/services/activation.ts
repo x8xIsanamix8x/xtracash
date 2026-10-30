@@ -7,6 +7,7 @@ import type {
 export type PreloadedActivationErrorCode =
   | "ACTIVACION_REALIZADA"
   | "API_KEY_INVALIDA"
+  | "DATOS_INVALIDOS"
   | "DEMASIADOS_INTENTOS"
   | "DOCUMENTO_RECHAZADO"
   | "NETWORK"
@@ -67,6 +68,7 @@ async function readApiResponse<T>(response: Response): Promise<T> {
   const knownCodes: readonly string[] = [
     "ACTIVACION_REALIZADA",
     "API_KEY_INVALIDA",
+    "DATOS_INVALIDOS",
     "DEMASIADOS_INTENTOS",
     "SIN_COINCIDENCIA",
     "TOKEN_INVALIDO",

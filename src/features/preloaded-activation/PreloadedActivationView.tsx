@@ -78,6 +78,8 @@ function activationErrorMessage(error: unknown): string {
       return "El sandbox rechazó la clave del servicio de activación. Confirma con backend si debe enviarse una X-Activation-Key o si la omisión está habilitada.";
     case "UNAVAILABLE":
       return "La activación no está disponible en este momento. Inténtalo más tarde.";
+    case "DATOS_INVALIDOS":
+      return "Revisa tu nombre, apellido y teléfono antes de continuar.";
     case "DEMASIADOS_INTENTOS":
       return "Se alcanzó el límite de intentos. Espera antes de volver a intentarlo.";
     case "DOCUMENTO_RECHAZADO": {
