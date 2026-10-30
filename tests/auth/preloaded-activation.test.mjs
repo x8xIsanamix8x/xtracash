@@ -12,9 +12,10 @@ import {
 import { getActivationHeaders } from "../../src/features/preloaded-activation/server/activationHeaders.ts";
 import { matchesPublicHost } from "../../src/features/preloaded-activation/server/activationOrigin.ts";
 
-test("el header de activación se omite si Core acepta el valor por defecto y solo se añade con secreto configurado", () => {
-  assert.deepEqual(getActivationHeaders(undefined), {});
-  assert.deepEqual(getActivationHeaders("   "), {});
+test("el header de activación siempre va: con el secreto configurado o con el valor por defecto de Core", () => {
+  const porDefecto = { "X-Activation-Key": "impulsa-activacion-precargado" };
+  assert.deepEqual(getActivationHeaders(undefined), porDefecto);
+  assert.deepEqual(getActivationHeaders("   "), porDefecto);
   assert.deepEqual(getActivationHeaders(" sandbox-secret "), { "X-Activation-Key": "sandbox-secret" });
 });
 
