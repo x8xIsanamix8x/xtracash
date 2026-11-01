@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { runMarketplaceImageOperation, runMarketplaceOperation } from "@/features/marketplace/server/marketplaceRoute";
-import { isC2pChargeRequest, isC2pOtpRequest, isCreatePurchaseRequest, isInitialPaymentRequest, isSignPurchaseRequest } from "@/features/marketplace/contractValidation";
+import { hasValidInitialPercentageQuery, isC2pChargeRequest, isC2pOtpRequest, isCreatePurchaseRequest, isInitialPaymentRequest, isSignPurchaseRequest } from "@/features/marketplace/contractValidation";
 
 const ID = /^[\w.-]{1,120}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -31,6 +31,9 @@ async function resolve(request: NextRequest, context: { params: Promise<{ segmen
   }
   const path = corePath(segments);
   if (!path) return Response.json({ error: "not_found" }, { status: 404 });
+  if (method === "GET" && path.endsWith("/planes") && !hasValidInitialPercentageQuery(request.nextUrl.searchParams)) {
+    return Response.json({ error: "invalid_request" }, { status: 400 });
+  }
   if (method === "POST" && !["compras", ...["pago-inicial", "pago-inicial/c2p", "pago-inicial/c2p/otp", "firma"].map((suffix) => `compras/${segments[1]}/${suffix}`)].includes(path)) return Response.json({ error: "not_found" }, { status: 404 });
   const query = request.nextUrl.search;
   let body: unknown;

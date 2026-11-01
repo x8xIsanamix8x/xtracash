@@ -63,7 +63,18 @@ export function getCatalog(query: string, page: number, signal?: AbortSignal, ca
 export function getCatalogCategories(signal?: AbortSignal) { return request<CatalogCategory[]>("catalogo/categorias", signal); }
 export function getMarketplaceLimit(signal?: AbortSignal) { return request<MarketplaceLimit>("marketplace/cupo", signal); }
 export function getProduct(id: string, signal?: AbortSignal) { return request<CatalogProduct>(`catalogo/${encodeURIComponent(id)}`, signal); }
-export function getProductPlan(id: string, signal?: AbortSignal) { return request<Record<string, unknown>>(`catalogo/${encodeURIComponent(id)}/planes`, signal); }
+export function buildProductPlanPath(id: string, initialPercentage?: string | number | null) {
+  const query = new URLSearchParams();
+  if (initialPercentage !== undefined && initialPercentage !== null) {
+    query.set("inicialPorcentaje", String(initialPercentage));
+  }
+  const serializedQuery = query.toString();
+  const suffix = serializedQuery ? `?${serializedQuery}` : "";
+  return `catalogo/${encodeURIComponent(id)}/planes${suffix}`;
+}
+export function getProductPlan(id: string, initialPercentage?: string | number | null, signal?: AbortSignal) {
+  return request<Record<string, unknown>>(buildProductPlanPath(id, initialPercentage), signal);
+}
 export function getMarketplaceHours(signal?: AbortSignal) { return request<Record<string, unknown>>("marketplace/horario", signal); }
 export function getPurchases(signal?: AbortSignal) { return request<unknown[]>("compras", signal); }
 export function getPurchase(id: string, signal?: AbortSignal) { return request<MarketplacePurchaseResponse>(`compras/${encodeURIComponent(id)}`, signal); }

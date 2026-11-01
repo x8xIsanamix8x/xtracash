@@ -3,6 +3,19 @@ const PHONE = /^04(12|14|16|22|24|26)\d{7}$/;
 const DOCUMENT = /^[VEPJGCvepjgc]-?[0-9]{1,9}$/;
 function record(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
 
+export function isValidInitialPercentage(value: string): boolean {
+  const normalized = value.trim();
+  return /^(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalized)
+    && Number.isFinite(Number(normalized))
+    && Number(normalized) > 0
+    && Number(normalized) <= 100;
+}
+
+export function hasValidInitialPercentageQuery(parameters: URLSearchParams): boolean {
+  const values = parameters.getAll("inicialPorcentaje");
+  return values.length <= 1 && (values.length === 0 || isValidInitialPercentage(values[0]));
+}
+
 export function isCreatePurchaseRequest(value: unknown): boolean {
   return record(value) && typeof value.productoId === "string" && UUID.test(value.productoId)
     && typeof value.pagoInicialUsdt === "number" && Number.isFinite(value.pagoInicialUsdt) && value.pagoInicialUsdt > 0;

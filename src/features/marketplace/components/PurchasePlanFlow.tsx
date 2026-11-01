@@ -6,13 +6,14 @@ import { AccountBalanceWalletRounded, CheckCircleRounded, CheckRounded, CloseRou
 import { Alert, Box, Button, Checkbox, Dialog, FormControlLabel, IconButton, MenuItem, Slide, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import type { TransitionProps } from "@mui/material/transitions";
 import { forwardRef } from "react";
-import { createPurchase, getMarketplaceHours, getMarketplacePaymentData, getProductPlan, getPurchases, getPurchase, getPurchaseContract, payC2p, reportInitialPayment, requestC2pOtp, signPurchase, MarketplaceServiceError } from "../services/marketplace";
+import { createPurchase, getMarketplaceHours, getMarketplaceLimit, getMarketplacePaymentData, getProductPlan, getPurchases, getPurchase, getPurchaseContract, payC2p, reportInitialPayment, requestC2pOtp, signPurchase, MarketplaceServiceError } from "../services/marketplace";
 import { createCopyAllText, createInstructionRows } from "../../installments/paymentInstructions";
 import { getMarketplacePaymentMethods, hasInitialPaymentDestination, isValidC2pOtp, isValidInitialPayment, parseC2pOtpResponse, parsePurchaseDestination, type MarketplacePaymentMethod } from "../paymentPresentation";
 import { MarketplaceProductImage } from "./MarketplaceProductImage";
 import { getSourceBanks } from "../../installments/services/installments";
 import type { SourceBank } from "../../installments/types";
 import { isActiveMarketplacePurchase, marketplacePurchaseProductId } from "../purchaseAvailability";
+import { getInitialPlanReason, parseMarketplaceInitialOptions, sameInitialPercentage, type MarketplaceInitialOption } from "../planOptions";
 
 const blue = "#2751E6";
 const surface = "#F0EFFF";
@@ -186,6 +187,13 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
   const [open, setOpen] = useState(false);
   const [stage, setStage] = useState<Stage>("plan");
   const [plan, setPlan] = useState<AnyRecord | null>(null);
+  const [initialOptions, setInitialOptions] = useState<MarketplaceInitialOption[]>([]);
+  const [selectedInitialPercentage, setSelectedInitialPercentage] = useState("");
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planQuoteError, setPlanQuoteError] = useState<string | null>(null);
+  const [planQuoteNotice, setPlanQuoteNotice] = useState<string | null>(null);
+  const [automaticInitialApplied, setAutomaticInitialApplied] = useState(false);
+  const [marketplaceLimit, setMarketplaceLimit] = useState<AnyRecord | null>(null);
   const [purchase, setPurchase] = useState<AnyRecord | null>(null);
   const [blockingPurchase, setBlockingPurchase] = useState<AnyRecord | null>(null);
   const [purchaseListChecked, setPurchaseListChecked] = useState(false);
@@ -202,15 +210,27 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
   const [bank, setBank] = useState(""); const [phone, setPhone] = useState(""); const [documentId, setDocumentId] = useState(""); const [reference, setReference] = useState(""); const [date, setDate] = useState(venezuelaDate); const [reportedAmountBs, setReportedAmountBs] = useState(""); const [otp, setOtp] = useState(""); const [otpSent, setOtpSent] = useState(false); const [c2pAttempted, setC2pAttempted] = useState(false);
   const operationLock = useRef(false);
+  const planQuoteController = useRef<AbortController | null>(null);
+  const planQuoteRequestId = useRef(0);
 
   useEffect(() => { if (!open) return; const c = new AbortController();
-    void Promise.allSettled([getProductPlan(productId, c.signal), getMarketplaceHours(c.signal), getPurchases(c.signal), getSourceBanks(c.signal)]).then(async ([p, h, all, banks]) => {
+    void Promise.allSettled([getProductPlan(productId, null, c.signal), getMarketplaceHours(c.signal), getPurchases(c.signal), getSourceBanks(c.signal), getMarketplaceLimit(c.signal)]).then(async ([p, h, all, banks, limit]) => {
       if (c.signal.aborted) return;
-      if (p.status === "rejected") { setError(formatError(p.reason)); return; }
-      setPlan(p.value.data);
+      if (p.status === "rejected") { setPlanQuoteError(formatError(p.reason)); }
+      else {
+        setPlan(p.value.data);
+        const options = parseMarketplaceInitialOptions(get(p.value.data, "opcionesInicial"));
+        setInitialOptions(options ?? []);
+        const quotedPercentage = get(p.value.data, "plan").inicialPorcentaje;
+        const defaultPercentage = options?.find((option) => sameInitialPercentage(option.porcentaje, quotedPercentage))?.porcentaje ?? options?.[0]?.porcentaje ?? "";
+        setSelectedInitialPercentage(String(defaultPercentage));
+        if (!options) setPlanQuoteError("No pudimos interpretar las opciones de inicial del servicio. Vuelve a intentarlo.");
+      }
       if (h.status === "fulfilled") setHours(h.value.data);
       if (banks.status === "fulfilled") { setSourceBanks(banks.value); setBankListUnavailable(false); }
       else { setSourceBanks([]); setBankListUnavailable(true); }
+      if (limit.status === "fulfilled") setMarketplaceLimit(limit.value.data);
+      else setMarketplaceLimit(null);
       if (all.status === "rejected") { setPurchaseListUnavailable(true); setPurchaseListChecked(true); return; }
       const list = purchaseItems(all.value.data);
       const openedPurchases = list.filter(isActiveMarketplacePurchase);
@@ -220,11 +240,44 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
       setPurchaseListChecked(true);
       if (opened?.id) { const current = await getPurchaseWithPaymentDestination(opened.id, c.signal); if (!c.signal.aborted) { setPurchase(current.data); setC2pAttempted(hasAttemptedC2p(String(opened.id))); } }
       else setPurchase(null);
-    }).catch((e: unknown) => { if (!c.signal.aborted) setError(formatError(e)); }).finally(() => { if (!c.signal.aborted) setBusy(false); });
-    return () => c.abort();
+    }).catch((e: unknown) => { if (!c.signal.aborted) setError(formatError(e)); }).finally(() => { if (!c.signal.aborted) { setBusy(false); setPlanLoading(false); } });
+    return () => { c.abort(); planQuoteController.current?.abort(); };
   }, [open, productId]);
 
-  const close = () => { setOpen(false); setStage("plan"); setPurchase(null); setBlockingPurchase(null); setPurchaseListChecked(false); setPurchaseListUnavailable(false); setPlan(null); setError(null); };
+  const close = () => { planQuoteController.current?.abort(); setOpen(false); setStage("plan"); setPurchase(null); setBlockingPurchase(null); setPurchaseListChecked(false); setPurchaseListUnavailable(false); setPlan(null); setInitialOptions([]); setSelectedInitialPercentage(""); setPlanQuoteError(null); setPlanQuoteNotice(null); setError(null); };
+  const requestPlanQuote = async (percentage?: string, automatic = false) => {
+    planQuoteController.current?.abort();
+    const controller = new AbortController();
+    planQuoteController.current = controller;
+    const requestId = ++planQuoteRequestId.current;
+    setPlanLoading(true); setPlanQuoteError(null); setPlanQuoteNotice(null);
+    try {
+      const result = await getProductPlan(productId, percentage ?? null, controller.signal);
+      if (controller.signal.aborted || requestId !== planQuoteRequestId.current) return;
+      const options = parseMarketplaceInitialOptions(get(result.data, "opcionesInicial"));
+      setPlan(result.data);
+      if (!options) {
+        setInitialOptions([]); setPlanQuoteError("No pudimos interpretar las opciones de inicial del servicio. Vuelve a intentarlo.");
+        return;
+      }
+      setInitialOptions(options);
+      const planPercentage = get(result.data, "plan").inicialPorcentaje;
+      const selected = options.find((option) => sameInitialPercentage(option.porcentaje, planPercentage))
+        ?? (percentage ? options.find((option) => sameInitialPercentage(option.porcentaje, percentage)) : undefined)
+        ?? options[0];
+      setSelectedInitialPercentage(selected?.porcentaje ?? "");
+      setAutomaticInitialApplied(automatic);
+      if (!selected) setPlanQuoteError("El servicio no devolvió una inicial disponible para esta cotización.");
+      if (percentage && selected && !sameInitialPercentage(planPercentage, percentage)) {
+        setPlanQuoteNotice("El backend ajustó la cotización. Revisa los nuevos montos antes de iniciar la compra.");
+      }
+    } catch (quoteError) {
+      if (controller.signal.aborted || requestId !== planQuoteRequestId.current) return;
+      setPlan(null); setPlanQuoteError(formatError(quoteError));
+    } finally {
+      if (!controller.signal.aborted && requestId === planQuoteRequestId.current) setPlanLoading(false);
+    }
+  };
   const resumePurchase = () => {
     if (!purchase) return;
     setStage(purchase.etapa === "PAGAR_INICIAL" ? "payment" : "status");
@@ -245,6 +298,9 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
   const create = () => withBusy(async () => {
     const p = get(plan, "plan");
     const initial = get(p, "pagoInicial");
+    const selectedOption = initialOptions.find((option) => sameInitialPercentage(option.porcentaje, selectedInitialPercentage));
+    const quoteMatchesSelection = sameInitialPercentage(p.inicialPorcentaje, selectedInitialPercentage);
+    if (planLoading || planQuoteError || !selectedOption || !quoteMatchesSelection || p.valida === false || p.alcanzaCupo === false || plan?.cupoUsable === false) throw new Error("plan_not_current");
     const amount = Number(initial.usdt ?? p.pagoInicialUsdt);
     if (!Number.isFinite(amount) || amount <= 0) throw new Error("plan_missing");
     try {
@@ -259,6 +315,11 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
     }
     catch (e) {
       const info = e instanceof MarketplaceServiceError ? get(e.body, "diagnostic") : {};
+      if (info.code === "MONTO_NO_CUADRA" || info.code === "CUPO_INSUFICIENTE" || info.code === "CUPO_NO_DISPONIBLE") {
+        await requestPlanQuote(selectedInitialPercentage);
+        setPlanQuoteNotice("El precio o el cupo cambiaron. Verifica la cotización actualizada antes de continuar.");
+        return;
+      }
       if (info.code !== "COMPRA_ABIERTA") throw e;
       const listed = await getPurchases(); const items = purchaseItems(listed.data);
       const existing = items.find((item: AnyRecord) => isActiveMarketplacePurchase(item) && item?.id);
@@ -317,6 +378,16 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
   });
 
   const p = get(plan, "plan"); const initial = get(p, "pagoInicial"); const initialBs = get(purchase, "pagoInicial").bs ?? initial.bs;
+  const selectedOption = initialOptions.find((option) => sameInitialPercentage(option.porcentaje, selectedInitialPercentage));
+  const quoteIsCurrent = Boolean(selectedOption && sameInitialPercentage(p.inicialPorcentaje, selectedInitialPercentage));
+  const planValid = p.valida !== false && p.alcanzaCupo !== false && plan?.alcanzaCupo !== false && plan?.cupoUsable !== false;
+  const insufficientLimit = p.motivo === "CUPO_INSUFICIENTE" || p.alcanzaCupo === false || plan?.alcanzaCupo === false;
+  const limitState = String(marketplaceLimit?.estado ?? "").toUpperCase();
+  const limitBlocked = limitState === "BLOQUEADA" || limitState === "SUSPENDIDA";
+  const canUseAutomaticInitial = insufficientLimit && !limitBlocked && limitState === "ABIERTA" && !blockingPurchase && !purchase && !purchaseListUnavailable;
+  const fullyPaid = sameInitialPercentage(p.inicialPorcentaje, "100") || Number(get(p, "aFinanciar").usdt) === 0;
+  const availableUsdt = get(plan, "disponible").usdt ?? marketplaceLimit?.disponible?.usdt;
+  const totalInitial = get(p, "pagoInicial");
   const horarioOpen = hours?.abierto ?? hours?.estaAbierto;
   const paymentEnabled = horarioOpen === true;
   const phoneValid = /^04(12|14|16|22|24|26)\d{7}$/.test(phone.replace(/\D/g, ""));
@@ -326,12 +397,14 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
   const availableMethods = getMarketplacePaymentMethods();
   const activeMethod = availableMethods.includes(method) ? method : availableMethods[0];
   return <>
-    <Button fullWidth variant="contained" onClick={() => { setBusy(true); setError(null); setPurchase(null); setBlockingPurchase(null); setPurchaseListChecked(false); setPurchaseListUnavailable(false); setPlan(null); setStage("plan"); setOpen(true); }} sx={{ position: "fixed", zIndex: (theme) => theme.zIndex.appBar, left: "50%", bottom: "calc(14px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", width: "min(calc(100% - 48px), 440px)", minHeight: 58, borderRadius: "14px", bgcolor: blue, fontWeight: 800, "&:hover": { bgcolor: blue } }}>Ir a plan de compra</Button>
+    <Button fullWidth variant="contained" onClick={() => { setBusy(true); setPlanLoading(true); setPlanQuoteError(null); setPlanQuoteNotice(null); setAutomaticInitialApplied(false); setInitialOptions([]); setSelectedInitialPercentage(""); setMarketplaceLimit(null); setError(null); setPurchase(null); setBlockingPurchase(null); setPurchaseListChecked(false); setPurchaseListUnavailable(false); setPlan(null); setStage("plan"); setOpen(true); }} sx={{ position: "fixed", zIndex: (theme) => theme.zIndex.appBar, left: "50%", bottom: "calc(14px + env(safe-area-inset-bottom))", transform: "translateX(-50%)", width: "min(calc(100% - 48px), 440px)", minHeight: 58, borderRadius: "14px", bgcolor: blue, fontWeight: 800, "&:hover": { bgcolor: blue } }}>Ir a plan de compra</Button>
     <Dialog open={open} onClose={close} aria-labelledby="purchase-flow-title" fullWidth maxWidth="sm" scroll="paper" slots={{ transition: SlideUp }} slotProps={{ backdrop: { sx: { bgcolor: "rgba(0,0,0,.76)" } }, container: { sx: { alignItems: "flex-end", pb: "max(8px, env(safe-area-inset-bottom))" } } }} sx={{ "& .MuiDialog-paper": { width: "calc(100% - 24px)", maxWidth: 548, height: "min(95dvh, 850px)", maxHeight: "calc(100dvh - 28px - env(safe-area-inset-top))", m: 0, overflow: "hidden", borderRadius: "24px", bgcolor: surface, color: "#171717" } }}>
       <Stack sx={{ height: "100%", minHeight: 0, overflowY: "auto", px: { xs: 2, sm: 3 }, pt: 2.5, pb: 2.5, gap: 1.4 }}>
         <FlowHeader title={stage === "plan" ? "Plan de compra" : stage === "payment" || stage === "report" || stage === "c2p" ? "Realizar pago" : stage === "contract" ? "Firma digital" : stage === "signed" ? "Compra confirmada" : "Estado de compra"} onClose={close} />
         {error && <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => void withBusy(refreshPurchase)}>Actualizar</Button>}>{error}</Alert>}
         {busy && <Typography role="status">Consultando información…</Typography>}
+        {stage === "plan" && planQuoteError && <Alert severity="error" action={<Button color="inherit" size="small" disabled={planLoading} onClick={() => void requestPlanQuote(selectedInitialPercentage || undefined)}>{planLoading ? "Actualizando…" : "Reintentar cotización"}</Button>}>{planQuoteError}</Alert>}
+        {stage === "plan" && planQuoteNotice && <Alert severity="info">{planQuoteNotice}</Alert>}
         {stage === "plan" && plan && <>
           {(!p || plan.plan === null) ? <Alert severity="info">Este producto no tiene un plan de financiamiento disponible.</Alert> : <>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.4, p: 1.2, borderRadius: "20px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
@@ -347,6 +420,18 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
             <Box sx={{ p: 1.5, borderRadius: "18px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
               <Typography sx={{ fontWeight: 800, mb: 1.2 }}>Tu plan de compra</Typography>
               <Stack spacing={1.2}>
+                {availableUsdt != null && <Box sx={{ p: 1.4, border: "1px solid #D9D9E1", borderRadius: "15px", bgcolor: "#F7F8FF" }}>
+                  <Typography sx={{ color: "text.secondary", fontSize: "0.88rem" }}>Disponible vigente</Typography>
+                  <Typography sx={{ color: blue, fontWeight: 800, fontSize: "1.12rem" }}>{fmt(availableUsdt)}</Typography>
+                </Box>}
+                <TextField select fullWidth label="Porcentaje de inicial" value={selectedInitialPercentage} disabled={planLoading || busy || Boolean(purchase) || Boolean(blockingPurchase) || !purchaseListChecked || !initialOptions.length || limitBlocked} helperText="Las opciones y los montos son calculados por el servicio." onChange={(event) => {
+                  const percentage = event.target.value;
+                  setSelectedInitialPercentage(percentage);
+                  setAutomaticInitialApplied(false);
+                  void requestPlanQuote(percentage);
+                }}>
+                  {initialOptions.map((option) => <MenuItem key={option.porcentaje} value={option.porcentaje}>{option.porcentaje}%</MenuItem>)}
+                </TextField>
                 {get(plan, "precio").usdt != null && <Box sx={{ position: "relative", p: 1.4, minHeight: 92, display: "flex", flexDirection: "column", justifyContent: "space-between", border: "1px solid #D9D9E1", borderRadius: "15px" }}>
                   <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start" }}><Typography sx={{ fontSize: "0.92rem" }}>Precio del equipo</Typography><LocalOfferRounded sx={{ color: blue, bgcolor: "#F0EFFF", borderRadius: "50%", p: 0.8, boxSizing: "content-box" }} /></Stack>
                   <Typography sx={{ mt: 1, color: blue, fontSize: "1.2rem", lineHeight: 1.2, fontWeight: 800 }}>{fmt(get(plan, "precio").usdt)}</Typography>
@@ -357,18 +442,22 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
                 </Box>}
               </Stack>
             </Box>
-            <Box sx={{ p: 1.25, borderRadius: "18px", bgcolor: "white", border: "1px solid #D9D9E1" }}>
+            {!planLoading && !planValid && <Alert severity="warning">{getInitialPlanReason(p.motivo) ?? (limitBlocked ? "Tu cupo está bloqueado o suspendido. Contacta a soporte para conocer cómo continuar." : "El plan no está disponible para esta inicial.")}</Alert>}
+            {planLoading && <Typography role="status" aria-live="polite" sx={{ color: "text.secondary", fontSize: "0.9rem" }}>Actualizando la cotización…</Typography>}
+            <Box sx={{ p: 1.25, borderRadius: "18px", bgcolor: "white", border: "1px solid #D9D9E1", opacity: planLoading ? 0.58 : 1 }}>
               <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 1.1 }}>
                 <PlanAmountCard title="Inicial" amount={get(p, "inicial").usdt} note={p.inicialPorcentaje != null ? `${p.inicialPorcentaje}% del valor del producto` : undefined} icon={<LocalAtmRounded fontSize="small" />} />
-                <PlanAmountCard title="Cuotas" amount={get(p, "montoCuota").usdt} note={[p.cuotas != null ? `${p.cuotas} cuotas` : null, p.frecuencia].filter(Boolean).join(" · ") || undefined} icon={<AccountBalanceWalletRounded fontSize="small" />} />
+                {!fullyPaid && <PlanAmountCard title="Cuotas" amount={get(p, "montoCuota").usdt} note={[p.cuotas != null ? `${p.cuotas} cuotas` : null, p.frecuencia].filter(Boolean).join(" · ") || undefined} icon={<AccountBalanceWalletRounded fontSize="small" />} />}
                 <PlanValueCard title="Servicio legal" value={get(p, "servicioLegal")} icon={<SavingsRounded fontSize="small" />} />
                 <PlanValueCard title="Servicio administrativo" value={get(p, "servicioAdministrativo")} icon={<RequestQuoteRounded fontSize="small" />} />
               </Box>
-              {Array.isArray(p.calendario) && <details style={{ margin: "14px 4px 2px" }}><summary>Ver calendario estimado</summary>{p.calendario.map((item: AnyRecord) => <Typography key={item.numero} sx={{ mt: 0.75 }}>Cuota {item.numero}: {item.vence} · {fmt(get(item, "monto").usdt)}</Typography>)}</details>}
+              {totalInitial.usdt != null && <Typography sx={{ mt: 1.2, px: 0.3, fontWeight: 700 }}>Total del pago inicial: <Box component="span" sx={{ color: blue }}>{fmt(totalInitial.usdt)}</Box></Typography>}
+              {fullyPaid ? <Alert severity="info" sx={{ mt: 1 }}>Con esta opción no se genera financiamiento ni cuotas. El backend determina el estado final después de confirmar la operación.</Alert> : Array.isArray(p.calendario) && <details style={{ margin: "14px 4px 2px" }}><summary>Ver calendario estimado</summary>{p.calendario.map((item: AnyRecord) => <Typography key={item.numero} sx={{ mt: 0.75 }}>Cuota {item.numero}: {item.vence} · {fmt(get(item, "monto").usdt)}</Typography>)}</details>}
             </Box>
-            {plan.alcanzaCupo === false || p.alcanzaCupo === false || plan.cupoUsable === false ? <Alert severity="warning">El cupo disponible no alcanza o no está habilitado para este plan.</Alert> : null}
             {horarioOpen === false && <OffHoursNotice isOpen={false} nextOpening={hours?.proximaApertura} />}
           </>}
+          {automaticInitialApplied && <Alert severity="success">Se aplicó la inicial automática calculada por el backend. Revisa el monto y el porcentaje antes de iniciar la compra.</Alert>}
+          {canUseAutomaticInitial && <Button variant="outlined" disabled={planLoading || busy} onClick={() => void requestPlanQuote(undefined, true)} sx={{ minHeight: 48, borderRadius: "13px", borderColor: blue, color: blue, fontWeight: 800 }}>Usar inicial automática</Button>}
           {purchaseListUnavailable && <Alert severity="warning">No pudimos consultar tus compras activas. Cierra este plan y vuelve a abrirlo para intentarlo nuevamente.</Alert>}
           {blockingPurchase ? <Box sx={{ p: 1.5, border: "1px solid #C7D3FF", borderRadius: "16px", bgcolor: "#F7F8FF" }}>
             <Typography sx={{ fontWeight: 800 }}>Tienes una compra en curso</Typography>
@@ -378,7 +467,7 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
             <Typography sx={{ fontWeight: 800 }}>Tienes una compra pendiente</Typography>
             <Typography sx={{ mt: 0.35, mb: 1.2, color: "text.secondary", fontSize: "0.9rem" }}>Revisa este plan y elige cuándo quieres retomar tu compra.</Typography>
             <Button fullWidth variant="contained" disabled={busy} onClick={resumePurchase} sx={{ minHeight: 50, borderRadius: "13px", bgcolor: blue, fontWeight: 800, "&:hover": { bgcolor: blue } }}>Continuar compra</Button>
-          </Box> : p && <Primary disabled={busy || !purchaseListChecked || purchaseListUnavailable || plan.alcanzaCupo === false || p.alcanzaCupo === false || plan.cupoUsable === false} onClick={() => void create()}>Iniciar compra</Primary>}
+          </Box> : p && <Primary disabled={busy || planLoading || Boolean(planQuoteError) || !quoteIsCurrent || !planValid || !purchaseListChecked || purchaseListUnavailable || !initialOptions.length || limitBlocked} onClick={() => void create()}>Iniciar compra</Primary>}
         </>}
         {(stage === "payment" || stage === "report") && purchase && <>
           <Typography component="h3" sx={{ fontWeight: 800, fontSize: "1.25rem" }}>Pagar inicial</Typography>

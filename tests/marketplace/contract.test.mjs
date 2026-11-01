@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isC2pChargeRequest, isC2pOtpRequest, isCreatePurchaseRequest, isInitialPaymentRequest, isSignPurchaseRequest } from "../../src/features/marketplace/contractValidation.ts";
+import { hasValidInitialPercentageQuery, isC2pChargeRequest, isC2pOtpRequest, isCreatePurchaseRequest, isInitialPaymentRequest, isSignPurchaseRequest, isValidInitialPercentage } from "../../src/features/marketplace/contractValidation.ts";
 
 const uuid = "01919b3e-7c2a-7d10-9f3e-2b6c8a4d5e71";
 const mobile = { bancoOrigen: "0171", telefonoOrigen: "04141122556" };
@@ -9,6 +9,18 @@ test("validates the purchase amount and UUID without coercing strings", () => {
   assert.equal(isCreatePurchaseRequest({ productoId: uuid, pagoInicialUsdt: 350 }), true);
   assert.equal(isCreatePurchaseRequest({ productoId: uuid, pagoInicialUsdt: "350" }), false);
   assert.equal(isCreatePurchaseRequest({ productoId: "not-a-uuid", pagoInicialUsdt: 350 }), false);
+});
+
+test("validates backend initial-percentage query bounds and rejects duplicated values", () => {
+  assert.equal(isValidInitialPercentage("30"), true);
+  assert.equal(isValidInitialPercentage("30.5"), true);
+  assert.equal(isValidInitialPercentage("100"), true);
+  assert.equal(isValidInitialPercentage("0"), false);
+  assert.equal(isValidInitialPercentage("100.01"), false);
+  assert.equal(isValidInitialPercentage("Infinity"), false);
+  assert.equal(hasValidInitialPercentageQuery(new URLSearchParams()), true);
+  assert.equal(hasValidInitialPercentageQuery(new URLSearchParams("inicialPorcentaje=30")), true);
+  assert.equal(hasValidInitialPercentageQuery(new URLSearchParams("inicialPorcentaje=30&inicialPorcentaje=40")), false);
 });
 
 test("validates the initial payment against Core fields", () => {
