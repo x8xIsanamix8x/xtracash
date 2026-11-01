@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowForwardRounded, StorefrontRounded } from "@mui/icons-material";
+import { ArrowForwardRounded, ReceiptLongRounded, StorefrontRounded } from "@mui/icons-material";
 import { Box, Button, Card, Stack, Typography } from "@mui/material";
 
 import { homeVisualTokens } from "../homeVisualTokens";
@@ -42,26 +42,42 @@ export function MarketplacePromo() {
               Impulsa Place
             </Typography>
             <Typography sx={{ mt: 0.5, color: "rgba(255,255,255,0.88)", fontSize: "0.875rem", lineHeight: 1.4 }}>
-              Explora productos y conoce tus opciones de financiamiento.
+              Explora productos o consulta tus compras.
             </Typography>
           </Box>
         </Stack>
-        <Button
-          component={Link}
-          href="/marketplace"
-          endIcon={<ArrowForwardRounded />}
-          variant="contained"
-          sx={{
-            flexShrink: 0,
-            borderRadius: 2,
-            bgcolor: homeVisualTokens.color.white,
-            color: homeVisualTokens.color.navy,
-            fontWeight: 700,
-            "&:hover": { bgcolor: "rgba(255,255,255,0.92)" },
-          }}
-        >
-          Explorar
-        </Button>
+        <Stack direction={{ xs: "column-reverse", sm: "row" }} spacing={1} sx={{ flexShrink: 0 }}>
+          <Button
+            component={Link}
+            href="/marketplace/compras"
+            startIcon={<ReceiptLongRounded />}
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              borderColor: "rgba(255,255,255,0.72)",
+              color: homeVisualTokens.color.white,
+              fontWeight: 700,
+              "&:hover": { borderColor: homeVisualTokens.color.white, bgcolor: "rgba(255,255,255,0.1)" },
+            }}
+          >
+            Mis compras
+          </Button>
+          <Button
+            component={Link}
+            href="/marketplace"
+            endIcon={<ArrowForwardRounded />}
+            variant="contained"
+            sx={{
+              borderRadius: 2,
+              bgcolor: homeVisualTokens.color.white,
+              color: homeVisualTokens.color.navy,
+              fontWeight: 700,
+              "&:hover": { bgcolor: "rgba(255,255,255,0.92)" },
+            }}
+          >
+            Explorar
+          </Button>
+        </Stack>
       </Stack>
     </Card>
   );

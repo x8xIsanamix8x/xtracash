@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  ReceiptLongRounded,
   SearchRounded,
   VisibilityOffRounded,
   VisibilityRounded,
@@ -17,7 +18,9 @@ import {
   InputAdornment,
   MenuItem,
   OutlinedInput,
-  TextField,
+  Select,
+  ToggleButton,
+  ToggleButtonGroup,
   Stack,
   Typography,
 } from "@mui/material";
@@ -33,41 +36,57 @@ import { MarketplaceProductImage } from "./components/MarketplaceProductImage";
 import { getCatalog, getCatalogCategories, getMarketplaceLimit, MarketplaceServiceError, type CatalogCategory, type CatalogProduct, type MarketplaceLimit } from "./services/marketplace";
 
 type AccessState = "checking" | "allowed" | "unavailable";
+type DisplayCurrency = "usdt" | "bs";
 
-function formatMoney(value: number | string | undefined, currency = "Bs.") {
+function formatMoney(value: number | string | undefined, currency = "USDT") {
   if (value === undefined) return "Precio no disponible";
   const numeric = typeof value === "string" ? Number(value) : value;
   return Number.isFinite(numeric) ? `${currency} ${new Intl.NumberFormat("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numeric)}` : `${currency} ${value}`;
 }
 
+function formatAmount(value: number | string | undefined) {
+  if (value === undefined) return "Precio no disponible";
+  const numeric = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(numeric)
+    ? new Intl.NumberFormat("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numeric)
+    : String(value);
+}
+
 function CatalogProductCard({ product }: Readonly<{ product: CatalogProduct }>) {
+  const subtitle = product.descripcionCorta?.trim() || product.descripcion?.trim();
   return (
     <Box
       component={Link}
       href={`/marketplace/${product.id}`}
-      aria-label={`Ver ${product.nombre}, ${formatMoney(product.precio?.usdt, product.moneda ?? "USDT")}`}
+      aria-label={`Ver ${product.nombre}, ${formatMoney(product.precio?.usdt)}`}
       sx={{
         minWidth: 0,
         overflow: "hidden",
         border: "1px solid #DADAE4",
-        borderRadius: "12px",
+        borderRadius: "20px",
         bgcolor: homeVisualTokens.color.white,
         color: homeVisualTokens.color.navy,
         textDecoration: "none",
+        display: "flex",
+        flexDirection: "column",
+        p: 1,
         transition: "transform 160ms ease, box-shadow 160ms ease",
         "&:hover": { transform: "translateY(-2px)", boxShadow: "0 8px 22px rgba(0, 0, 75, .11)" },
         "&:focus-visible": { outline: `3px solid ${homeVisualTokens.color.violet}`, outlineOffset: 3 },
       }}
     >
-      <Box sx={{ position: "relative", aspectRatio: "1.12 / 1", overflow: "hidden" }}>
+      <Box sx={{ position: "relative", aspectRatio: "1 / 1", overflow: "hidden", borderRadius: "14px", bgcolor: "#E7E7EE" }}>
         <MarketplaceProductImage url={product.imagenPrincipal} productId={product.id} alt={product.nombre} />
       </Box>
-      <Stack spacing={0.25} sx={{ px: 1.25, pt: 1, pb: 1.25 }}>
-        <Typography sx={{ color: homeVisualTokens.color.navy, fontSize: "0.95rem", lineHeight: 1.3, fontWeight: 500 }}>
+      <Stack spacing={0.35} sx={{ minWidth: 0, flex: 1, px: 0.25, pt: 1, pb: 0.5 }}>
+        <Typography sx={{ color: homeVisualTokens.color.navy, fontSize: "0.9rem", lineHeight: 1.25, fontWeight: 750, overflowWrap: "anywhere" }}>
           {product.nombre}
         </Typography>
-        <Typography sx={{ color: "#20202A", fontSize: "1.22rem", fontWeight: 800, lineHeight: 1.25 }}>
-          {formatMoney(product.precio?.usdt, product.moneda ?? "USDT")}
+        {subtitle && <Typography sx={{ color: "#33333A", fontSize: "0.8rem", lineHeight: 1.3, display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden" }}>
+          {subtitle}
+        </Typography>}
+        <Typography sx={{ mt: "auto", pt: 0.35, color: "#20202A", fontSize: "1.05rem", fontWeight: 800, lineHeight: 1.2, overflowWrap: "anywhere" }}>
+          {formatMoney(product.precio?.usdt)}
         </Typography>
       </Stack>
     </Box>
@@ -79,6 +98,7 @@ export function MarketplaceView() {
   const [access, setAccess] = useState<AccessState>("checking");
   const [search, setSearch] = useState("");
   const [isAvailableVisible, setIsAvailableVisible] = useState(false);
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("usdt");
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [categoryId, setCategoryId] = useState("");
@@ -128,8 +148,9 @@ export function MarketplaceView() {
     }, 250);
     return () => { window.clearTimeout(timeout); controller.abort(); };
   }, [access, catalogReload, categoryId, page, search]);
-  const availableBs = limit?.disponible?.bs;
-  const totalBs = limit?.limite?.bs;
+  const availableAmount = limit?.disponible?.[displayCurrency];
+  const totalAmount = limit?.limite?.[displayCurrency];
+  const currencyLabel = displayCurrency === "usdt" ? "USDT" : "Bs.";
 
   return (
     <Box
@@ -157,6 +178,79 @@ export function MarketplaceView() {
 
           {access === "allowed" && (
             <>
+              <Typography component="h2" sx={{ mb: -1.4, color: homeVisualTokens.color.navy, fontSize: "1.05rem", fontWeight: 800 }}>
+                Disponible
+              </Typography>
+              <Box
+                component="section"
+                aria-label="Disponible de financiamiento"
+                sx={{
+                  minHeight: 142,
+                  px: { xs: 2.5, sm: 3 },
+                  py: 1.75,
+                  borderRadius: "14px",
+                  bgcolor: "#2751E6",
+                  color: "#FFFFFF",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                }}
+              >
+                <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", minHeight: 38 }}>
+                  <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    value={displayCurrency}
+                    onChange={(_, value: DisplayCurrency | null) => value && setDisplayCurrency(value)}
+                    aria-label="Moneda del disponible"
+                    sx={{ p: 0.25, border: "1px solid rgba(255,255,255,.45)", borderRadius: "999px", bgcolor: "rgba(255,255,255,.12)", "& .MuiToggleButtonGroup-grouped": { minHeight: 30, px: 1.25, border: 0, borderRadius: "999px !important", color: "white", fontSize: "0.75rem", fontWeight: 800, lineHeight: 1, textTransform: "none" }, "& .Mui-selected": { bgcolor: "white !important", color: "#2751E6 !important" } }}
+                  >
+                    <ToggleButton value="usdt" aria-label="Mostrar en USDT">USDT</ToggleButton>
+                    <ToggleButton value="bs" aria-label="Mostrar en bolívares">Bs.</ToggleButton>
+                  </ToggleButtonGroup>
+                  <IconButton
+                    aria-label={isAvailableVisible ? "Ocultar disponible" : "Mostrar disponible"}
+                    aria-pressed={isAvailableVisible}
+                    onClick={() => setIsAvailableVisible((current) => !current)}
+                    sx={{ color: "#FFFFFF", mr: -1 }}
+                  >
+                    {isAvailableVisible ? <VisibilityRounded /> : <VisibilityOffRounded />}
+                  </IconButton>
+                </Stack>
+                <Stack
+                  direction="row"
+                  aria-live="polite"
+                  aria-label={`Disponible: ${isAvailableVisible ? `${currencyLabel} ${formatAmount(availableAmount)}` : "monto oculto"}`}
+                  sx={{ alignItems: "baseline", gap: 0.9, minWidth: 0, mt: 0.75 }}
+                >
+                  <Typography component="span" sx={{ minWidth: 0, fontSize: "clamp(1.65rem, 7vw, 2.2rem)", lineHeight: 1.15, fontWeight: 500, letterSpacing: "-0.035em", overflowWrap: "anywhere" }}>
+                    {isAvailableVisible ? formatAmount(availableAmount) : "••••••"}
+                  </Typography>
+                </Stack>
+                <Typography sx={{ mt: 1.5, fontSize: "0.875rem" }}>
+                  Línea total {currencyLabel} {isAvailableVisible ? formatAmount(totalAmount) : "••••••"}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 1.25 }}>
+                {categories.length > 0 ? <Select
+                  fullWidth
+                  displayEmpty
+                  value={categoryId}
+                  data-testid="marketplace-category-select"
+                  inputProps={{ "aria-label": "Categoría" }}
+                  renderValue={(selected) => selected ? categories.find((category) => category.id === selected)?.nombre ?? "Categoría" : "Categoría"}
+                  onChange={(event) => { setCategoryId(event.target.value); setPage(0); }}
+                  sx={{ minWidth: 0, height: 54, bgcolor: "white", borderRadius: "14px", color: "#667085", "& .MuiSelect-select": { display: "flex", alignItems: "center", py: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "& .MuiOutlinedInput-notchedOutline": { borderColor: "#DADAE4" } }}
+                >
+                  <MenuItem value="">Todas las categorías</MenuItem>
+                  {categories.map((category) => <MenuItem key={category.id} value={category.id}>{category.nombre}</MenuItem>)}
+                </Select> : <Button disabled variant="outlined" sx={{ minWidth: 0, height: 54, borderRadius: "14px", borderColor: "#DADAE4", color: "text.secondary", fontWeight: 700 }}>Categoría</Button>}
+                <Button component={Link} href="/marketplace/compras" startIcon={<ReceiptLongRounded />} fullWidth variant="outlined" sx={{ minWidth: 0, height: 54, borderRadius: "14px", borderColor: homeVisualTokens.color.violet, color: homeVisualTokens.color.violet, fontWeight: 700, whiteSpace: "nowrap", "& .MuiButton-startIcon": { mr: { xs: 0.5, sm: 1 } } }}>
+                  Mis compras
+                </Button>
+              </Box>
+
               <OutlinedInput
                 fullWidth
                 value={search}
@@ -176,47 +270,6 @@ export function MarketplaceView() {
                   "& fieldset": { border: 0 },
                 }}
               />
-              {categories.length > 0 && <TextField select fullWidth label="Categoría" value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(0); }} size="small" sx={{ bgcolor: "white", borderRadius: "12px" }}>
-                <MenuItem value="">Todas las categorías</MenuItem>
-                {categories.map((category) => <MenuItem key={category.id} value={category.id}>{category.nombre}</MenuItem>)}
-              </TextField>}
-
-              <Box
-                component="section"
-                aria-label="Disponible de financiamiento"
-                sx={{
-                  minHeight: 180,
-                  px: { xs: 2.5, sm: 3 },
-                  py: 2.5,
-                  borderRadius: "14px",
-                  bgcolor: "#2751E6",
-                  color: "#FFFFFF",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
-                  <Typography sx={{ fontSize: "0.95rem" }}>Disponible</Typography>
-                  <IconButton
-                    aria-label={isAvailableVisible ? "Ocultar disponible" : "Mostrar disponible"}
-                    aria-pressed={isAvailableVisible}
-                    onClick={() => setIsAvailableVisible((current) => !current)}
-                    sx={{ color: "#FFFFFF", mr: -1 }}
-                  >
-                    {isAvailableVisible ? <VisibilityRounded /> : <VisibilityOffRounded />}
-                  </IconButton>
-                </Stack>
-                <Typography
-                  aria-live="polite"
-                  sx={{ fontSize: "clamp(2rem, 9vw, 2.75rem)", lineHeight: 1.15, fontWeight: 400, letterSpacing: "-0.04em" }}
-                >
-                  {isAvailableVisible ? formatMoney(availableBs) : "Bs. ••••••"}
-                </Typography>
-                <Typography sx={{ mt: 1.6, fontSize: "0.875rem" }}>
-                  Línea total {isAvailableVisible ? formatMoney(totalBs) : "Bs. ••••••"}
-                </Typography>
-              </Box>
 
               {(limit?.estado === "BLOQUEADA" || limit?.estado === "SUSPENDIDA") && <Alert severity="warning">{limit.estado === "BLOQUEADA" ? "El uso de tu cupo del marketplace está bloqueado." : "El marketplace está suspendido temporalmente."} Puedes consultar el catálogo; el servicio validará si una compra puede continuar.</Alert>}
 

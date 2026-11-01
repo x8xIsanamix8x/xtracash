@@ -58,7 +58,7 @@ async function getPurchaseWithPaymentDestination(id: string, signal?: AbortSigna
 function fmt(value: unknown, currency = "USDT") { if (value === undefined || value === null || value === "") return "—"; const n = Number(value); return Number.isFinite(n) ? `${currency} ${new Intl.NumberFormat("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}` : `${currency} ${String(value)}`; }
 function venezuelaDate() { const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date()); const value = (type: string) => parts.find((part) => part.type === type)?.value ?? ""; return `${value("year")}-${value("month")}-${value("day")}`; }
 function errorCode(error: unknown) { return error instanceof MarketplaceServiceError ? String(get(error.body, "diagnostic").code ?? get(error.body, "code") ?? "") : ""; }
-function formatError(error: unknown) { if (error instanceof Error && error.message === "c2p_otp_not_requested") return "El banco no confirmó la solicitud de OTP. Verifica los datos e inténtalo nuevamente."; if (error instanceof MarketplaceServiceError) { const code = errorCode(error); if (code === "C2P_RECHAZADO") return "El banco rechazó el cobro C2P. No se realizó el pago; revisa los datos o solicita un nuevo OTP."; if (code === "C2P_OTP_FALLIDO") return "El banco no pudo generar el OTP. Puedes volver a solicitarlo."; if (code === "COMPRA_ABIERTA") return "Ya tienes una compra abierta. Estamos recuperando su estado."; if (code === "MONTO_NO_CUADRA") return "El monto del plan cambió. Actualiza el plan antes de continuar."; if (code === "FUERA_DE_HORARIO") return "El pago inicial solo se puede reportar dentro del horario de atención."; if (code === "COMPRA_VENCIDA") return "Esta compra venció. Actualiza su estado para ver las opciones disponibles."; if (code === "REFERENCIA_USADA") return "Esta referencia ya fue reportada. Verifica el estado de la compra antes de volver a intentar."; if (code === "CUPO_NO_DISPONIBLE" || code === "CUPO_INSUFICIENTE") return "El cupo cambió y ya no permite continuar con esta compra."; if (error.status === 403) return "Esta operación no está habilitada en este momento."; if (error.status === 409) return "La operación no puede continuar con el estado actual."; } return "No pudimos completar la operación. Revisa tu conexión e inténtalo nuevamente."; }
+function formatError(error: unknown) { if (error instanceof Error && error.message === "c2p_otp_not_requested") return "El banco no confirmó la solicitud de OTP. Verifica los datos e inténtalo nuevamente."; if (error instanceof Error && error.message === "purchase_product_mismatch") return "Esta compra no corresponde al producto seleccionado. Vuelve a Mis compras para abrirla desde allí."; if (error instanceof MarketplaceServiceError) { const code = errorCode(error); if (code === "C2P_RECHAZADO") return "El banco rechazó el cobro C2P. No se realizó el pago; revisa los datos o solicita un nuevo OTP."; if (code === "C2P_OTP_FALLIDO") return "El banco no pudo generar el OTP. Puedes volver a solicitarlo."; if (code === "COMPRA_ABIERTA") return "Ya tienes una compra abierta. Estamos recuperando su estado."; if (code === "MONTO_NO_CUADRA") return "El monto del plan cambió. Actualiza el plan antes de continuar."; if (code === "FUERA_DE_HORARIO") return "El pago inicial solo se puede reportar dentro del horario de atención."; if (code === "COMPRA_VENCIDA") return "Esta compra venció. Actualiza su estado para ver las opciones disponibles."; if (code === "REFERENCIA_USADA") return "Esta referencia ya fue reportada. Verifica el estado de la compra antes de volver a intentar."; if (code === "CUPO_NO_DISPONIBLE" || code === "CUPO_INSUFICIENTE") return "El cupo cambió y ya no permite continuar con esta compra."; if (error.status === 403) return "Esta operación no está habilitada en este momento."; if (error.status === 409) return "La operación no puede continuar con el estado actual."; } return "No pudimos completar la operación. Revisa tu conexión e inténtalo nuevamente."; }
 function setAttemptedC2p(id: string, attempted: boolean) { try { const key = `marketplace:c2p-attempt:${id}`; if (attempted) localStorage.setItem(key, "1"); else localStorage.removeItem(key); } catch { /* El estado del servidor sigue siendo la fuente de verdad. */ } }
 function hasAttemptedC2p(id: string) { try { return localStorage.getItem(`marketplace:c2p-attempt:${id}`) === "1"; } catch { return false; } }
 
@@ -183,8 +183,8 @@ function PlanValueCard({ title, value, icon }: Readonly<{ title: string; value: 
   </Box>;
 }
 
-export function PurchasePlanFlow({ productId, productName, productImageUrl, productSubtitle }: Readonly<{ productId: string; productName: string; productImageUrl?: string; productSubtitle?: string }>) {
-  const [open, setOpen] = useState(false);
+export function PurchasePlanFlow({ productId, productName, productImageUrl, productSubtitle, initialPurchaseId }: Readonly<{ productId: string; productName: string; productImageUrl?: string; productSubtitle?: string; initialPurchaseId?: string }>) {
+  const [open, setOpen] = useState(Boolean(initialPurchaseId));
   const [stage, setStage] = useState<Stage>("plan");
   const [plan, setPlan] = useState<AnyRecord | null>(null);
   const [initialOptions, setInitialOptions] = useState<MarketplaceInitialOption[]>([]);
@@ -231,7 +231,17 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
       else { setSourceBanks([]); setBankListUnavailable(true); }
       if (limit.status === "fulfilled") setMarketplaceLimit(limit.value.data);
       else setMarketplaceLimit(null);
-      if (all.status === "rejected") { setPurchaseListUnavailable(true); setPurchaseListChecked(true); return; }
+      if (all.status === "rejected") { setPurchaseListUnavailable(true); setPurchaseListChecked(true); }
+      if (initialPurchaseId) {
+        const current = await getPurchaseWithPaymentDestination(initialPurchaseId, c.signal);
+        if (c.signal.aborted) return;
+        if (marketplacePurchaseProductId(current.data) !== productId) throw new Error("purchase_product_mismatch");
+        setPurchase(current.data);
+        setC2pAttempted(hasAttemptedC2p(initialPurchaseId));
+        setStage(current.data.etapa === "PAGAR_INICIAL" ? "payment" : "status");
+        return;
+      }
+      if (all.status === "rejected") return;
       const list = purchaseItems(all.value.data);
       const openedPurchases = list.filter(isActiveMarketplacePurchase);
       const opened = openedPurchases.find((item: AnyRecord) => marketplacePurchaseProductId(item) === productId);
@@ -242,7 +252,7 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
       else setPurchase(null);
     }).catch((e: unknown) => { if (!c.signal.aborted) setError(formatError(e)); }).finally(() => { if (!c.signal.aborted) { setBusy(false); setPlanLoading(false); } });
     return () => { c.abort(); planQuoteController.current?.abort(); };
-  }, [open, productId]);
+  }, [open, productId, initialPurchaseId]);
 
   const close = () => { planQuoteController.current?.abort(); setOpen(false); setStage("plan"); setPurchase(null); setBlockingPurchase(null); setPurchaseListChecked(false); setPurchaseListUnavailable(false); setPlan(null); setInitialOptions([]); setSelectedInitialPercentage(""); setPlanQuoteError(null); setPlanQuoteNotice(null); setError(null); };
   const requestPlanQuote = async (percentage?: string, automatic = false) => {
@@ -530,6 +540,7 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
             <Button disabled={busy} onClick={() => void downloadContract()}>Descargar contrato</Button>
           </>}
           {purchase.etapa === "PAGAR_CUOTAS" && purchase.consumoId && <Button component="a" href={`/installments/${encodeURIComponent(purchase.consumoId)}`} variant="contained" sx={{ bgcolor: blue }}>Ir a mis cuotas</Button>}
+          {(purchase.etapa === "PAGAR_CUOTAS" || purchase.etapa === "PAGADA") && <Button component={Link} href={`/marketplace/compras/${encodeURIComponent(purchase.id)}`} variant="outlined" sx={{ borderColor: blue, color: blue, fontWeight: 700 }}>Ver detalle de la compra</Button>}
           <Button onClick={() => void withBusy(refreshPurchase)}>Actualizar estado</Button>
         </>}
         {stage === "contract" && purchase && <>
@@ -563,6 +574,7 @@ export function PurchasePlanFlow({ productId, productName, productImageUrl, prod
           </Box>
           <Alert severity="info">Core confirmó la compra y la etapa de cuotas. El estado de la firma de la otra parte y la emisión del documento bilateral no están disponibles en esta integración.</Alert>
           {purchase.consumoId && <Button component="a" href={`/installments/${encodeURIComponent(purchase.consumoId)}`} variant="contained" sx={{ minHeight: 54, bgcolor: blue, fontWeight: 800 }}>Ir a mis cuotas</Button>}
+          <Button component={Link} href={`/marketplace/compras/${encodeURIComponent(purchase.id)}`} variant="outlined" sx={{ borderColor: blue, color: blue, fontWeight: 700 }}>Ver detalle de la compra</Button>
           <Button disabled={busy} onClick={() => void downloadContract()}>Descargar contrato</Button>
         </>}
       </Stack>

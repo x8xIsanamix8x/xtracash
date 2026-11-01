@@ -76,7 +76,7 @@ export function getProductPlan(id: string, initialPercentage?: string | number |
   return request<Record<string, unknown>>(buildProductPlanPath(id, initialPercentage), signal);
 }
 export function getMarketplaceHours(signal?: AbortSignal) { return request<Record<string, unknown>>("marketplace/horario", signal); }
-export function getPurchases(signal?: AbortSignal) { return request<unknown[]>("compras", signal); }
+export function getPurchases(signal?: AbortSignal) { return request<unknown>("compras", signal); }
 export function getPurchase(id: string, signal?: AbortSignal) { return request<MarketplacePurchaseResponse>(`compras/${encodeURIComponent(id)}`, signal); }
 /** Datos bancarios de la empresa autenticada, sin cotización de cuotas. */
 export function getMarketplacePaymentData(signal?: AbortSignal) { return request<Record<string, unknown>>("datos-pago", signal); }
