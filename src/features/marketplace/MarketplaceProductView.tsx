@@ -49,7 +49,7 @@ function ProductDataSection({ title, rows }: Readonly<{ title: string; rows: Rea
   </Box>;
 }
 
-export function MarketplaceProductView({ productId }: Readonly<{ productId: string }>) {
+export function MarketplaceProductView({ productId, resumePurchaseId }: Readonly<{ productId: string; resumePurchaseId?: string }>) {
   const router = useRouter();
   const [access, setAccess] = useState<AccessState>("checking");
   const [product, setProduct] = useState<CatalogProduct | null>(null);
@@ -122,7 +122,7 @@ export function MarketplaceProductView({ productId }: Readonly<{ productId: stri
             <Typography component="h3" sx={{ mb: 1, fontSize: "1.15rem", fontWeight: 800 }}>Descripción</Typography>
             <Typography sx={{ fontSize: "0.94rem", lineHeight: 1.5, whiteSpace: "pre-line" }}>{description}</Typography>
           </Box>}
-          <PurchasePlanFlow productId={product.id} productName={product.nombre} productImageUrl={activeImage?.url ?? product.imagenPrincipal} productSubtitle={textValue(product.descripcionCorta) ?? undefined} />
+          <PurchasePlanFlow productId={product.id} productName={product.nombre} productImageUrl={activeImage?.url ?? product.imagenPrincipal} productSubtitle={textValue(product.descripcionCorta) ?? undefined} initialPurchaseId={resumePurchaseId} />
         </>}
       </Stack>
     </Container>
