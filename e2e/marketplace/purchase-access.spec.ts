@@ -107,3 +107,74 @@ test("una compra pagada muestra confirmación y no acceso a cuotas", async ({ pa
   await expect(page.getByRole("link", { name: "Ver mis cuotas" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Volver al catálogo" })).toBeVisible();
 });
+
+for (const etapa of ["PAGAR_CUOTAS", "PAGADA"] as const) {
+  test(`el flujo de compra muestra la finalización desde el estado confirmado ${etapa}`, async ({ page, bff }) => {
+    const confirmedPurchase = {
+      ...purchase,
+      etapa,
+      consumoId: etapa === "PAGAR_CUOTAS" ? consumptionId : null,
+    };
+    await bff.respond(`**/api/marketplace/catalogo/${productId}`, {
+      body: { id: productId, nombre: "Panel solar 550W", precio: { usdt: "400.00" }, imagenes: [] },
+    });
+    await bff.respond(`**/api/marketplace/catalogo/${productId}/planes**`, { body: {} });
+    await bff.respond("**/api/marketplace/marketplace/horario", { body: { abierto: true } });
+    await bff.respond("**/api/marketplace/marketplace/cupo", { body: { estado: "ABIERTA", disponible: { usdt: "500.00" } } });
+    await bff.respond("**/api/marketplace/compras", { body: [confirmedPurchase] });
+    await bff.respond(`**/api/marketplace/compras/${purchaseId}`, { body: confirmedPurchase });
+    await bff.respond("**/api/installments/banks", { body: [{ code: "0171", name: "Banesco" }] });
+
+    await page.goto(`/marketplace/${productId}?compraId=${purchaseId}`);
+    await expect(page.getByRole("heading", { name: "¡Compra confirmada!" })).toBeVisible();
+    await expect(page.getByText("Firma registrada correctamente.")).toBeVisible();
+    await expect(page.getByText("Gracias por tu compra. Nuestro equipo se pondrá en contacto contigo a la brevedad para coordinar la instalación.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ver detalles de mi compra" })).toHaveAttribute("href", `/marketplace/compras/${purchaseId}`);
+
+    if (etapa === "PAGAR_CUOTAS") {
+      await expect(page.getByRole("link", { name: "Ir a mis cuotas" })).toHaveAttribute("href", `/installments/${consumptionId}`);
+    } else {
+      await expect(page.getByRole("link", { name: "Ir a mis cuotas" })).toHaveCount(0);
+    }
+  });
+}
+
+test("solo presenta la finalización cuando Core confirma la firma", async ({ page, bff }) => {
+  const waitingForSignature = { ...purchase, etapa: "ESPERANDO_FIRMAS", consumoId: null };
+  const confirmedPurchase = { ...purchase, etapa: "PAGAR_CUOTAS" };
+  let signatureSubmitted = false;
+  await bff.respond(`**/api/marketplace/catalogo/${productId}`, {
+    body: { id: productId, nombre: "Panel solar 550W", precio: { usdt: "400.00" }, imagenes: [] },
+  });
+  await bff.respond(`**/api/marketplace/catalogo/${productId}/planes**`, { body: {} });
+  await bff.respond("**/api/marketplace/marketplace/horario", { body: { abierto: true } });
+  await bff.respond("**/api/marketplace/marketplace/cupo", { body: { estado: "ABIERTA", disponible: { usdt: "500.00" } } });
+  await bff.respond("**/api/marketplace/compras", { body: [waitingForSignature] });
+  await bff.respond(`**/api/marketplace/compras/${purchaseId}`, () => ({ body: signatureSubmitted ? confirmedPurchase : waitingForSignature }));
+  await bff.respond(`**/api/marketplace/compras/${purchaseId}/firma`, (_url, method) => {
+    expect(method).toBe("POST");
+    signatureSubmitted = true;
+    return { body: confirmedPurchase };
+  });
+  await bff.respond("**/api/installments/banks", { body: [{ code: "0171", name: "Banesco" }] });
+
+  await page.goto(`/marketplace/${productId}?compraId=${purchaseId}`);
+  await page.getByRole("button", { name: "Revisar y firmar contrato" }).click();
+  await expect(page.getByRole("heading", { name: "Revisa y firma tu contrato" })).toBeVisible();
+  await page.getByLabel("Confirmo que revisé y acepto las condiciones del contrato.").check();
+  await page.getByLabel("Acepto los términos y condiciones de esta compra.").check();
+  await page.getByRole("button", { name: "Dibujar firma" }).click();
+  const canvas = page.getByLabel("Área para dibujar la firma");
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+  await page.mouse.move(bounds!.x + 25, bounds!.y + 60);
+  await page.mouse.down();
+  await page.mouse.move(bounds!.x + 100, bounds!.y + 90, { steps: 5 });
+  await page.mouse.up();
+  await page.getByRole("button", { name: "Usar firma" }).click();
+  await page.getByRole("button", { name: "Firmar contrato y confirmar" }).click();
+
+  await expect(page.getByRole("heading", { name: "¡Compra confirmada!" })).toBeVisible();
+  expect(bff.sentBodies(`/api/marketplace/compras/${purchaseId}/firma`)).toEqual([{ firmado: true }]);
+  await expect(page.getByText("Gracias por tu compra. Nuestro equipo se pondrá en contacto contigo a la brevedad para coordinar la instalación.")).toBeVisible();
+});
