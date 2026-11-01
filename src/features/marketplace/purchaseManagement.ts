@@ -149,6 +149,10 @@ export function marketplacePurchaseStageMessage(stage: string): string {
   }
 }
 
+export function isConfirmedMarketplacePurchaseStage(stage: string): boolean {
+  return stage === "PAGAR_CUOTAS" || stage === "PAGADA";
+}
+
 export function formatMarketplaceAmount(value: string | number | undefined, currency = "USDT"): string | null {
   if (value === undefined || value === "") return null;
   const amount = Number(value);

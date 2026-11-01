@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   formatMarketplaceAmount,
+  isConfirmedMarketplacePurchaseStage,
   marketplacePurchaseStageLabel,
   marketplacePurchaseStageMessage,
   parseMarketplacePurchase,
@@ -30,6 +31,13 @@ test("labels purchase states without implying approval for review", () => {
   assert.equal(marketplacePurchaseStageLabel("VALIDANDO_PAGO"), "Pago en revisión");
   assert.match(marketplacePurchaseStageMessage("VALIDANDO_PAGO"), /no repitas el pago/i);
   assert.match(marketplacePurchaseStageMessage("PAGADA"), /no se generaron cuotas/i);
+});
+
+test("treats financed and fully-paid purchases as confirmed, but not pending signatures", () => {
+  assert.equal(isConfirmedMarketplacePurchaseStage("PAGAR_CUOTAS"), true);
+  assert.equal(isConfirmedMarketplacePurchaseStage("PAGADA"), true);
+  assert.equal(isConfirmedMarketplacePurchaseStage("ESPERANDO_FIRMAS"), false);
+  assert.equal(isConfirmedMarketplacePurchaseStage("VALIDANDO_PAGO"), false);
 });
 
 test("formats backend decimal amounts for Venezuelan users", () => {
