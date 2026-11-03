@@ -509,6 +509,39 @@ export function SignInSheet({ biometricEnabled = false, notification, open, onCl
               Ingresar
             </Button>
 
+            <Button
+              component={Link}
+              disabled={isLoading}
+              fullWidth
+              href="/activate"
+              onClick={(event) => {
+                if (isLoading) {
+                  event.preventDefault();
+                  return;
+                }
+
+                requestClose();
+              }}
+              variant="outlined"
+              sx={{
+                minHeight: 50,
+                borderRadius: "999px",
+                fontWeight: 400,
+                color: themeTokens.color.preLoginNavy,
+                borderColor: themeTokens.color.preLoginPrimary,
+                "&:hover": {
+                  bgcolor: themeTokens.color.preLoginBackground,
+                  borderColor: darken(themeTokens.color.preLoginPrimary, 0.12),
+                },
+                "&:focus-visible": {
+                  outline: `3px solid ${themeTokens.color.preLoginPrimary}`,
+                  outlineOffset: 2,
+                },
+              }}
+            >
+              Activar cuenta
+            </Button>
+
             {showBiometricAccess && (
               <Box sx={{ pt: "clamp(8px, 3dvh, 28px)" }}>
                 <BiometricLoginAction
