@@ -15,6 +15,7 @@ test("validates backend initial-percentage query bounds and rejects duplicated v
   assert.equal(isValidInitialPercentage("30"), true);
   assert.equal(isValidInitialPercentage("30.5"), true);
   assert.equal(isValidInitialPercentage("100"), true);
+  assert.equal(isValidInitialPercentage("29.99"), false);
   assert.equal(isValidInitialPercentage("0"), false);
   assert.equal(isValidInitialPercentage("100.01"), false);
   assert.equal(isValidInitialPercentage("Infinity"), false);
