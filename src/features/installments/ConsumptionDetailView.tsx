@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { CloudOffRounded, ReplayRounded, TaskAltRounded } from "@mui/icons-material";
 import { Alert, Box, Button, Card, CardContent, Skeleton, Stack } from "@mui/material";
 import type { ReactNode } from "react";
@@ -14,12 +14,13 @@ import { InstallmentsHeader } from "./components/InstallmentsHeader";
 import { InstallmentsScreen, panelSlotSx, panelToBottomSx } from "./components/InstallmentsScreen";
 import { PaymentOptions } from "./components/PaymentOptions";
 import { pillButton, StateCard } from "./components/StateCard";
+import { MARKETPLACE_BOTTOM_NAVIGATION_HEIGHT } from "@/components/AppBottomNavigation";
 import {
   useConsumptionDetail,
   useInstallmentsCache,
   usePaymentData,
 } from "./InstallmentsProvider";
-import { createPaymentChoices, normalizePaymentSelection } from "./paymentOptions";
+import { createPaymentChoices, normalizePaymentSelection, paymentSelectionToQuery } from "./paymentOptions";
 import type { PaymentSelection } from "./paymentOptions";
 import { createConsumptionDetailViewModel } from "./presentation";
 import type { ConsumptionDetailViewModel } from "./presentation";
@@ -62,6 +63,9 @@ function usePaymentSection(
     ? normalizePaymentSelection(choices, paymentSelections[consumptionId])
     : null;
   const select = (next: PaymentSelection) => setPaymentSelection(consumptionId, next);
+  const instructionHref = choices && selection
+    ? `/installments/${encodeURIComponent(consumptionId)}/payment?${paymentSelectionToQuery(selection)}`
+    : null;
 
   const selectFromSchedule = () => {
     if (!choices) return;
@@ -102,15 +106,41 @@ function usePaymentSection(
           hasPaymentInReview={viewModel.hasPaymentInReview}
           onSelectionChange={select}
           selection={selection}
+          variant={viewModel && !viewModel.isPaid ? "marketplace" : "standard"}
         />
       );
     }
   }
 
-  return { section, selectFromSchedule, canSelect: Boolean(choices) };
+  return { section, selectFromSchedule, canSelect: Boolean(choices), instructionHref };
 }
 
-export function ConsumptionDetailView({ consumptionId }: Readonly<{ consumptionId: string }>) {
+function MarketplaceDetailActions({
+  onAdvance,
+  onInstructions,
+  disabled,
+}: Readonly<{ onAdvance: () => void; onInstructions: () => void; disabled: boolean }>) {
+  return <Box sx={{
+    position: "fixed",
+    zIndex: (theme) => theme.zIndex.appBar + 2,
+    left: "50%",
+    bottom: `calc(${MARKETPLACE_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom) + 8px)`,
+    transform: "translateX(-50%)",
+    width: "min(calc(100% - 56px), 420px)",
+    px: 0,
+    pt: 1.5,
+    pb: 1.25,
+    background: "linear-gradient(180deg, rgba(255,255,255,0), #fff 22%)",
+  }}>
+    <Stack spacing={0.9}>
+      <Button onClick={onAdvance} disabled={disabled} variant="contained" sx={{ minHeight: 54, borderRadius: 99, bgcolor: "#2751E6", fontSize: "1rem", fontWeight: 800, boxShadow: "none", "&:hover": { bgcolor: "#2148D2", boxShadow: "none" } }}>Adelantar cuota</Button>
+      <Button onClick={onInstructions} disabled={disabled} variant="outlined" sx={{ minHeight: 54, borderRadius: 99, borderColor: "#E3E3E8", bgcolor: "#F8F8FA", color: "#2751E6", fontSize: "1rem", fontWeight: 800, boxShadow: "0 1px 2px rgba(0,0,0,.14)", "&:hover": { borderColor: "#D5D5DC", bgcolor: "#F4F4F7" } }}>Ver instrucciones de pago</Button>
+    </Stack>
+  </Box>;
+}
+
+export function ConsumptionDetailView({ consumptionId, variant = "standard" }: Readonly<{ consumptionId: string; variant?: "standard" | "marketplace" }>) {
+  const router = useRouter();
   const detail = useConsumptionDetail(consumptionId);
   const viewModel = detail.status === "ready" ? createConsumptionDetailViewModel(detail.data) : null;
   const payment = usePaymentSection(consumptionId, viewModel);
@@ -139,6 +169,18 @@ export function ConsumptionDetailView({ consumptionId }: Readonly<{ consumptionI
 
     if (!viewModel) return null;
 
+    const scheduleAndPayment = <Stack spacing={variant === "marketplace" ? 2 : 2.5}>
+      {viewModel.isPaid && <Alert icon={<TaskAltRounded />} severity="success" sx={{ borderRadius: 3 }}>Este consumo está pagado. No tienes cuotas pendientes.</Alert>}
+      <InstallmentSchedule
+        items={viewModel.schedule}
+        variant={variant}
+        onSelect={payment.canSelect && !viewModel.hasPaymentInReview ? payment.selectFromSchedule : undefined}
+      />
+      {payment.section}
+    </Stack>;
+
+    if (variant === "marketplace") return scheduleAndPayment;
+
     return (
       <Card
         sx={{
@@ -150,40 +192,58 @@ export function ConsumptionDetailView({ consumptionId }: Readonly<{ consumptionI
       >
         <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
           <Stack spacing={2}>
-            <ConsumptionSummary header={viewModel.header} />
-            {viewModel.isPaid && (
-              <Alert icon={<TaskAltRounded />} severity="success" sx={{ borderRadius: 3 }}>
-                Este consumo está pagado. No tienes cuotas pendientes.
-              </Alert>
-            )}
-            <InstallmentSchedule
-              items={viewModel.schedule}
-              onSelect={payment.canSelect && !viewModel.hasPaymentInReview
-                ? payment.selectFromSchedule
-                : undefined}
-            />
-            {payment.section}
+            <ConsumptionSummary header={viewModel.header} variant={variant} />
+            {scheduleAndPayment}
           </Stack>
         </CardContent>
       </Card>
     );
   })();
 
+  if (variant === "marketplace") {
+    return (
+      <InstallmentsScreen variant="marketplace">
+        <Stack sx={{ ...panelSlotSx, minHeight: 0 }} spacing={0}>
+          <InstallmentsHeader title="Mis Cuotas" variant="marketplace" />
+          {viewModel && <Box sx={{ position: "relative", zIndex: 2, mx: 2, mt: 1.1, mb: -5.8 }}><ConsumptionSummary header={viewModel.header} variant="marketplace" /></Box>}
+          <Box sx={{
+            flex: 1,
+            minHeight: 0,
+            mt: viewModel ? 0 : 1.5,
+            px: 1.5,
+            pt: viewModel ? 7 : 2,
+            pb: viewModel && !viewModel.isPaid ? "178px" : 2,
+            overflowY: "auto",
+            borderRadius: "26px 26px 0 0",
+            bgcolor: "#FFFFFF",
+          }}>
+            {content}
+          </Box>
+        </Stack>
+        {viewModel && !viewModel.isPaid && <MarketplaceDetailActions
+          onAdvance={payment.selectFromSchedule}
+          onInstructions={() => { if (payment.instructionHref) router.push(payment.instructionHref); }}
+          disabled={!payment.canSelect || viewModel.hasPaymentInReview}
+        />}
+      </InstallmentsScreen>
+    );
+  }
+
   return (
-    <InstallmentsScreen>
+    <InstallmentsScreen variant={variant}>
       <Stack spacing={2.5} sx={panelSlotSx}>
-        <InstallmentsHeader backHref="/home" backLabel="Volver al inicio" title="Mis cuotas" />
+        <InstallmentsHeader backHref="/home" backLabel="Volver al inicio" title="Mis Cuotas" variant={variant} />
         <Box sx={panelSlotSx}>{content}</Box>
       </Stack>
     </InstallmentsScreen>
   );
 }
 
-export function ConsumptionNotFound() {
+export function ConsumptionNotFound({ variant = "standard" }: Readonly<{ variant?: "standard" | "marketplace" }>) {
   return (
-    <InstallmentsScreen>
+    <InstallmentsScreen variant={variant}>
       <Stack spacing={2.5}>
-        <InstallmentsHeader backHref="/home" backLabel="Volver al inicio" title="Mis cuotas" />
+        <InstallmentsHeader backHref={variant === "marketplace" ? "/marketplace" : "/home"} backLabel={variant === "marketplace" ? "Volver al catálogo" : "Volver al inicio"} title="Mis Cuotas" variant={variant} />
         <StateCard
           action={(
             <Button component={Link} href="/installments" sx={pillButton} variant="contained">

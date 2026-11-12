@@ -41,7 +41,7 @@ function describeDebtState(state: string | undefined): string | null {
 
 function nextAction(purchase: MarketplacePurchase): React.ReactNode {
   if (purchase.etapa === "PAGAR_CUOTAS" && purchase.consumoId) {
-    return <Button component={Link} fullWidth href={`/installments/${encodeURIComponent(purchase.consumoId)}`} variant="contained" startIcon={<ReceiptLongRounded />} sx={{ minHeight: 52, borderRadius: "13px", bgcolor: homeVisualTokens.color.violet, fontWeight: 800 }}>Ver mis cuotas</Button>;
+    return <Button component={Link} fullWidth href={`/marketplace/cuotas/${encodeURIComponent(purchase.consumoId)}`} variant="contained" startIcon={<ReceiptLongRounded />} sx={{ minHeight: 52, borderRadius: "13px", bgcolor: homeVisualTokens.color.violet, fontWeight: 800 }}>Ver mis cuotas</Button>;
   }
   if (purchase.etapa === "PAGADA") {
     return <Button component={Link} fullWidth href="/marketplace" variant="contained" startIcon={<ShoppingBagRounded />} sx={{ minHeight: 52, borderRadius: "13px", bgcolor: homeVisualTokens.color.violet, fontWeight: 800 }}>Volver al catálogo</Button>;
@@ -164,6 +164,6 @@ export function MarketplacePurchaseDetailView({ purchaseId }: Readonly<{ purchas
         </>}
       </Stack>
     </Container>
-    <AppBottomNavigation activeItem="home" />
+    <AppBottomNavigation activeItem="purchases" variant="marketplace" />
   </Box>;
 }

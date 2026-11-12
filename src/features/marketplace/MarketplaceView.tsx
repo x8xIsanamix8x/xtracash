@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
-  ReceiptLongRounded,
+  AppsRounded,
+  BoltRounded,
+  CategoryRounded,
+  CottageRounded,
+  ElectricalServicesRounded,
+  ExpandMoreRounded,
   SearchRounded,
   VisibilityOffRounded,
   VisibilityRounded,
+  WbSunnyRounded,
 } from "@mui/icons-material";
+import type { SvgIconComponent } from "@mui/icons-material";
 import {
   Alert,
   Box,
@@ -19,14 +25,12 @@ import {
   MenuItem,
   OutlinedInput,
   Select,
-  ToggleButton,
-  ToggleButtonGroup,
   Stack,
   Typography,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 
-import { APP_BOTTOM_NAVIGATION_HEIGHT, AppBottomNavigation } from "@/components/AppBottomNavigation";
+import { MARKETPLACE_BOTTOM_NAVIGATION_HEIGHT, AppBottomNavigation } from "@/components/AppBottomNavigation";
 import { getProfilePersonalInfo, ProfileServiceError } from "@/features/profile/services/profile";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 
@@ -37,6 +41,13 @@ import { getCatalog, getCatalogCategories, getMarketplaceLimit, MarketplaceServi
 
 type AccessState = "checking" | "allowed" | "unavailable";
 type DisplayCurrency = "usdt" | "bs";
+const CATEGORY_ICONS: ReadonlyArray<readonly [string, SvgIconComponent]> = [
+  ["elect", ElectricalServicesRounded],
+  ["energ", BoltRounded],
+  ["solar", WbSunnyRounded],
+  ["hogar", CottageRounded],
+  ["home", CottageRounded],
+];
 
 function formatMoney(value: number | string | undefined, currency = "USDT") {
   if (value === undefined) return "Precio no disponible";
@@ -52,8 +63,35 @@ function formatAmount(value: number | string | undefined) {
     : String(value);
 }
 
+function CategoryIcon({ name }: Readonly<{ name: string }>) {
+  const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-VE");
+  const Icon = normalized === "todos"
+    ? AppsRounded
+    : CATEGORY_ICONS.find(([key]) => normalized.includes(key))?.[1] ?? CategoryRounded;
+  return <Icon aria-hidden="true" sx={{ fontSize: 23 }} />;
+}
+
+function CurrencyMark({ currency }: Readonly<{ currency: DisplayCurrency }>) {
+  return <Box aria-hidden="true" sx={{ width: 18, height: 18, flexShrink: 0, display: "grid", placeItems: "center", border: "1.4px solid currentColor", borderRadius: "50%", fontSize: currency === "usdt" ? "0.78rem" : "0.55rem", lineHeight: 1, fontWeight: 800, letterSpacing: currency === "bs" ? "-0.04em" : 0 }}>
+    {currency === "usdt" ? "₮" : "Bs"}
+  </Box>;
+}
+
+function getDeliveryLabels(product: CatalogProduct): string[] {
+  const raw = product.entrega?.modalidades ?? product.entrega?.modalidad;
+  if (!raw) return [];
+  const values = Array.isArray(raw) ? raw : raw.split(/[,|;/]+/);
+  return values.map((part) => part.trim()).filter(Boolean).map((part) => {
+    const normalized = part.toLocaleUpperCase("es-VE").replace(/[\s-]+/g, "_");
+    if (["RETIRO", "PICKUP", "RECOGER"].includes(normalized)) return "Pickup";
+    if (["DOMICILIO", "ENVIO", "DELIVERY"].includes(normalized)) return "Delivery";
+    return part.replace(/[_-]+/g, " ").toLocaleLowerCase("es-VE").replace(/^./, (letter) => letter.toLocaleUpperCase("es-VE"));
+  });
+}
+
 function CatalogProductCard({ product }: Readonly<{ product: CatalogProduct }>) {
   const subtitle = product.descripcionCorta?.trim() || product.descripcion?.trim();
+  const deliveryLabels = getDeliveryLabels(product);
   return (
     <Box
       component={Link}
@@ -78,16 +116,22 @@ function CatalogProductCard({ product }: Readonly<{ product: CatalogProduct }>) 
       <Box sx={{ position: "relative", aspectRatio: "1 / 1", overflow: "hidden", borderRadius: "14px", bgcolor: "#E7E7EE" }}>
         <MarketplaceProductImage url={product.imagenPrincipal} productId={product.id} alt={product.nombre} />
       </Box>
-      <Stack spacing={0.35} sx={{ minWidth: 0, flex: 1, px: 0.25, pt: 1, pb: 0.5 }}>
-        <Typography sx={{ color: homeVisualTokens.color.navy, fontSize: "0.9rem", lineHeight: 1.25, fontWeight: 750, overflowWrap: "anywhere" }}>
+      <Stack spacing={0.3} sx={{ minWidth: 0, flex: 1, px: 0.25, pt: 1, pb: 0.5 }}>
+        <Typography sx={{ color: "#111", fontSize: "0.84rem", lineHeight: 1.2, fontWeight: 750, overflow: "hidden", display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflowWrap: "anywhere", minHeight: "2.05em" }}>
           {product.nombre}
         </Typography>
-        {subtitle && <Typography sx={{ color: "#33333A", fontSize: "0.8rem", lineHeight: 1.3, display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden" }}>
+        {subtitle && <Typography sx={{ color: "#33333A", fontSize: "0.73rem", lineHeight: 1.25, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
           {subtitle}
         </Typography>}
-        <Typography sx={{ mt: "auto", pt: 0.35, color: "#20202A", fontSize: "1.05rem", fontWeight: 800, lineHeight: 1.2, overflowWrap: "anywhere" }}>
+        <Typography sx={{ mt: "auto", pt: 0.25, color: "#111", fontSize: "0.95rem", fontWeight: 700, lineHeight: 1.2, overflowWrap: "anywhere" }}>
           {formatMoney(product.precio?.usdt)}
         </Typography>
+        {typeof product.stock === "number" && <Typography sx={{ color: "#006341", fontSize: "0.68rem", lineHeight: 1.15, mt: 0.35 }}>
+          {product.stock} uds. disponibles
+        </Typography>}
+        {deliveryLabels.length > 0 && <Stack direction="row" useFlexGap sx={{ mt: 0.5, gap: 0.5, flexWrap: "wrap" }}>
+          {deliveryLabels.map((label) => <Box component="span" key={label} sx={{ px: 0.7, py: 0.35, borderRadius: "7px", bgcolor: label === "Pickup" ? "#C5F7E4" : "#D9E2FF", color: "#17245A", fontSize: "0.66rem", fontWeight: 700, lineHeight: 1.1 }}>{label}</Box>)}
+        </Stack>}
       </Stack>
     </Box>
   );
@@ -150,7 +194,7 @@ export function MarketplaceView() {
   }, [access, catalogReload, categoryId, page, search]);
   const availableAmount = limit?.disponible?.[displayCurrency];
   const totalAmount = limit?.limite?.[displayCurrency];
-  const currencyLabel = displayCurrency === "usdt" ? "USDT" : "Bs.";
+  const currencyLabel = displayCurrency === "usdt" ? "USDT" : "Bs";
 
   return (
     <Box
@@ -158,37 +202,37 @@ export function MarketplaceView() {
       sx={{
         minHeight: "100dvh",
         bgcolor: homeVisualTokens.color.surfaceTint,
-        pt: "calc(10px + env(safe-area-inset-top))",
-        pb: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`,
+        pt: "calc(72px + env(safe-area-inset-top))",
+        pb: `calc(${MARKETPLACE_BOTTOM_NAVIGATION_HEIGHT + 20}px + env(safe-area-inset-bottom))`,
+        position: "relative",
+        overflow: "hidden",
+        "&::before": { content: "\"\"", position: "absolute", inset: "0 0 auto", height: "206px", bgcolor: "#07074B", zIndex: 0 },
       }}
     >
-      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 } }}>
-        <Stack spacing={2.2}>
-          {access !== "checking" && (
-            <Stack component="header" direction="row" sx={{ minHeight: 52, alignItems: "center", justifyContent: "space-between" }}>
-              <Box sx={{ width: 42, height: 42, display: "grid", placeItems: "center", borderRadius: "50%", bgcolor: "white" }}>
-                <Image alt="" aria-hidden="true" src="/entry/isotipo-impulsa.png" width={26} height={32} style={{ objectFit: "contain" }} />
-              </Box>
-              <Typography component="h1" sx={{ color: "#111111", fontSize: "1rem", fontWeight: 500 }}>
-                Impúlsate
-              </Typography>
-              <Box sx={{ width: 42 }} aria-hidden="true" />
-            </Stack>
-          )}
-
+      <Container maxWidth="sm" sx={{ px: { xs: 2, sm: 3 }, position: "relative", zIndex: 1 }}>
+        <Stack spacing={2.1}>
           {access === "allowed" && (
             <>
-              <Typography component="h2" sx={{ mb: -1.4, color: homeVisualTokens.color.navy, fontSize: "1.05rem", fontWeight: 800 }}>
-                Disponible
-              </Typography>
+              <OutlinedInput
+                fullWidth
+                value={search}
+                onChange={(event) => { setSearch(event.target.value); setPage(0); }}
+                placeholder="Busca un producto"
+                inputProps={{ "aria-label": "Buscar productos" }}
+                startAdornment={<InputAdornment position="start"><SearchRounded sx={{ color: "#777" }} /></InputAdornment>}
+                sx={{ minHeight: 50, borderRadius: "12px", bgcolor: "#fff", fontSize: "0.93rem", "& fieldset": { border: 0 } }}
+              />
+
               <Box
                 component="section"
                 aria-label="Disponible de financiamiento"
                 sx={{
-                  minHeight: 142,
-                  px: { xs: 2.5, sm: 3 },
-                  py: 1.75,
-                  borderRadius: "14px",
+                  minHeight: 132,
+                  mt: "-0.35rem",
+                  px: 2.25,
+                  py: 1.65,
+                  borderRadius: "20px",
+                  border: "1px solid rgba(255,255,255,.8)",
                   bgcolor: "#2751E6",
                   color: "#FFFFFF",
                   display: "flex",
@@ -196,18 +240,9 @@ export function MarketplaceView() {
                   justifyContent: "center",
                 }}
               >
-                <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", minHeight: 38 }}>
-                  <ToggleButtonGroup
-                    exclusive
-                    size="small"
-                    value={displayCurrency}
-                    onChange={(_, value: DisplayCurrency | null) => value && setDisplayCurrency(value)}
-                    aria-label="Moneda del disponible"
-                    sx={{ p: 0.25, border: "1px solid rgba(255,255,255,.45)", borderRadius: "999px", bgcolor: "rgba(255,255,255,.12)", "& .MuiToggleButtonGroup-grouped": { minHeight: 30, px: 1.25, border: 0, borderRadius: "999px !important", color: "white", fontSize: "0.75rem", fontWeight: 800, lineHeight: 1, textTransform: "none" }, "& .Mui-selected": { bgcolor: "white !important", color: "#2751E6 !important" } }}
-                  >
-                    <ToggleButton value="usdt" aria-label="Mostrar en USDT">USDT</ToggleButton>
-                    <ToggleButton value="bs" aria-label="Mostrar en bolívares">Bs.</ToggleButton>
-                  </ToggleButtonGroup>
+                <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", minHeight: 30 }}>
+                  <Stack direction="row" spacing={0.7} sx={{ alignItems: "center" }}>
+                    <Typography sx={{ fontSize: "0.87rem", fontWeight: 700 }}>Mi disponible</Typography>
                   <IconButton
                     aria-label={isAvailableVisible ? "Ocultar disponible" : "Mostrar disponible"}
                     aria-pressed={isAvailableVisible}
@@ -216,60 +251,52 @@ export function MarketplaceView() {
                   >
                     {isAvailableVisible ? <VisibilityRounded /> : <VisibilityOffRounded />}
                   </IconButton>
+                  </Stack>
+                  <Select
+                    value={displayCurrency}
+                    onChange={(event) => setDisplayCurrency(event.target.value as DisplayCurrency)}
+                    IconComponent={ExpandMoreRounded}
+                    aria-label="Moneda del disponible"
+                    renderValue={(value) => <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", whiteSpace: "nowrap" }}><CurrencyMark currency={value as DisplayCurrency} /><Box component="span">{value === "usdt" ? "USDT" : "Bs"}</Box></Stack>}
+                    sx={{ width: 104, height: 30, color: "#fff", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 700, "& .MuiSelect-select": { py: 0.35, pl: 0.7, pr: "23px !important" }, "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,.7)" }, "& .MuiSvgIcon-root": { color: "white", fontSize: 19 } }}
+                    MenuProps={{
+                      slotProps: {
+                        paper: { sx: { width: 104, minWidth: "104px !important", borderRadius: "8px", py: 0.4, "& .MuiMenuItem-root": { minHeight: 32, px: 1, fontSize: "0.75rem" } } },
+                        list: { dense: true },
+                      },
+                    }}
+                  >
+                    <MenuItem value="usdt"><Stack direction="row" sx={{ alignItems: "center" }}><CurrencyMark currency="usdt" /><Box component="span" sx={{ ml: 1.25 }}>USDT</Box></Stack></MenuItem>
+                    <MenuItem value="bs"><Stack direction="row" sx={{ alignItems: "center" }}><CurrencyMark currency="bs" /><Box component="span" sx={{ ml: 1.25 }}>Bs</Box></Stack></MenuItem>
+                  </Select>
                 </Stack>
                 <Stack
                   direction="row"
                   aria-live="polite"
                   aria-label={`Disponible: ${isAvailableVisible ? `${currencyLabel} ${formatAmount(availableAmount)}` : "monto oculto"}`}
-                  sx={{ alignItems: "baseline", gap: 0.9, minWidth: 0, mt: 0.75 }}
+                  sx={{ alignItems: "baseline", gap: 0.65, minWidth: 0, mt: 1.2 }}
                 >
-                  <Typography component="span" sx={{ minWidth: 0, fontSize: "clamp(1.65rem, 7vw, 2.2rem)", lineHeight: 1.15, fontWeight: 500, letterSpacing: "-0.035em", overflowWrap: "anywhere" }}>
+                  <Typography component="span" sx={{ minWidth: 0, fontSize: "1.25rem", lineHeight: 1.2, fontWeight: 500, overflowWrap: "anywhere" }}>
                     {isAvailableVisible ? formatAmount(availableAmount) : "••••••"}
                   </Typography>
+                  <Typography component="span" sx={{ fontSize: "0.68rem", lineHeight: 1.2 }}>{currencyLabel}</Typography>
                 </Stack>
-                <Typography sx={{ mt: 1.5, fontSize: "0.875rem" }}>
-                  Línea total {currencyLabel} {isAvailableVisible ? formatAmount(totalAmount) : "••••••"}
+                <Typography sx={{ mt: 0.8, fontSize: "0.83rem" }}>
+                  Línea total {isAvailableVisible ? formatAmount(totalAmount) : "••••••"} {currencyLabel}
                 </Typography>
               </Box>
 
-              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 1.25 }}>
-                {categories.length > 0 ? <Select
-                  fullWidth
-                  displayEmpty
-                  value={categoryId}
-                  data-testid="marketplace-category-select"
-                  inputProps={{ "aria-label": "Categoría" }}
-                  renderValue={(selected) => selected ? categories.find((category) => category.id === selected)?.nombre ?? "Categoría" : "Categoría"}
-                  onChange={(event) => { setCategoryId(event.target.value); setPage(0); }}
-                  sx={{ minWidth: 0, height: 54, bgcolor: "white", borderRadius: "14px", color: "#667085", "& .MuiSelect-select": { display: "flex", alignItems: "center", py: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "& .MuiOutlinedInput-notchedOutline": { borderColor: "#DADAE4" } }}
-                >
-                  <MenuItem value="">Todas las categorías</MenuItem>
-                  {categories.map((category) => <MenuItem key={category.id} value={category.id}>{category.nombre}</MenuItem>)}
-                </Select> : <Button disabled variant="outlined" sx={{ minWidth: 0, height: 54, borderRadius: "14px", borderColor: "#DADAE4", color: "text.secondary", fontWeight: 700 }}>Categoría</Button>}
-                <Button component={Link} href="/marketplace/compras" startIcon={<ReceiptLongRounded />} fullWidth variant="outlined" sx={{ minWidth: 0, height: 54, borderRadius: "14px", borderColor: homeVisualTokens.color.violet, color: homeVisualTokens.color.violet, fontWeight: 700, whiteSpace: "nowrap", "& .MuiButton-startIcon": { mr: { xs: 0.5, sm: 1 } } }}>
-                  Mis compras
-                </Button>
+              <Box component="nav" aria-label="Categorías de productos" sx={{ mx: -2, overflowX: "auto", scrollbarWidth: "none", "&::-webkit-scrollbar": { display: "none" } }}>
+                <Stack direction="row" spacing={1.2} sx={{ minWidth: "max-content", px: 2, alignItems: "flex-start" }}>
+                  {[{ id: "", nombre: "Todos" }, ...categories].map((category) => {
+                    const selected = categoryId === category.id;
+                    return <Button key={category.id || "all"} onClick={() => { setCategoryId(category.id); setPage(0); }} aria-pressed={selected} sx={{ p: 0, minWidth: 0, width: 78, color: "#111", display: "flex", flexDirection: "column", gap: 0.45, textTransform: "none", "&:hover": { bgcolor: "transparent" } }}>
+                      <Box sx={{ width: 64, height: 64, borderRadius: "50%", display: "grid", placeItems: "center", bgcolor: selected ? "#2751E6" : "#fff", color: selected ? "#fff" : "#2751E6", transition: "background-color 140ms ease, color 140ms ease", "&:focus-visible": { outline: "3px solid #101044", outlineOffset: 2 } }}><CategoryIcon name={category.nombre} /></Box>
+                      <Typography component="span" sx={{ maxWidth: 78, fontSize: "0.69rem", lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{category.nombre}</Typography>
+                    </Button>;
+                  })}
+                </Stack>
               </Box>
-
-              <OutlinedInput
-                fullWidth
-                value={search}
-                onChange={(event) => { setSearch(event.target.value); setPage(0); }}
-                placeholder="Busca un producto"
-                inputProps={{ "aria-label": "Buscar productos" }}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <SearchRounded sx={{ color: "#151515" }} />
-                  </InputAdornment>
-                }
-                sx={{
-                  minHeight: 54,
-                  borderRadius: "14px",
-                  bgcolor: homeVisualTokens.color.white,
-                  fontSize: "1rem",
-                  "& fieldset": { border: 0 },
-                }}
-              />
 
               {(limit?.estado === "BLOQUEADA" || limit?.estado === "SUSPENDIDA") && <Alert severity="warning">{limit.estado === "BLOQUEADA" ? "El uso de tu cupo del marketplace está bloqueado." : "El marketplace está suspendido temporalmente."} Puedes consultar el catálogo; el servicio validará si una compra puede continuar.</Alert>}
 
@@ -299,7 +326,7 @@ export function MarketplaceView() {
           )}
         </Stack>
       </Container>
-      <AppBottomNavigation activeItem="home" />
+      <AppBottomNavigation activeItem="home" variant="marketplace" />
     </Box>
   );
 }

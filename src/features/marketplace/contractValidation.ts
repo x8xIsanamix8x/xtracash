@@ -1,14 +1,16 @@
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PHONE = /^04(12|14|16|22|24|26)\d{7}$/;
 const DOCUMENT = /^[VEPJGCvepjgc]-?[0-9]{1,9}$/;
+const MIN_INITIAL_PERCENTAGE = 30;
+const MAX_INITIAL_PERCENTAGE = 100;
 function record(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
 
 export function isValidInitialPercentage(value: string): boolean {
   const normalized = value.trim();
   return /^(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalized)
     && Number.isFinite(Number(normalized))
-    && Number(normalized) > 0
-    && Number(normalized) <= 100;
+    && Number(normalized) >= MIN_INITIAL_PERCENTAGE
+    && Number(normalized) <= MAX_INITIAL_PERCENTAGE;
 }
 
 export function hasValidInitialPercentageQuery(parameters: URLSearchParams): boolean {

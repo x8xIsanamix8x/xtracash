@@ -38,7 +38,7 @@ function ListSkeleton() {
   );
 }
 
-export function InstallmentsListView() {
+export function InstallmentsListView({ variant = "standard" }: Readonly<{ variant?: "standard" | "marketplace" }>) {
   const overview = useInstallmentsOverview();
 
   const content = (() => {
@@ -71,8 +71,8 @@ export function InstallmentsListView() {
       return (
         <StateCard
           action={(
-            <Button component={Link} href="/home" sx={pillButton} variant="contained">
-              Volver al inicio
+          <Button component={Link} href={variant === "marketplace" ? "/marketplace" : "/home"} sx={pillButton} variant="contained">
+              {variant === "marketplace" ? "Volver al catálogo" : "Volver al inicio"}
             </Button>
           )}
           description="No tienes cuotas pendientes por pagar."
@@ -83,10 +83,10 @@ export function InstallmentsListView() {
     }
 
     return (
-      <Stack component="ul" spacing={1.5} sx={{ m: 0, p: 0, listStyle: "none" }}>
+      <Stack component="ul" spacing={variant === "marketplace" ? 1.2 : 1.5} sx={{ m: 0, p: 0, listStyle: "none" }}>
         {items.map((item) => (
           <li key={item.id}>
-            <UpcomingInstallmentCard item={item} />
+          <UpcomingInstallmentCard item={item} variant={variant} />
           </li>
         ))}
       </Stack>
@@ -94,18 +94,18 @@ export function InstallmentsListView() {
   })();
 
   return (
-    <InstallmentsScreen>
-      <Stack spacing={2.5}>
-        <InstallmentsHeader title="Mis cuotas" />
+    <InstallmentsScreen variant={variant}>
+      <Stack spacing={variant === "marketplace" ? 1.25 : 2.5}>
+        <InstallmentsHeader title="Mis Cuotas" variant={variant} />
         <Box component="section" aria-labelledby="installments-list-title">
           <Typography
             component="h2"
             id="installments-list-title"
             sx={{
-              mb: 1.5,
-              color: homeVisualTokens.color.navy,
-              fontSize: "1.25rem",
-              fontWeight: 600,
+              mb: variant === "marketplace" ? 1.1 : 1.5,
+              color: variant === "marketplace" ? "#171717" : homeVisualTokens.color.navy,
+              fontSize: variant === "marketplace" ? "1rem" : "1.25rem",
+              fontWeight: variant === "marketplace" ? 700 : 600,
             }}
           >
             Próximas cuotas

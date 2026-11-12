@@ -3,11 +3,13 @@ import { Box, Container } from "@mui/material";
 
 import {
   APP_BOTTOM_NAVIGATION_HEIGHT,
+  MARKETPLACE_BOTTOM_NAVIGATION_HEIGHT,
   AppBottomNavigation,
 } from "@/components/AppBottomNavigation";
 import { homeVisualTokens } from "@/features/home/homeVisualTokens";
 
-const bottomSpace = `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area-inset-bottom))`;
+const bottomSpace = (variant: "standard" | "marketplace") => `calc(${(variant === "marketplace" ? MARKETPLACE_BOTTOM_NAVIGATION_HEIGHT : APP_BOTTOM_NAVIGATION_HEIGHT) + 24}px + env(safe-area-inset-bottom))`;
+const standardBottomSpace = bottomSpace("standard");
 
 /**
  * Panel blanco que baja hasta la barra de navegación (Figma 13): ocupa el alto que sobra,
@@ -16,8 +18,8 @@ const bottomSpace = `calc(${APP_BOTTOM_NAVIGATION_HEIGHT + 24}px + env(safe-area
  */
 export const panelToBottomSx = {
   flex: 1,
-  mb: `calc(-1 * ${bottomSpace})`,
-  pb: bottomSpace,
+  mb: `calc(-1 * ${standardBottomSpace})`,
+  pb: standardBottomSpace,
   borderBottomLeftRadius: 0,
   borderBottomRightRadius: 0,
 } as const;
@@ -26,7 +28,8 @@ export const panelToBottomSx = {
 export const panelSlotSx = { flex: 1, display: "flex", flexDirection: "column" } as const;
 
 /** Marco de las pantallas de Cuotas: mismo fondo y márgenes que el Home. */
-export function InstallmentsScreen({ children }: Readonly<{ children: ReactNode }>) {
+export function InstallmentsScreen({ children, variant = "standard" }: Readonly<{ children: ReactNode; variant?: "standard" | "marketplace" }>) {
+  const reservedBottomSpace = bottomSpace(variant);
   return (
     <Box
       component="main"
@@ -36,13 +39,13 @@ export function InstallmentsScreen({ children }: Readonly<{ children: ReactNode 
         flexDirection: "column",
         bgcolor: homeVisualTokens.color.surfaceTint,
         pt: "calc(16px + env(safe-area-inset-top))",
-        pb: bottomSpace,
+        pb: reservedBottomSpace,
       }}
     >
       <Container maxWidth="sm" sx={{ ...panelSlotSx, px: { xs: 2, sm: 3 } }}>
         {children}
       </Container>
-      <AppBottomNavigation activeItem="installments" />
+      <AppBottomNavigation activeItem="installments" variant={variant} />
     </Box>
   );
 }

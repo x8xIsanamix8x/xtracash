@@ -3,16 +3,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  NotificationsNoneRounded,
   SearchRounded,
   ReplayRounded,
   TuneRounded,
 } from "@mui/icons-material";
+import Image from "next/image";
 import {
   Alert,
   Box,
   Button,
   CircularProgress,
   Container,
+  IconButton,
   Stack,
   TextField,
   Typography,
@@ -20,6 +23,7 @@ import {
 
 import { AppBackButton } from "@/components/AppBackButton";
 import { AppBottomNavigation } from "@/components/AppBottomNavigation";
+import { getProfilePersonalInfo, ProfileServiceError } from "@/features/profile/services/profile";
 import { sessionExpiredUrl } from "@/lib/accessNotificationNavigation";
 import { themeTokens } from "@/theme/tokens";
 
@@ -43,6 +47,7 @@ import type {
   CreditMovementQuery,
   CreditMovementsPage,
 } from "./types";
+import { canAccessMarketplace } from "../home/marketplaceAccess";
 
 const PAGE_SIZE = 20;
 const initialFilters: CreditMovementFilters = {
@@ -53,10 +58,12 @@ const initialFilters: CreditMovementFilters = {
 function createQuery(
   filters: CreditMovementFilters,
   page: number,
+  searchQuery?: string,
 ): CreditMovementQuery {
   return {
     ...(filters.type === "all" ? {} : { type: filters.type }),
     ...(filters.status === "all" ? {} : { status: filters.status }),
+    ...(searchQuery?.trim() ? { q: searchQuery.trim() } : {}),
     page,
     size: PAGE_SIZE,
   };
@@ -102,8 +109,9 @@ function mergeMovements(
   return merged;
 }
 
-export function CreditMovementsView() {
+export function CreditMovementsView({ variant = "standard" }: Readonly<{ variant?: "standard" | "marketplace" }>) {
   const router = useRouter();
+  const isMarketplace = variant === "marketplace";
   const titleRef = useRef<HTMLHeadingElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const dataRef = useRef<CreditMovementsPage | null>(null);
@@ -112,6 +120,7 @@ export function CreditMovementsView() {
     id: number;
   } | null>(null);
   const requestIdRef = useRef(0);
+  const lastServerSearchRef = useRef("");
   const [status, setStatus] = useState<CreditMovementsViewStatus>("loading");
   const [data, setData] = useState<CreditMovementsPage | null>(null);
   const [filters, setFilters] = useState<CreditMovementFilters>(initialFilters);
@@ -124,11 +133,13 @@ export function CreditMovementsView() {
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [paginationExhausted, setPaginationExhausted] = useState(false);
   const [announcement, setAnnouncement] = useState("Cargando movimientos.");
+  const [marketplaceAccess, setMarketplaceAccess] = useState<"checking" | "allowed" | "denied">(isMarketplace ? "checking" : "allowed");
 
   const requestPage = useCallback((
     page: number,
     nextFilters: CreditMovementFilters,
     mode: "replace" | "append",
+    searchQuery = "",
   ) => {
     requestRef.current?.controller.abort();
 
@@ -137,7 +148,7 @@ export function CreditMovementsView() {
     requestIdRef.current = requestId;
     requestRef.current = { controller, id: requestId };
 
-    void getCreditMovements(createQuery(nextFilters, page), controller.signal)
+    void getCreditMovements(createQuery(nextFilters, page, searchQuery), controller.signal)
       .then((nextPage) => {
         if (requestRef.current?.id !== requestId) return;
 
@@ -205,14 +216,51 @@ export function CreditMovementsView() {
     const animationFrame = window.requestAnimationFrame(() => {
       titleRef.current?.focus({ preventScroll: true });
     });
-    requestPage(0, initialFilters, "replace");
+    if (!isMarketplace) requestPage(0, initialFilters, "replace");
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
       requestRef.current?.controller.abort();
       requestRef.current = null;
     };
-  }, [requestPage]);
+  }, [isMarketplace, requestPage]);
+
+  useEffect(() => {
+    if (!isMarketplace) return;
+    const controller = new AbortController();
+    void getProfilePersonalInfo(controller.signal)
+      .then(({ email }) => {
+        if (controller.signal.aborted) return;
+        if (!canAccessMarketplace(email)) {
+          setMarketplaceAccess("denied");
+          router.replace("/home");
+          return;
+        }
+        setMarketplaceAccess("allowed");
+        requestPage(0, initialFilters, "replace");
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (error instanceof ProfileServiceError && error.type === "unauthenticated") {
+          router.replace(sessionExpiredUrl);
+          return;
+        }
+        setMarketplaceAccess("denied");
+      });
+    return () => controller.abort();
+  }, [isMarketplace, requestPage, router]);
+
+  useEffect(() => {
+    if (!isMarketplace || marketplaceAccess !== "allowed") return;
+    const normalizedQuery = search.trim();
+    if (normalizedQuery === lastServerSearchRef.current) return;
+    const timeout = window.setTimeout(() => {
+      lastServerSearchRef.current = normalizedQuery;
+      dataRef.current = null;
+      requestPage(0, filters, "replace", normalizedQuery);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [filters, isMarketplace, marketplaceAccess, requestPage, search]);
 
   const normalizedSearch = normalizeSearchText(search);
   const filteredMovements = useMemo(
@@ -265,7 +313,7 @@ export function CreditMovementsView() {
     setAnnouncement(
       `Consultando movimientos. Filtro ${getMovementFilterLabel(pendingFilters)}.`,
     );
-    requestPage(0, pendingFilters, "replace");
+    requestPage(0, pendingFilters, "replace", search);
   };
 
   const loadMore = useCallback(() => {
@@ -273,8 +321,8 @@ export function CreditMovementsView() {
     setIsLoadingMore(true);
     setLoadMoreError(false);
     setAnnouncement("Cargando más movimientos.");
-    requestPage(data.page + 1, filters, "append");
-  }, [data, filters, hasMore, isLoadingMore, requestPage]);
+    requestPage(data.page + 1, filters, "append", search);
+  }, [data, filters, hasMore, isLoadingMore, requestPage, search]);
 
   useEffect(() => {
     if (
@@ -301,30 +349,30 @@ export function CreditMovementsView() {
       component="main"
       sx={{
         minHeight: "100dvh",
-        bgcolor: "background.default",
-        pt: "calc(16px + env(safe-area-inset-top))",
-        pb: "calc(88px + env(safe-area-inset-bottom))",
+        bgcolor: isMarketplace ? "#F0EFFF" : "background.default",
+        pt: isMarketplace ? "calc(10px + env(safe-area-inset-top))" : "calc(16px + env(safe-area-inset-top))",
+        pb: isMarketplace ? "calc(96px + env(safe-area-inset-bottom))" : "calc(88px + env(safe-area-inset-bottom))",
       }}
     >
-      <Container maxWidth="md">
-        <Stack spacing={3} sx={{ width: "100%", maxWidth: 760, mx: "auto" }}>
+      <Container maxWidth={isMarketplace ? false : "md"} sx={isMarketplace ? { px: { xs: 2, sm: 3 }, maxWidth: 560 } : undefined}>
+        <Stack spacing={isMarketplace ? 1.5 : 3} sx={{ width: "100%", maxWidth: isMarketplace ? 560 : 760, mx: "auto" }}>
           <Stack
             component="header"
-            sx={{ minHeight: 56, alignItems: "center", position: "relative" }}
+            direction="row"
+            sx={{ minHeight: isMarketplace ? 54 : 56, alignItems: "center", justifyContent: "space-between", position: "relative" }}
           >
-            <Box sx={{ position: "absolute", left: 0, top: 4, zIndex: 1 }}>
-              <AppBackButton href="/home" label="Volver al inicio" />
-            </Box>
+            {isMarketplace ? <Image src="/entry/isotipo-impulsa.png" alt="Impulsa" width={28} height={28} style={{ objectFit: "contain" }} /> : <Box sx={{ position: "absolute", left: 0, top: 4, zIndex: 1 }}><AppBackButton href="/home" label="Volver al inicio" /></Box>}
             <Typography
               component="h1"
               ref={titleRef}
               tabIndex={-1}
-              variant="h4"
+                variant={isMarketplace ? "h6" : "h4"}
               sx={{
-                width: "100%",
+                width: isMarketplace ? "auto" : "100%",
+                flex: isMarketplace ? 1 : undefined,
                 color: "secondary.main",
-                fontSize: { xs: "2rem", sm: "2.25rem" },
-                fontWeight: 500,
+                fontSize: isMarketplace ? "1.1rem" : { xs: "2rem", sm: "2.25rem" },
+                fontWeight: isMarketplace ? 700 : 500,
                 textAlign: "center",
                 outline: "none",
                 borderRadius: 1,
@@ -334,40 +382,47 @@ export function CreditMovementsView() {
                 },
               }}
             >
-              Mis consumos
+              {isMarketplace ? "Mis consumos" : "Mis consumos"}
             </Typography>
+            {isMarketplace ? <IconButton aria-label="Notificaciones" size="small" sx={{ color: "primary.main" }}><NotificationsNoneRounded /></IconButton> : <Box sx={{ width: 40 }} />}
           </Stack>
+
+          {isMarketplace && marketplaceAccess !== "allowed" ? <Box sx={{ minHeight: "50vh" }} /> : null}
 
           {status === "ready" && data ? (
             <>
               <Box component="section" aria-labelledby="recent-movements-title">
                 <Stack
-                  direction={{ xs: "column", sm: "row" }}
+                  direction="row"
                   spacing={1}
-                  sx={{ mb: 1.5, alignItems: "stretch" }}
+                  sx={{ mb: 1, alignItems: "stretch" }}
                 >
                   <TextField
                     fullWidth
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Buscar consumo"
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                    }}
+                    placeholder={isMarketplace ? "Buscar consumo" : "Buscar consumo"}
                     slotProps={{
                       input: {
                         startAdornment: <SearchRounded color="primary" />,
+                        sx: isMarketplace ? { bgcolor: "#fff", borderRadius: "12px", height: 46 } : undefined,
                       },
                     }}
                     value={search}
                   />
                   <Button
                     onClick={openFilter}
-                    startIcon={<TuneRounded />}
-                    sx={{ minWidth: { sm: 132 }, flexShrink: 0 }}
+                    startIcon={isMarketplace ? undefined : <TuneRounded />}
+                    sx={isMarketplace ? { minWidth: 58, width: 58, bgcolor: "#fff", color: "primary.main", borderRadius: "12px" } : { minWidth: { sm: 132 }, flexShrink: 0 }}
                     type="button"
-                    variant="contained"
+                    variant={isMarketplace ? "outlined" : "contained"}
+                    aria-label="Filtrar movimientos"
                   >
-                    Filtrar
+                    {isMarketplace ? <TuneRounded /> : "Filtrar"}
                   </Button>
                 </Stack>
-                <Stack
+                {!isMarketplace && <Stack
                   direction="row"
                   spacing={1}
                   sx={{ mb: 2, overflowX: "auto" }}
@@ -393,8 +448,8 @@ export function CreditMovementsView() {
                       {label}
                     </Button>
                   ))}
-                </Stack>
-                <MovementList groups={groups} isFiltered={isFiltered} />
+                </Stack>}
+                <MovementList groups={groups} isFiltered={isFiltered} variant={variant} />
 
                 {hasMore && (
                   <Box
@@ -459,13 +514,14 @@ export function CreditMovementsView() {
       >
         {announcement}
       </Box>
-      <AppBottomNavigation activeItem="movements" />
+      <AppBottomNavigation activeItem="movements" variant={variant} />
       <MovementFilterDialog
         onApply={applyFilters}
         onChange={setPendingFilters}
         onClose={() => setIsFilterOpen(false)}
         open={isFilterOpen}
         pendingFilters={pendingFilters}
+        variant={variant}
       />
     </Box>
   );
