@@ -13,7 +13,7 @@ const { color } = homeVisualTokens;
 const radius = `${homeVisualTokens.radius.inset}px`;
 
 /** Próxima cuota de un consumo: hoja de calendario a la izquierda y el consumo a la derecha. */
-export function UpcomingInstallmentCard({ item }: Readonly<{ item: UpcomingInstallmentItem }>) {
+export function UpcomingInstallmentCard({ item, variant = "standard" }: Readonly<{ item: UpcomingInstallmentItem; variant?: "standard" | "marketplace" }>) {
   const style = calendarStatusStyles[item.status.kind];
   const isNext = item.status.kind === "next";
 
@@ -22,19 +22,20 @@ export function UpcomingInstallmentCard({ item }: Readonly<{ item: UpcomingInsta
       direction="row"
       sx={{
         width: "100%",
+        minHeight: variant === "marketplace" ? 92 : undefined,
         overflow: "hidden",
         textAlign: "left",
         borderRadius: radius,
         border: "2px solid",
         borderColor: style.border === "transparent" ? color.white : style.border,
         bgcolor: color.white,
-        boxShadow: isNext ? `0 6px 16px ${alpha(nextYellowBorder, 0.28)}` : "none",
+        boxShadow: isNext && variant === "standard" ? `0 6px 16px ${alpha(nextYellowBorder, 0.28)}` : "none",
       }}
     >
       <Box component="span" sx={visuallyHidden}>{item.dueDateLabel}</Box>
       <Stack
         aria-hidden="true"
-        sx={{ width: 72, flexShrink: 0, textAlign: "center", bgcolor: color.neutralSurface }}
+        sx={{ width: variant === "marketplace" ? 92 : 72, flexShrink: 0, textAlign: "center", bgcolor: color.neutralSurface }}
       >
         <Typography
           sx={{
@@ -53,7 +54,7 @@ export function UpcomingInstallmentCard({ item }: Readonly<{ item: UpcomingInsta
             flex: 1,
             display: "grid",
             placeItems: "center",
-            py: 1,
+            py: variant === "marketplace" ? 0.5 : 1,
             color: color.navy,
             fontSize: "1.875rem",
             fontWeight: 800,
@@ -63,9 +64,9 @@ export function UpcomingInstallmentCard({ item }: Readonly<{ item: UpcomingInsta
           {item.day}
         </Typography>
       </Stack>
-      <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0, px: 1.5, py: 1.25 }} useFlexGap>
-        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-          <Box
+      <Stack spacing={variant === "marketplace" ? 0.2 : 0.5} sx={{ flex: 1, minWidth: 0, px: variant === "marketplace" ? 1.25 : 1.5, py: variant === "marketplace" ? 0.65 : 1.25 }} useFlexGap>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
+          {variant === "standard" && <Box
             aria-hidden="true"
             sx={{
               width: 28,
@@ -79,9 +80,9 @@ export function UpcomingInstallmentCard({ item }: Readonly<{ item: UpcomingInsta
             }}
           >
             <PaymentPurposeIcon iconId={item.icon} sx={{ fontSize: 18 }} />
-          </Box>
+          </Box>}
           <Typography
-            sx={{ flex: 1, minWidth: 0, color: color.navy, fontWeight: 600, overflowWrap: "anywhere" }}
+            sx={{ flex: 1, minWidth: 0, color: color.navy, fontSize: variant === "marketplace" ? "1rem" : undefined, fontWeight: variant === "marketplace" ? 700 : 600, overflowWrap: "anywhere" }}
           >
             {item.label}
           </Typography>
@@ -102,10 +103,10 @@ export function UpcomingInstallmentCard({ item }: Readonly<{ item: UpcomingInsta
             {item.status.label}
           </Typography>
         </Stack>
-        <Typography sx={{ color: color.neutral, fontSize: "0.75rem", fontWeight: 400 }}>
+        <Typography sx={{ color: color.neutral, fontSize: variant === "marketplace" ? "0.92rem" : "0.75rem", fontWeight: variant === "marketplace" ? 600 : 400, lineHeight: 1.1 }}>
           {item.numberLabel}
         </Typography>
-        <Typography sx={{ color: color.navy, fontSize: "1.0625rem", fontWeight: 800 }}>
+        <Typography sx={{ color: color.navy, fontSize: variant === "marketplace" ? "1.15rem" : "1.0625rem", fontWeight: 800, lineHeight: 1.1 }}>
           {item.amount}
         </Typography>
       </Stack>

@@ -17,3 +17,9 @@ export function marketplacePurchaseProductId(value: unknown): string | null {
   const id = product?.id ?? purchase?.productoId;
   return typeof id === "string" && id.trim() ? id : null;
 }
+
+export function findActiveMarketplacePurchaseForProduct(values: readonly unknown[], productId: string): Record<string, unknown> | null {
+  const purchase = values.find((value) => isActiveMarketplacePurchase(value)
+    && marketplacePurchaseProductId(value) === productId);
+  return record(purchase);
+}

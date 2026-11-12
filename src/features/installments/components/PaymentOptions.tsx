@@ -34,6 +34,7 @@ type PaymentOptionsProps = Readonly<{
   onSelectionChange: (selection: PaymentSelection) => void;
   /** Hay un pago de este consumo en validación: no se puede reportar otro. */
   hasPaymentInReview: boolean;
+  variant?: "standard" | "marketplace";
 }>;
 
 function CountStepper({
@@ -96,6 +97,7 @@ export function PaymentOptions({
   selection,
   onSelectionChange,
   hasPaymentInReview,
+  variant = "standard",
 }: PaymentOptionsProps) {
   const countRange = choices.countRange;
 
@@ -192,7 +194,7 @@ export function PaymentOptions({
         </Alert>
       )}
 
-      <Box sx={{ mt: 2 }}>
+      {variant === "standard" && <Box sx={{ mt: 2 }}>
         {hasPaymentInReview ? (
           <Button disabled fullWidth sx={pillButton} variant="contained">
             Ver instrucciones de pago
@@ -208,7 +210,7 @@ export function PaymentOptions({
             Ver instrucciones de pago
           </Button>
         )}
-      </Box>
+      </Box>}
     </Box>
   );
 }

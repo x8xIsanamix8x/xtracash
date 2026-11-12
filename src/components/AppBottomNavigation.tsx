@@ -1,22 +1,29 @@
 import type { MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { ShoppingBagOutlined } from "@mui/icons-material";
 import { BottomNavigation, BottomNavigationAction, Paper } from "@mui/material";
+import type { SvgIconComponent } from "@mui/icons-material";
 
 import { themeTokens } from "@/theme/tokens";
 
 export type AppDestination =
   | "home"
+  | "catalog"
   | "installments"
+  | "purchases"
   | "movements"
   | "mobile-payment"
   | "profile";
 
 export const APP_BOTTOM_NAVIGATION_HEIGHT = 64;
+export const MARKETPLACE_BOTTOM_NAVIGATION_HEIGHT = 80;
 
 export const appDestinationHref: Readonly<Record<AppDestination, string>> = {
   home: "/home",
+  catalog: "/marketplace",
   installments: "/installments",
+  purchases: "/marketplace/compras",
   movements: "/movements",
   "mobile-payment": "/mobile-payment",
   profile: "/profile",
@@ -24,7 +31,7 @@ export const appDestinationHref: Readonly<Record<AppDestination, string>> = {
 
 const navigationItems: readonly Readonly<{
   destination: AppDestination;
-  icon: string;
+  icon: string | SvgIconComponent;
   label: string;
 }>[] = [
   { destination: "home", icon: "/navigation/home.svg", label: "Inicio" },
@@ -33,20 +40,32 @@ const navigationItems: readonly Readonly<{
   { destination: "profile", icon: "/navigation/profile.svg", label: "Perfil" },
 ];
 
+const marketplaceNavigationItems: typeof navigationItems = [
+  { destination: "home", icon: "/navigation/home.svg", label: "Inicio" },
+  { destination: "installments", icon: "/navigation/cuotas.svg", label: "Cuotas" },
+  { destination: "purchases", icon: ShoppingBagOutlined, label: "Mis Compras" },
+  { destination: "profile", icon: "/navigation/profile.svg", label: "Perfil" },
+];
+
 type AppBottomNavigationProps = Readonly<{
   activeItem: AppDestination;
   disabled?: boolean;
+  variant?: "standard" | "marketplace";
   onNavigate?: (destination: AppDestination) => boolean;
 }>;
 
-function NavigationIcon({ src }: Readonly<{ src: string }>) {
+function NavigationIcon({ src, size = 24 }: Readonly<{ src: string | SvgIconComponent; size?: number }>) {
+  if (typeof src !== "string") {
+    const Icon = src;
+    return <Icon sx={{ fontSize: size }} aria-hidden="true" />;
+  }
   return (
     <Image
       alt=""
       aria-hidden="true"
       height={48}
       src={src}
-      style={{ width: 24, height: 24, objectFit: "contain" }}
+      style={{ width: size, height: size, objectFit: "contain" }}
       width={48}
     />
   );
@@ -55,8 +74,10 @@ function NavigationIcon({ src }: Readonly<{ src: string }>) {
 export function AppBottomNavigation({
   activeItem,
   disabled = false,
+  variant = "standard",
   onNavigate,
 }: AppBottomNavigationProps) {
+  const navigationHeight = variant === "marketplace" ? MARKETPLACE_BOTTOM_NAVIGATION_HEIGHT : APP_BOTTOM_NAVIGATION_HEIGHT;
   const handleNavigation = (
     event: MouseEvent<HTMLElement>,
     destination: AppDestination,
@@ -78,7 +99,7 @@ export function AppBottomNavigation({
         left: 0,
         bottom: 0,
         width: "100%",
-        minHeight: `calc(${APP_BOTTOM_NAVIGATION_HEIGHT}px + env(safe-area-inset-bottom))`,
+        minHeight: `calc(${navigationHeight}px + env(safe-area-inset-bottom))`,
         maxWidth: 900,
         mx: "auto",
         borderRadius: 0,
@@ -92,25 +113,29 @@ export function AppBottomNavigation({
         showLabels
         value={activeItem}
         sx={{
-          height: APP_BOTTOM_NAVIGATION_HEIGHT,
+          height: navigationHeight,
           bgcolor: themeTokens.color.brandDeep,
         }}
       >
-        {navigationItems.map((item) => (
+        {(variant === "marketplace" ? marketplaceNavigationItems : navigationItems).map((item) => (
           <BottomNavigationAction
             aria-current={activeItem === item.destination ? "page" : undefined}
             component={Link}
             disabled={disabled}
-            href={appDestinationHref[item.destination]}
-            icon={<NavigationIcon src={item.icon} />}
+            href={variant === "marketplace"
+              ? item.destination === "installments"
+                ? "/marketplace/cuotas"
+                : appDestinationHref[item.destination]
+              : appDestinationHref[item.destination]}
+            icon={<NavigationIcon src={item.icon} size={variant === "marketplace" ? 27 : 24} />}
             key={item.destination}
             label={item.label}
             onClick={(event) => handleNavigation(event, item.destination)}
             sx={{
               minWidth: 0,
               maxWidth: "none",
-              minHeight: APP_BOTTOM_NAVIGATION_HEIGHT,
-              p: "0.45rem 0.25rem 0.35rem",
+              minHeight: navigationHeight,
+              p: variant === "marketplace" ? "0.55rem 0.25rem 0.45rem" : "0.45rem 0.25rem 0.35rem",
               color: "common.white",
               opacity: 0.72,
               "&:hover": { bgcolor: "rgba(255, 255, 255, 0.06)" },
@@ -129,13 +154,13 @@ export function AppBottomNavigation({
               },
               "& .MuiBottomNavigationAction-label": {
                 mt: 0.25,
-                fontSize: "0.625rem",
+                fontSize: variant === "marketplace" ? "0.7rem" : "0.625rem",
                 fontWeight: 500,
                 lineHeight: 1.1,
                 whiteSpace: "nowrap",
               },
               "& .MuiBottomNavigationAction-label.Mui-selected": {
-                fontSize: "0.625rem",
+                fontSize: variant === "marketplace" ? "0.7rem" : "0.625rem",
                 fontWeight: 700,
               },
             }}

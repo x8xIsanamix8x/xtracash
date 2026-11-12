@@ -33,9 +33,9 @@ test("el flujo llama servicios reales y no simula pagos, comprobantes ni importe
   assert.match(flow, /getPurchase\(/);
   assert.match(flow, /Pago móvil en revisión/);
   assert.match(flow, /Compra confirmada/);
-  assert.match(flow, /PlanAmountCard/);
-  assert.match(flow, /Precio del equipo/);
-  assert.match(flow, /Monto a financiar/);
+  assert.match(flow, /Total a pagar/);
+  assert.match(flow, /\[\["Inicial"/);
+  assert.match(flow, /get\(p, "aFinanciar"\)/);
   assert.match(flow, /Servicio administrativo/);
   assert.match(flow, /productImageUrl/);
   assert.doesNotMatch(flow, /Mascota|Orden #1234|Comprobante adjunto/);

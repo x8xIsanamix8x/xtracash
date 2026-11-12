@@ -42,10 +42,12 @@ export type CatalogProduct = Readonly<{
   disponibilidad?: string;
   disponible?: boolean;
   stock?: number;
+  etiquetas?: ReadonlyArray<string>;
+  financiable?: boolean;
   precio?: { usdt?: number | string; bs?: number | string; moneda?: string };
   atributos?: Record<string, string | number | boolean | null | undefined>;
   garantia?: string;
-  entrega?: { modalidad?: string; tiempo?: string; zona?: string; costoUsdt?: string };
+  entrega?: { modalidad?: string | string[]; modalidades?: string[]; tiempo?: string; zona?: string; costoUsdt?: string };
   imagenPrincipal?: string;
   imagenes?: ReadonlyArray<{ id: string; url?: string; principal?: boolean }>;
   comercio?: { nombre?: string };

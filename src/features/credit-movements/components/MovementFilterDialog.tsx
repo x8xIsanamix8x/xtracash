@@ -1,7 +1,9 @@
 "use client";
 
 import { TuneRounded } from "@mui/icons-material";
+import CloseRounded from "@mui/icons-material/CloseRounded";
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -11,6 +13,7 @@ import {
   FormControl,
   FormControlLabel,
   FormLabel,
+  IconButton,
   Radio,
   RadioGroup,
   Slide,
@@ -36,6 +39,7 @@ type MovementFilterDialogProps = Readonly<{
   onApply: () => void;
   onChange: (filters: CreditMovementFilters) => void;
   onClose: () => void;
+  variant?: "standard" | "marketplace";
 }>;
 
 function FilterTransition(props: SlideProps) {
@@ -48,14 +52,16 @@ export function MovementFilterDialog({
   onApply,
   onChange,
   onClose,
+  variant = "standard",
 }: MovementFilterDialogProps) {
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const isMarketplace = variant === "marketplace";
 
   return (
     <Dialog
       aria-labelledby="movement-filter-title"
       fullWidth
-      maxWidth="xs"
+      maxWidth={isMarketplace ? "sm" : "xs"}
       onClose={onClose}
       open={open}
       slots={{ transition: FilterTransition }}
@@ -68,7 +74,10 @@ export function MovementFilterDialog({
             m: { xs: 0, sm: 2 },
             width: "100%",
             maxHeight: "min(86dvh, 720px)",
-            borderRadius: { xs: "24px 24px 0 0", sm: 3 },
+            borderRadius: isMarketplace ? { xs: "24px 24px 0 0", sm: 4 } : { xs: "24px 24px 0 0", sm: 3 },
+            bgcolor: isMarketplace ? "#F0EFFF" : undefined,
+            color: isMarketplace ? "#101044" : undefined,
+            boxShadow: isMarketplace ? "none" : undefined,
           },
         },
       }}
@@ -76,15 +85,17 @@ export function MovementFilterDialog({
     >
       <DialogTitle
         id="movement-filter-title"
-        sx={{ color: "secondary.main", fontWeight: 700 }}
+        sx={isMarketplace ? { display: "grid", gridTemplateColumns: "40px 1fr 40px", alignItems: "center", pt: 3, px: 3, color: "#111", fontWeight: 700, textAlign: "center" } : { color: "secondary.main", fontWeight: 700 }}
       >
-        Filtrar movimientos
+        {isMarketplace && <IconButton aria-label="Cerrar filtros" onClick={onClose} sx={{ border: "1.5px solid currentColor", width: 36, height: 36 }}><CloseRounded fontSize="small" /></IconButton>}
+        {isMarketplace ? "Filtros" : "Filtrar movimientos"}
+        {isMarketplace && <Box aria-hidden="true" />}
       </DialogTitle>
       <DialogContent>
-        <Stack spacing={2}>
-          <Typography color="text.secondary" variant="body2">
+        <Stack spacing={isMarketplace ? 1.5 : 2}>
+          {!isMarketplace && <Typography color="text.secondary" variant="body2">
             Los filtros consultan los movimientos disponibles en el historial.
-          </Typography>
+          </Typography>}
 
           <FormControl fullWidth>
             <FormLabel sx={{ color: "secondary.main", fontWeight: 700 }}>
@@ -111,6 +122,8 @@ export function MovementFilterDialog({
                     mx: 0,
                     px: 1,
                     borderRadius: 2,
+                    flexDirection: isMarketplace ? "row-reverse" : undefined,
+                    justifyContent: isMarketplace ? "space-between" : undefined,
                     "&:hover": { bgcolor: "action.hover" },
                   }}
                 />
@@ -118,7 +131,7 @@ export function MovementFilterDialog({
             </RadioGroup>
           </FormControl>
 
-          <Divider />
+          <Divider sx={isMarketplace ? { borderColor: "rgba(16,16,68,.35)" } : undefined} />
 
           <FormControl fullWidth>
             <FormLabel sx={{ color: "secondary.main", fontWeight: 700 }}>
@@ -143,6 +156,8 @@ export function MovementFilterDialog({
                     mx: 0,
                     px: 1,
                     borderRadius: 2,
+                    flexDirection: isMarketplace ? "row-reverse" : undefined,
+                    justifyContent: isMarketplace ? "space-between" : undefined,
                     "&:hover": { bgcolor: "action.hover" },
                   }}
                 />
@@ -152,22 +167,20 @@ export function MovementFilterDialog({
         </Stack>
       </DialogContent>
       <DialogActions
-        sx={{
-          gap: 1,
-          px: 3,
-          pb: "calc(20px + env(safe-area-inset-bottom))",
-        }}
+        sx={isMarketplace ? { display: "flex", flexDirection: "column", gap: 1, px: 3, pb: "calc(20px + env(safe-area-inset-bottom))", "& > :not(style) ~ :not(style)": { ml: 0 } } : { gap: 1, px: 3, pb: "calc(20px + env(safe-area-inset-bottom))" }}
       >
-        <Button onClick={onClose} type="button">
+        <Button onClick={onClose} fullWidth={isMarketplace} type="button" variant={isMarketplace ? "outlined" : undefined} sx={isMarketplace ? { minHeight: 56, borderRadius: 99, fontWeight: 700, bgcolor: "#fff" } : undefined}>
           Cancelar
         </Button>
         <Button
           onClick={onApply}
-          startIcon={<TuneRounded />}
+          startIcon={isMarketplace ? undefined : <TuneRounded />}
+          fullWidth={isMarketplace}
           type="button"
           variant="contained"
+          sx={isMarketplace ? { minHeight: 56, borderRadius: 99, fontWeight: 700, order: -1 } : undefined}
         >
-          Aplicar
+          {isMarketplace ? "Aplicar filtros" : "Aplicar"}
         </Button>
       </DialogActions>
     </Dialog>
