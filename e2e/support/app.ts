@@ -51,7 +51,7 @@ export const profilePersonalInfo = {
   fullName: "Leonardo Prueba",
   documentType: "V",
   documentNumber: "12345678",
-  email: "leonardo@example.test",
+  email: "lmelo@impulsatechs.com",
   phone: "04141234567",
 };
 
@@ -108,7 +108,7 @@ type JsonResponse = Readonly<{ status?: number; body: unknown }>;
 
 export type BffMock = Readonly<{
   /** Responde una ruta del BFF (patrón glob de Playwright) con JSON. */
-  respond: (pattern: string, response: JsonResponse | ((url: URL) => JsonResponse)) => Promise<void>;
+  respond: (pattern: string, response: JsonResponse | ((url: URL, method: string) => JsonResponse)) => Promise<void>;
   /** Simula que se cae la conexión al pedir esa ruta. */
   disconnect: (pattern: string) => Promise<void>;
   /** Cuántas veces el navegador pidió una ruta del BFF. */
@@ -160,7 +160,7 @@ export const test = base.extend<{ bff: BffMock }>({
       respond: async (pattern, response) => {
         await context.route(pattern, (route) => {
           const { status = 200, body } = typeof response === "function"
-            ? response(new URL(route.request().url()))
+            ? response(new URL(route.request().url()), route.request().method())
             : response;
           return route.fulfill({ status, json: body });
         });

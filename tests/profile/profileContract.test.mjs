@@ -105,16 +105,18 @@ test("crea exclusivamente la presentación derivada", () => {
 });
 
 test("agrupa información, seguridad e instalación en una navegación por tabs", async () => {
-  const [profileView, sessionCard] = await Promise.all([
+  const [profileView, sessionCard, backButton] = await Promise.all([
     readFile(new URL("../../src/features/profile/ProfileView.tsx", import.meta.url), "utf8"),
     readFile(new URL("../../src/features/profile/components/SessionCard.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../../src/components/AppBackButton.tsx", import.meta.url), "utf8"),
   ]);
 
   assert.match(profileView, /<Tabs/);
   assert.match(profileView, /aria-label="Secciones del perfil"/);
   assert.match(profileView, /src="\/entry\/isotipo-impulsa\.png"/);
-  assert.match(profileView, /aria-label="Volver al inicio"/);
-  assert.match(profileView, /<ChevronLeftRounded \/>/);
+  assert.match(profileView, /<AppBackButton href="\/home" label="Volver al inicio" \/>/);
+  assert.match(backButton, /aria-label=\{label\}/);
+  assert.match(backButton, /<ChevronLeftRounded \/>/);
   assert.match(profileView, /label: "Información"/);
   assert.match(profileView, /label: "Seguridad"/);
   assert.match(profileView, /label: "Instalar"/);

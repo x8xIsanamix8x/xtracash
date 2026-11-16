@@ -1,3 +1,4 @@
+import type { ActivationNationality } from "../validation";
 import type {
   PreloadedActivationProfile,
   PreloadedActivationSubmission,
@@ -6,6 +7,7 @@ import type {
 export type PreloadedActivationErrorCode =
   | "ACTIVACION_REALIZADA"
   | "API_KEY_INVALIDA"
+  | "DATOS_INVALIDOS"
   | "DEMASIADOS_INTENTOS"
   | "DOCUMENTO_RECHAZADO"
   | "NETWORK"
@@ -66,6 +68,7 @@ async function readApiResponse<T>(response: Response): Promise<T> {
   const knownCodes: readonly string[] = [
     "ACTIVACION_REALIZADA",
     "API_KEY_INVALIDA",
+    "DATOS_INVALIDOS",
     "DEMASIADOS_INTENTOS",
     "SIN_COINCIDENCIA",
     "TOKEN_INVALIDO",
@@ -105,7 +108,7 @@ function parseSubmission(value: unknown): PreloadedActivationSubmission {
 }
 
 export async function validateInvitation(
-  request: Readonly<{ cedula: string; correo: string }>,
+  request: Readonly<{ nacionalidad: ActivationNationality; cedula: string; correo: string }>,
   signal: AbortSignal,
 ): Promise<PreloadedActivationProfile> {
   let response: Response;
@@ -146,7 +149,7 @@ export async function submitPreloadedActivation(
 }
 
 export async function resendActivationEmail(
-  request: Readonly<{ cedula: string; correo: string }>,
+  request: Readonly<{ nacionalidad: ActivationNationality; cedula: string; correo: string }>,
   signal: AbortSignal,
 ): Promise<void> {
   let response: Response;

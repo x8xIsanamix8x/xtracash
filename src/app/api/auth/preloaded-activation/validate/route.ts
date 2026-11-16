@@ -14,8 +14,8 @@ export async function POST(request: NextRequest) {
   if (!isValidIdentity(body)) return authJson({ error: "invalid_request" }, 400);
 
   try {
-    const profile = await validatePreloadedIdentity(body.cedula.trim(), body.correo.trim(), request.signal);
-    const digits = profile.cedula.replace(/^[VJvj]-?/, "");
+    const profile = await validatePreloadedIdentity(body.nacionalidad, body.cedula.trim(), body.correo.trim(), request.signal);
+    const digits = profile.cedula.replace(/^[VEJvej]-?/, "");
     const expiry = Date.parse(profile.tokenVenceEn);
     const maxAge = Math.min(900, Math.floor((expiry - Date.now()) / 1000));
     if (maxAge <= 0) return authJson({ error: "TOKEN_INVALIDO" }, 502);

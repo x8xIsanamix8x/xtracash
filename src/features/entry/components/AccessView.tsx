@@ -241,6 +241,23 @@ export function AccessView({
           >
             Registrarme
           </Button>
+          <Button
+            fullWidth
+            component={Link}
+            href="/activate"
+            variant="outlined"
+            sx={{
+              ...pillButton,
+              color: themeTokens.color.preLoginNavy,
+              borderColor: themeTokens.color.preLoginPrimary,
+              "&:hover": {
+                bgcolor: themeTokens.color.preLoginBackground,
+                borderColor: darken(themeTokens.color.preLoginPrimary, 0.12),
+              },
+            }}
+          >
+            Activar cuenta
+          </Button>
         </Stack>
       </Box>
 

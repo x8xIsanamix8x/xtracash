@@ -82,6 +82,7 @@ const knownErrorCodes = new Set([
   "ACTIVACION_REALIZADA",
   "ACTIVACION_SIN_ENVIAR",
   "CAMPO_NO_EDITABLE",
+  "DATOS_INVALIDOS",
   "DEMASIADOS_INTENTOS",
   "DOCUMENTO_RECHAZADO",
   "SIN_COINCIDENCIA",
@@ -152,6 +153,7 @@ function assertString(body: Record<string, unknown>, key: string): string {
 }
 
 export async function validatePreloadedIdentity(
+  nacionalidad: "V" | "E",
   cedulaDigits: string,
   correo: string,
   signal?: AbortSignal,
@@ -159,7 +161,7 @@ export async function validatePreloadedIdentity(
   const response = await callCore("/validar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cedula: `V${cedulaDigits}`, correo: correo.trim() }),
+    body: JSON.stringify({ cedula: `${nacionalidad}${cedulaDigits}`, correo: correo.trim() }),
     signal,
   });
   const body = await parseJson(response);

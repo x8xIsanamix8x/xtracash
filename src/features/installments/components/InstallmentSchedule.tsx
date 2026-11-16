@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Box, ButtonBase, Stack, Typography } from "@mui/material";
+import Link from "next/link";
+import { Box, Button, ButtonBase, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
 import { homeVisualTokens } from "@/features/home/homeVisualTokens";
@@ -47,7 +48,7 @@ export const calendarStatusStyles: Readonly<Record<ScheduleStatusKind, Readonly<
 };
 
 /** Una hoja de calendario: mes arriba, día grande, número de cuota, monto y estado. */
-function CalendarCard({ item }: Readonly<{ item: ScheduleItem }>) {
+function CalendarCard({ item, variant }: Readonly<{ item: ScheduleItem; variant: "standard" | "marketplace" }>) {
   const style = calendarStatusStyles[item.status.kind];
   const isNext = item.status.kind === "next";
 
@@ -63,7 +64,7 @@ function CalendarCard({ item }: Readonly<{ item: ScheduleItem }>) {
         border: "2px solid",
         borderColor: style.border,
         bgcolor: isNext ? color.white : color.neutralSurface,
-        boxShadow: isNext ? `0 6px 16px ${alpha(nextYellowBorder, 0.28)}` : "none",
+        boxShadow: isNext && variant === "standard" ? `0 6px 16px ${alpha(nextYellowBorder, 0.28)}` : "none",
         opacity: item.status.kind === "paid" ? 0.65 : 1,
       }}
     >
@@ -84,7 +85,7 @@ function CalendarCard({ item }: Readonly<{ item: ScheduleItem }>) {
       <Stack spacing={0.5} sx={{ flex: 1, px: 1, pt: 0.75, pb: 1.25, alignItems: "center" }} useFlexGap>
         <Typography
           aria-hidden="true"
-          sx={{ color: color.navy, fontSize: "1.875rem", fontWeight: 800, lineHeight: 1 }}
+          sx={{ color: color.navy, fontSize: variant === "marketplace" ? "2.125rem" : "1.875rem", fontWeight: 800, lineHeight: 1 }}
         >
           {item.day}
         </Typography>
@@ -120,12 +121,13 @@ function CalendarCard({ item }: Readonly<{ item: ScheduleItem }>) {
 
 type InstallmentScheduleProps = Readonly<{
   items: readonly ScheduleItem[];
+  variant?: "standard" | "marketplace";
   /** Si viene, las cuotas por pagar se pueden tocar (SPEC-04). */
   onSelect?: (item: ScheduleItem) => void;
 }>;
 
 /** "Tus cuotas": calendario horizontal (estilo Cashea) con scroll lateral si no caben. */
-export function InstallmentSchedule({ items, onSelect }: InstallmentScheduleProps) {
+export function InstallmentSchedule({ items, onSelect, variant = "standard" }: InstallmentScheduleProps) {
   const listRef = useRef<HTMLOListElement>(null);
 
   // Al abrir, la fila arranca en la próxima cuota (solo scroll horizontal de la fila) y deja
@@ -139,13 +141,16 @@ export function InstallmentSchedule({ items, onSelect }: InstallmentScheduleProp
 
   return (
     <Box component="section" aria-labelledby="installment-schedule-title">
+      <Stack direction="row" sx={{ mb: 1.25, alignItems: "center", justifyContent: "space-between" }}>
       <Typography
         component="h2"
         id="installment-schedule-title"
-        sx={{ mb: 1.25, color: color.navy, fontSize: "1.0625rem", fontWeight: 600 }}
+        sx={{ color: color.navy, fontSize: variant === "marketplace" ? "1.05rem" : "1.0625rem", fontWeight: 700 }}
       >
         Tus cuotas
       </Typography>
+      {variant === "marketplace" && <Button component={Link} href="/marketplace/cuotas" size="small" sx={{ color: "#777", fontWeight: 600 }}>Ver más</Button>}
+      </Stack>
       <Stack
         aria-labelledby="installment-schedule-title"
         component="ol"
@@ -176,7 +181,7 @@ export function InstallmentSchedule({ items, onSelect }: InstallmentScheduleProp
             component="li"
             data-next={item.status.kind === "next"}
             key={item.id}
-            sx={{ flex: `0 0 ${CARD_WIDTH}px`, scrollSnapAlign: "start", display: "flex" }}
+            sx={{ flex: `0 0 ${variant === "marketplace" ? 145 : CARD_WIDTH}px`, height: variant === "marketplace" ? 198 : "auto", scrollSnapAlign: "start", display: "flex" }}
           >
             {onSelect && item.isPayable ? (
               <ButtonBase
@@ -189,10 +194,10 @@ export function InstallmentSchedule({ items, onSelect }: InstallmentScheduleProp
                   "&:focus-visible": { outline: `3px solid ${installmentsPrimary}`, outlineOffset: 2 },
                 }}
               >
-                <CalendarCard item={item} />
+                <CalendarCard item={item} variant={variant} />
               </ButtonBase>
             ) : (
-              <CalendarCard item={item} />
+              <CalendarCard item={item} variant={variant} />
             )}
           </Box>
         ))}

@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return authJson({ error: "invalid_request" }, 400); }
   if (!isValidIdentity(body)) return authJson({ error: "invalid_request" }, 400);
   try {
-    const validated = await validatePreloadedIdentity(body.cedula.trim(), body.correo.trim(), request.signal);
+    const validated = await validatePreloadedIdentity(body.nacionalidad, body.cedula.trim(), body.correo.trim(), request.signal);
     await resendActivation(validated.token, request.signal);
     return authJson({ correoActivacion: "ENVIADO" });
   } catch (error) {

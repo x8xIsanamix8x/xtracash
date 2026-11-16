@@ -20,7 +20,10 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  InputAdornment,
   LinearProgress,
+  MenuItem,
+  Select,
   Stack,
   TextField,
   Typography,
@@ -39,6 +42,8 @@ import {
   validateActivationDocument,
   validateActivationIdentity,
   type ActivationFormErrors,
+  isActivationNationality,
+  type ActivationNationality,
 } from "./validation";
 import {
   PreloadedActivationError,
@@ -73,6 +78,8 @@ function activationErrorMessage(error: unknown): string {
       return "El sandbox rechazó la clave del servicio de activación. Confirma con backend si debe enviarse una X-Activation-Key o si la omisión está habilitada.";
     case "UNAVAILABLE":
       return "La activación no está disponible en este momento. Inténtalo más tarde.";
+    case "DATOS_INVALIDOS":
+      return "Revisa tu nombre, apellido y teléfono antes de continuar.";
     case "DEMASIADOS_INTENTOS":
       return "Se alcanzó el límite de intentos. Espera antes de volver a intentarlo.";
     case "DOCUMENTO_RECHAZADO": {
@@ -99,7 +106,7 @@ function acceptedFileSize(size: number): string {
 export function PreloadedActivationView() {
   const [step, setStep] = useState<PreloadedActivationStep>("identity");
   const [profile, setProfile] = useState<PreloadedActivationProfile | null>(null);
-  const [identity, setIdentity] = useState({ cedula: "", correo: "" });
+  const [identity, setIdentity] = useState<{ nacionalidad: ActivationNationality; cedula: string; correo: string }>({ nacionalidad: "V", cedula: "", correo: "" });
   const [details, setDetails] = useState({ nombre: "", apellido: "", telefono: "" });
   const [documents, setDocuments] = useState<ActivationDocuments>(emptyDocuments);
   const [confirmedDetails, setConfirmedDetails] = useState(false);
@@ -161,6 +168,7 @@ export function PreloadedActivationView() {
     const controller = createRequest();
     try {
       const result = await validateInvitation({
+        nacionalidad: identity.nacionalidad,
         cedula: identity.cedula.trim(),
         correo: identity.correo.trim(),
       }, controller.signal);
@@ -293,7 +301,7 @@ export function PreloadedActivationView() {
     requestRef.current?.abort();
     setStep("identity");
     setProfile(null);
-    setIdentity({ cedula: "", correo: "" });
+    setIdentity({ nacionalidad: "V", cedula: "", correo: "" });
     setDetails({ nombre: "", apellido: "", telefono: "" });
     setDocuments(emptyDocuments);
     setDocumentErrors({});
@@ -472,12 +480,38 @@ export function PreloadedActivationView() {
                   error={Boolean(errors.cedula)}
                   fullWidth
                   helperText={errors.cedula ?? "Solo números, sin puntos ni letras."}
+                  hiddenLabel
                   inputRef={cedulaRef}
-                  label="Cédula de identidad"
                   name="cedula"
                   onChange={(event) => setIdentity((current) => ({ ...current, cedula: keepActivationDigits(event.target.value) }))}
+                  placeholder="Cédula de identidad"
                   required
-                  slotProps={{ htmlInput: { inputMode: "numeric", maxLength: 9 } }}
+                  slotProps={{
+                    htmlInput: { "aria-label": "Cédula de identidad", inputMode: "numeric", maxLength: 9 },
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start" sx={activationDocumentTypeAdornmentSx}>
+                          <Select
+                            disableUnderline
+                            inputProps={{ "aria-label": "Tipo de cédula" }}
+                            name="nacionalidad"
+                            onChange={(event) => {
+                              if (isActivationNationality(event.target.value)) {
+                                const nacionalidad = event.target.value;
+                                setIdentity((current) => ({ ...current, nacionalidad }));
+                              }
+                            }}
+                            value={identity.nacionalidad}
+                            variant="standard"
+                            sx={activationDocumentTypeSx}
+                          >
+                            <MenuItem value="V">V</MenuItem>
+                            <MenuItem value="E">E</MenuItem>
+                          </Select>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
                   value={identity.cedula}
                   variant="filled"
                   sx={activationFieldSx}
@@ -731,6 +765,19 @@ const activationFieldSx = {
   },
   "& .MuiInputLabel-root": { color: themeTokens.color.preLoginMuted },
   "& .MuiInputBase-input.Mui-disabled": { WebkitTextFillColor: themeTokens.color.preLoginNavy, opacity: 0.8 },
+} as const;
+
+const activationDocumentTypeAdornmentSx = {
+  mt: "0 !important",
+  mr: 1.5,
+  pr: 0.5,
+  height: 28,
+  borderRight: `1px solid ${alpha(themeTokens.color.preLoginMuted, 0.3)}`,
+} as const;
+
+const activationDocumentTypeSx = {
+  fontWeight: 700,
+  "& .MuiSelect-select": { py: 0, pl: 0.5, "&:focus": { bgcolor: "transparent" } },
 } as const;
 
 const activationPrimaryButtonSx = {
