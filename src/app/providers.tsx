@@ -5,6 +5,7 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import type { ReactNode } from "react";
 
 import { AuthSessionMonitor } from "@/features/auth/session/components/AuthSessionMonitor";
+import { TermsGate } from "@/features/terms/TermsGate";
 import { PwaProvider } from "@/features/pwa/PwaProvider";
 import { theme } from "@/theme";
 
@@ -19,6 +20,7 @@ export function AppProviders({ children }: AppProvidersProps) {
         <CssBaseline />
         <PwaProvider>
           <AuthSessionMonitor />
+          <TermsGate />
           {children}
         </PwaProvider>
       </ThemeProvider>

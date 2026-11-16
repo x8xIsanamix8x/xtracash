@@ -5,6 +5,7 @@ const protectedRoutes = [
   "/notifications",
   "/mobile-payment",
   "/profile",
+  "/marketplace",
 ] as const;
 
 export function isProtectedRoute(pathname: string): boolean {
